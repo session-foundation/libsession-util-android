@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    id("maven-publish")
 }
 
 android {
@@ -37,6 +38,65 @@ android {
 
     kotlinOptions {
         jvmTarget = "11"
+    }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "org.sessionfoundation"
+            artifactId = "libsession-util-android"
+            version = System.getenv("VERSION") ?: "dev-snapshot"
+
+            pom {
+                url = "getsession.org"
+
+                licenses {
+                    license {
+                        name = "GNU GENERAL PUBLIC LICENSE, Version 3"
+                        url = "https://www.gnu.org/licenses/gpl-3.0.txt"
+                    }
+                }
+
+                scm {
+                    connection = "scm:git:https://github.com/session-foundation/libsession-android"
+                    url = "https://github.com/session-foundation/libsession-android"
+                }
+            }
+
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+
+        repositories {
+            maven {
+                name = "libsession-util-android"
+                url = uri(layout.buildDirectory.dir("repo"))
+            }
+
+            val githubUser = System.getenv("GITHUB_USER").orEmpty()
+            val githubToken = System.getenv("GITHUB_TOKEN").orEmpty()
+
+            // Only enable the github remote repository if credentials are given
+            if (githubUser.isNotBlank() && githubToken.isNotBlank()) {
+                maven {
+                    name = "libsession-util-android"
+                    url =
+                        uri("https://maven.pkg.github.com/session-foundation/libsession-android")
+                    credentials {
+                        username = githubUser
+                        password = githubToken
+                    }
+                }
+            }
+        }
     }
 }
 
