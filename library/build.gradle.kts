@@ -77,7 +77,7 @@ publishing {
 
         repositories {
             maven {
-                name = "libsession-util-android"
+                name = "local"
                 url = uri(layout.buildDirectory.dir("repo"))
             }
 
@@ -87,7 +87,7 @@ publishing {
             // Only enable the github remote repository if credentials are given
             if (githubUser.isNotBlank() && githubToken.isNotBlank()) {
                 maven {
-                    name = "libsession-util-android"
+                    name = "github"
                     url =
                         uri("https://maven.pkg.github.com/session-foundation/libsession-android")
                     credentials {

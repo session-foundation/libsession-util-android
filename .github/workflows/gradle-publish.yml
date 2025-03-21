@@ -38,11 +38,11 @@ jobs:
       - name: Gather version name from git describe
         id: version
         if: github.event_name == 'push'
-        run: echo version=$(git describe --tags --dirty) >> $GITHUB_OUTPUT
+        run: echo version=$(git describe --tags --dirty) | tee $GITHUB_OUTPUT
 
       - name: Publish to GitHub Packages
         if: github.event_name == 'push'
-        run: ./gradlew publish
+        run: ./gradlew publishAllPublicationsToGithubRepository
         env:
           GITHUB_USER: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
