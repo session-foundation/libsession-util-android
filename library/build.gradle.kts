@@ -80,22 +80,6 @@ publishing {
                 name = "local"
                 url = uri(layout.buildDirectory.dir("repo"))
             }
-
-            val githubUser = System.getenv("GITHUB_USER").orEmpty()
-            val githubToken = System.getenv("GITHUB_TOKEN").orEmpty()
-
-            // Only enable the github remote repository if credentials are given
-            if (githubUser.isNotBlank() && githubToken.isNotBlank()) {
-                maven {
-                    name = "github"
-                    url =
-                        uri("https://maven.pkg.github.com/session-foundation/libsession-android")
-                    credentials {
-                        username = githubUser
-                        password = githubToken
-                    }
-                }
-            }
         }
     }
 }
