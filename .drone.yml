@@ -5,5 +5,8 @@ name: Build and Publish
 steps:
   - name: publish
     image: registry.oxen.rocks/lokinet-ci-android:latest
+    environment:
+      - ANDROID_HOME=/usr/lib/android-sdk
     commands:
+      - update-java-alternatives -s java-1.17.0-openjdk-amd64
       - ./gradlew publish
