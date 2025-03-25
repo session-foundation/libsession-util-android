@@ -3,6 +3,7 @@
 #include <sodium/crypto_sign.h>
 #include <session/multi_encrypt.hpp>
 #include <string>
+#include <session/network.h>
 
 #include <android/log.h>
 
@@ -22,6 +23,8 @@ namespace util {
         auto jlength = (jsize)length;
         jbyteArray new_array = env->NewByteArray(jlength);
         env->SetByteArrayRegion(new_array, 0, jlength, (jbyte*)from_str.data());
+
+        network_init(nullptr, nullptr, false, false, false, nullptr);
         return new_array;
     }
 

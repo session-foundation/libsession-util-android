@@ -7,11 +7,19 @@ plugins {
 android {
     namespace = "org.sessionfoundation.libsession_util"
     compileSdk = 35
+    ndkVersion = "26.3.11579264" // r27c can't compile gnutls due to mktime_z: make sure you check before updating this
 
     defaultConfig {
         minSdk = 24
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            cmake {
+                targets("session_util")
+                arguments("-GNinja")
+            }
+        }
     }
 
     externalNativeBuild {
@@ -65,8 +73,8 @@ publishing {
                 }
 
                 scm {
-                    connection = "scm:git:https://github.com/session-foundation/libsession-android"
-                    url = "https://github.com/session-foundation/libsession-android"
+                    connection = "scm:git:https://github.com/session-foundation/libsession-util-android"
+                    url = "https://github.com/session-foundation/libsession-util-android"
                 }
             }
 
@@ -85,4 +93,17 @@ publishing {
 }
 
 dependencies {
+    implementation(libs.androidx.annotation.jvm)
+    implementation(libs.jna) {
+        artifact {
+            type = "aar"
+        }
+    }
+
+    testImplementation(libs.junit)
+
+    androidTestImplementation(libs.androidx.junit.ktx)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.espresso.core)
+    androidTestImplementation(libs.coroutines.test)
 }
