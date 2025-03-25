@@ -8,7 +8,6 @@ steps:
     commands:
       - git fetch --tags
       - git submodule update --init --recursive --depth=1
-      - git fetch --unshallow
 
   - name: publish
     image: registry.oxen.rocks/lokinet-ci-android:latest
