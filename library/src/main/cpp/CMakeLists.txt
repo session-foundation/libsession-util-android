@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
@@ -23,7 +23,13 @@ set(CMAKE_BUILD_TYPE Release)
 # Gradle automatically packages shared libraries with your APK.
 
 set(STATIC_BUNDLE ON)
-set(ENABLE_ONIONREQ OFF)
+set(ENABLE_ONIONREQ ON)
+
+set(LIBIDN2_VERSION 2.3.7)
+set(LIBIDN2_HASH SHA512=eab5702bc0baed45492f8dde43a4d2ea3560ad80645e5f9e0cfa8d3b57bccd7fd782d04638e000ba07924a5d9f85e760095b55189188c4017b94705bef9b4a66)
+
+set(GMP_MIRROR https://ftp.gnu.org/gnu/gmp)
+
 add_subdirectory(../../../../libsession-util libsession)
 
 set(SOURCES
@@ -70,7 +76,9 @@ target_link_libraries( # Specifies the target library.
         libsession::util
         libsession::config
         libsession::crypto
+        libsession::onionreq
+        quic
         libsodium::sodium-internal
         # Links the target library to the log library
         # included in the NDK.
-        ${log-lib})
+        log)

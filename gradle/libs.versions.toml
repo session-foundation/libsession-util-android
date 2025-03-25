@@ -1,8 +1,17 @@
 [versions]
-agp = "8.9.0"
+agp = "8.9.1"
 kotlin = "2.1.10"
+annotationJvm = "1.9.1"
+junit = "4.13.2"
+junitKtx = "1.2.1"
 
 [libraries]
+androidx-annotation-jvm = { group = "androidx.annotation", name = "annotation-jvm", version.ref = "annotationJvm" }
+jna = { group = "net.java.dev.jna", name = "jna", version = "5.17.0" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit-ktx = { group = "androidx.test.ext", name = "junit-ktx", version.ref = "junitKtx" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version = "3.6.1" }
+coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version = "1.9.0" }
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }
