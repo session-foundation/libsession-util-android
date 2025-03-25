@@ -1,0 +1,9 @@
+kind: pipeline
+type: docker
+name: Build and Publish
+
+steps:
+  - name: publish
+    image: registry.oxen.rocks/lokinet-ci-android:latest
+    commands:
+      - ./gradlew publish
