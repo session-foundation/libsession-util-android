@@ -23,7 +23,6 @@ steps:
     environment:
       SSH_KEY:
         from_secret: SSH_KEY
-      MAVEN_METADATA_PATH: library/build/repo/org/sessionfoundation/libsession-util-android/maven-metadata.xml
     commands:
       - apt-get -y install python3
       - ./scripts/upload-maven-artifacts.py
