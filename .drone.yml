@@ -16,4 +16,13 @@ steps:
     commands:
       - apt-get -y install ninja-build
       - update-java-alternatives -s java-1.17.0-openjdk-amd64
-      - ./gradlew publish
+      - env VERSION=`git describe --tags --dirty` ./gradlew publish
+
+  - name: upload the artifact
+    image: registry.oxen.rocks/lokinet-ci-android:latest
+    environment:
+      SSH_KEY:
+        from_secret: SSH_KEY
+      MAVEN_METADATA_PATH: library/build/repo/org/sessionfoundation/libsession-util-android/maven-metadata.xml
+    commands:
+      - ./scripts/upload-maven-artifacts.py
