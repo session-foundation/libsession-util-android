@@ -232,7 +232,7 @@ def _mkdirs_sftp_commands(path: Path) -> typing.List[str]:
 if __name__ == '__main__':
     upload(
         environment=Environment(
-            remote_ssh_key=_require_env_var('SSH_KEY'),
+            remote_ssh_key=_require_env_var('SSH_KEY') + '\n',
             remote_host='drone@oxen.rocks',
             repo=_require_env_var('DRONE_REPO').replace(' ', '_'),
             maven_metadata_path=Path(_require_env_var('DRONE_WORKSPACE')) / 'library/build/repo/org/sessionfoundation/libsession-util-android/maven-metadata.xml'
