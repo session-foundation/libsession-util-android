@@ -135,7 +135,7 @@ def upload(environment: Environment):
         remote_path = reduce(lambda path, c: path / c,
                              local_maven_repo_metadata.group_id.split('.'),
                              Path(f'oxen.rocks/{environment.repo}/maven')
-                             ) / local_maven_repo_metadata.artifact_id / local_maven_repo_metadata.artifact_id
+                             ) / local_maven_repo_metadata.artifact_id
         sftp_commands.extend(_mkdirs_sftp_commands(remote_path))
 
         # Grab the remote maven metadata if it exists
@@ -172,12 +172,14 @@ def upload(environment: Environment):
         merged_contents = merged_metadata.to_xml()
         merged_metadata_file = create_and_write_temp_file(merged_contents)
         tmp_files.append(merged_metadata_file)
+        os.chmod(merged_metadata_file.name, 0o644)
         sftp_commands.append(f'put "{merged_metadata_file.name}" {merged_metadata_filename}')
 
         # Create hashes for the metadata file
         merged_contents_bytes = merged_contents.encode('utf-8')
         for hash_info in _MAVEN_REPO_METADATA_HASHES:
             hash_file = create_and_write_temp_file(hash_info['hasher'](merged_contents_bytes).hexdigest())
+            os.chmod(hash_file.name, 0o644)
             tmp_files.append(hash_file)
             sftp_commands.append(f'put "{hash_file.name}" {merged_metadata_filename}.{hash_info["ext"]}')
 
