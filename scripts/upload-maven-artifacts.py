@@ -110,9 +110,8 @@ _MAVEN_REPO_METADATA_HASHES = [
     },
 ]
 
-
 def create_and_write_temp_file(content: str) -> NamedTemporaryFile:
-    tmp_file = NamedTemporaryFile('wt')
+    tmp_file = NamedTemporaryFile('wt', dir=os.getcwd())
     tmp_file.write(content)
     tmp_file.flush()
     return tmp_file
@@ -187,15 +186,12 @@ def upload(environment: Environment):
 
     finally:
         for tmp_file in tmp_files:
+            print(f'Clean up {tmp_file.name}')
             tmp_file.close()
 
 
 def _ls_remote_dir(ssh_key_path: str, host: str, remote_dir: Path) -> typing.List[str]:
-    with NamedTemporaryFile('wt') as command_file:
-        command_file.write(f'cd "{remote_dir}"\n')
-        command_file.write(f'ls -1\n')
-        command_file.flush()
-
+    with create_and_write_temp_file(f'cd "{remote_dir}"\nls -1\n') as command_file:
         try:
             lines = subprocess.check_output(
                 ['sftp', '-i', ssh_key_path, '-o', 'StrictHostKeyChecking=off', '-b', command_file.name, host]).splitlines()
@@ -213,13 +209,7 @@ def _get_remote_maven_metadata(ssh_key_path: str, host: str, remote_meta_path: P
 
 
 def _run_sftp_commands(ssh_key_path: str, host: str, commands: typing.List[str]):
-    with NamedTemporaryFile('wt') as command_file:
-        for command in commands:
-            command_file.write(command)
-            command_file.write('\n')
-
-        command_file.flush()
-
+    with create_and_write_temp_file('\n'.join(commands) + '\n') as command_file:
         subprocess.check_call(
             ['sftp', '-i', ssh_key_path, '-o', 'StrictHostKeyChecking=off', '-b', command_file.name, host])
 
