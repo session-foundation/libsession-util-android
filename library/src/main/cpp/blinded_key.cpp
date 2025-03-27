@@ -32,3 +32,27 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blindVersionSign(J
         return util::bytes_from_ustring(env, bytes);
     });
 }
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blindVersionSignRequest(JNIEnv *env,
+                                                                                      jobject thiz,
+                                                                                      jbyteArray ed25519_secret_key,
+                                                                                      jlong timestamp,
+                                                                                      jstring method,
+                                                                                      jstring path,
+                                                                                      jbyteArray body) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        auto methodC = util::string_from_jstring(env, method);
+        auto pathC = util::string_from_jstring(env, path);
+
+        auto bytes = session::blind_version_sign_request(
+                util::ustring_from_bytes(env, ed25519_secret_key),
+                timestamp,
+                methodC,
+                pathC,
+                body ? std::optional(util::ustring_from_bytes(env, body)) : std::nullopt
+        );
+        return util::bytes_from_ustring(env, bytes);
+    });
+}

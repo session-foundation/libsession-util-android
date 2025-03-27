@@ -12,4 +12,10 @@ object BlindKeyAPI {
 
     external fun blindVersionKeyPair(ed25519SecretKey: ByteArray): KeyPair
     external fun blindVersionSign(ed25519SecretKey: ByteArray, timestamp: Long): ByteArray
+    external fun blindVersionSignRequest(
+        ed25519SecretKey: ByteArray,
+        timestamp: Long,
+        method: String,
+        path: String,
+        body: ByteArray?): ByteArray
 }
