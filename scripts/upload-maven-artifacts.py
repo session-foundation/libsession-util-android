@@ -135,7 +135,7 @@ def upload(environment: Environment):
         remote_path = reduce(lambda path, c: path / c,
                              local_maven_repo_metadata.group_id.split('.'),
                              Path(f'oxen.rocks/{environment.repo}/maven')
-                             ) / local_maven_repo_metadata.artifact_id
+                             ) / local_maven_repo_metadata.artifact_id / local_maven_repo_metadata.artifact_id
         sftp_commands.extend(_mkdirs_sftp_commands(remote_path))
 
         # Grab the remote maven metadata if it exists
