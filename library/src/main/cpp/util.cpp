@@ -243,8 +243,8 @@ Java_network_loki_messenger_libsession_1util_util_Sodium_encryptForMultipleSimpl
         recipient_vec.emplace_back(recipient);
     }
 
-    std::vector<session::ustring_view> message_sv_vec{};
-    std::vector<session::ustring_view> recipient_sv_vec{};
+    std::vector<std::span<const unsigned char>> message_sv_vec{};
+    std::vector<std::span<const unsigned char>> recipient_sv_vec{};
     for (int i = 0; i < size; i++) {
         message_sv_vec.emplace_back(session::to_span(message_vec[i]));
         recipient_sv_vec.emplace_back(session::to_span(recipient_vec[i]));

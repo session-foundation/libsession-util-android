@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <session/blinding.hpp>
+#include <session/util.hpp>
 
 #include "util.h"
 #include "jni_utils.h"
@@ -45,13 +46,15 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blindVersionSignRe
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
         auto methodC = util::string_from_jstring(env, method);
         auto pathC = util::string_from_jstring(env, path);
+        auto keyBytes = util::vector_from_bytes(env, ed25519_secret_key);
+        auto bodyBytes = body ? std::optional(util::vector_from_bytes(env, body)) : std::nullopt;
 
         auto bytes = session::blind_version_sign_request(
-                util::span_from_bytes(env, ed25519_secret_key),
+                session::to_span(keyBytes),
                 timestamp,
                 methodC,
                 pathC,
-                body ? std::optional(util::span_from_bytes(env, body)) : std::nullopt
+                body ? std::optional(session::to_span(*bodyBytes)) : std::nullopt
         );
         return util::bytes_from_vector(env, bytes);
     });

@@ -146,7 +146,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_rekey(JNIEnv *env, 
     auto info = reinterpret_cast<session::config::groups::Info*>(info_ptr);
     auto members = reinterpret_cast<session::config::groups::Members*>(members_ptr);
     auto rekey = keys->rekey(*info, *members);
-    auto rekey_bytes = util::bytes_from_span(env, rekey.data());
+    auto rekey_bytes = util::bytes_from_span(env, rekey);
     return rekey_bytes;
 }
 
