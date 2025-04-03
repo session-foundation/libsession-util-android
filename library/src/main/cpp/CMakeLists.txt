@@ -9,8 +9,8 @@ cmake_minimum_required(VERSION 3.18.1)
 
 project("session_util")
 
-# Compiles in C++17 mode
-set(CMAKE_CXX_STANDARD 17)
+# Compiles in C++20 mode
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
