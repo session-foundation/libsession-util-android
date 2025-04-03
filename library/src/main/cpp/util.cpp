@@ -24,7 +24,6 @@ namespace util {
         jbyteArray new_array = env->NewByteArray(jlength);
         env->SetByteArrayRegion(new_array, 0, jlength, (jbyte*)from_str.data());
 
-        network_init(nullptr, nullptr, false, false, false, nullptr);
         return new_array;
     }
 

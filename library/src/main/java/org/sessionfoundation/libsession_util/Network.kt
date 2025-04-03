@@ -5,6 +5,7 @@ import com.sun.jna.Native
 import com.sun.jna.NativeLong
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.PointerByReference
+import org.sessionfoundation.libsession_util.bindings.SessionNetworkBinding
 import java.io.File
 import java.net.Inet4Address
 import java.net.InetAddress
@@ -49,15 +50,15 @@ class Network internal constructor(
 
     suspend fun getSwarm(pubKeyHex: String): List<ServiceNode> {
         return suspendCoroutine { cont ->
-            library.network_get_swarm(ptr, object : SessionUtilLibrary.GetSwarmCallback {
+            library.network_get_swarm(ptr, object : SessionNetworkBinding.GetSwarmCallback {
                 override fun invoke(
-                    nodes: SessionUtilLibrary.NetworkServiceNode.ByReference,
+                    nodes: SessionNetworkBinding.NetworkServiceNode.ByReference,
                     nodeLen: NativeLong,
                     data: Pointer
                 ) {
                     cont.resume(
                         nodes.toArray(nodeLen.toInt())
-                            .map { node -> ServiceNode(node as SessionUtilLibrary.NetworkServiceNode) }
+                            .map { node -> ServiceNode(node as SessionNetworkBinding.NetworkServiceNode) }
                     )
                 }
             }, Pointer.NULL)
@@ -69,7 +70,7 @@ class Network internal constructor(
         val quicPort: Short,
         val ed25519PubKeyHex: String,
     ) {
-        internal constructor(node: SessionUtilLibrary.NetworkServiceNode)
+        internal constructor(node: SessionNetworkBinding.NetworkServiceNode)
                 : this(
             address = InetAddress.getByAddress(node.ip) as Inet4Address,
             quicPort = node.quic_port,

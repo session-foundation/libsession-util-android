@@ -17,7 +17,7 @@ class NetworkTest {
     @Before
     fun setUp() {
         network = Network(
-            library = Native.load("session_util", SessionUtilLibrary::class.java),
+            library = SessionUtilLibrary.load(),
             cacheDir = InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,
             useTestnet = true,
             singlePathMode = false,
