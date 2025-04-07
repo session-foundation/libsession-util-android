@@ -26,26 +26,28 @@ Java_network_loki_messenger_libsession_1util_ConfigBase_needsDump(JNIEnv *env, j
 
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConfigBase_push(JNIEnv *env, jobject thiz) {
-    std::lock_guard lock{util::util_mutex_};
-    auto config = ptrToConfigBase(env, thiz);
-    auto push_tuple = config->push();
-    auto to_push_str = std::get<1>(push_tuple);
-    auto to_delete = std::get<2>(push_tuple);
+    return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=] {
+        std::lock_guard lock{util::util_mutex_};
+        auto config = ptrToConfigBase(env, thiz);
+        auto push_tuple = config->push();
+        auto to_push_str = std::get<1>(push_tuple);
+        auto to_delete = std::get<2>(push_tuple);
 
-    jbyteArray returnByteArray = util::bytes_from_vector(env, to_push_str);
-    jlong seqNo = std::get<0>(push_tuple);
-    jclass returnObjectClass = env->FindClass("network/loki/messenger/libsession_util/util/ConfigPush");
-    jclass stackClass = env->FindClass("java/util/Stack");
-    jmethodID methodId = env->GetMethodID(returnObjectClass, "<init>", "([BJLjava/util/List;)V");
-    jmethodID stack_init = env->GetMethodID(stackClass, "<init>", "()V");
-    jobject our_stack = env->NewObject(stackClass, stack_init);
-    jmethodID push_stack = env->GetMethodID(stackClass, "push", "(Ljava/lang/Object;)Ljava/lang/Object;");
-    for (auto entry : to_delete) {
-        auto entry_jstring = env->NewStringUTF(entry.data());
-        env->CallObjectMethod(our_stack, push_stack, entry_jstring);
-    }
-    jobject returnObject = env->NewObject(returnObjectClass, methodId, returnByteArray, seqNo, our_stack);
-    return returnObject;
+        jbyteArray returnByteArray = util::bytes_from_vector(env, to_push_str);
+        jlong seqNo = std::get<0>(push_tuple);
+        jclass returnObjectClass = env->FindClass("network/loki/messenger/libsession_util/util/ConfigPush");
+        jclass stackClass = env->FindClass("java/util/Stack");
+        jmethodID methodId = env->GetMethodID(returnObjectClass, "<init>", "([BJLjava/util/List;)V");
+        jmethodID stack_init = env->GetMethodID(stackClass, "<init>", "()V");
+        jobject our_stack = env->NewObject(stackClass, stack_init);
+        jmethodID push_stack = env->GetMethodID(stackClass, "push", "(Ljava/lang/Object;)Ljava/lang/Object;");
+        for (auto entry : to_delete) {
+            auto entry_jstring = env->NewStringUTF(entry.data());
+            env->CallObjectMethod(our_stack, push_stack, entry_jstring);
+        }
+        jobject returnObject = env->NewObject(returnObjectClass, methodId, returnByteArray, seqNo, our_stack);
+        return returnObject;
+    });
 }
 
 JNIEXPORT void JNICALL
