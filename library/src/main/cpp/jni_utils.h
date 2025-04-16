@@ -3,6 +3,10 @@
 
 #include <jni.h>
 #include <exception>
+#include <ranges>
+#include <type_traits>
+
+#include "util.h"
 
 namespace jni_utils {
     /**
@@ -48,6 +52,43 @@ namespace jni_utils {
 
             return RetT();
         });
+    }
+
+    template <typename IterBegin, typename IterEnd, typename ConvertItemFunc>
+    jobject jlist_from_iterator(JNIEnv *env, IterBegin begin, IterEnd end, const ConvertItemFunc &func) {
+        jclass list_clazz = env->FindClass("java/util/ArrayList");
+        jmethodID init = env->GetMethodID(list_clazz, "<init>", "()V");
+        jobject our_list = env->NewObject(list_clazz, init);
+        jmethodID push = env->GetMethodID(list_clazz, "add", "(Ljava/lang/Object;)Z");
+
+        for (auto iter = begin; iter != end; ++iter) {
+            jobject item_java = func(env, *iter);
+            env->CallBooleanMethod(our_list, push, item_java);
+            env->DeleteLocalRef(item_java);
+        }
+
+        env->DeleteLocalRef(list_clazz);
+        return our_list;
+    }
+
+    template <typename Collection, typename ConvertItemFunc>
+    jobject jlist_from_collection(JNIEnv *env, const Collection& obj, const ConvertItemFunc &func) {
+        return jlist_from_iterator(env, obj.begin(), obj.end(), func);
+    }
+
+    template <typename Collection>
+    jobject jstring_list_from_collection(JNIEnv *env, const Collection& obj) {
+        return jlist_from_collection(env, obj, util::jstringFromOptional);
+    }
+
+    template <typename Collection>
+    jobject session_bytes_from_range(JNIEnv *env, const Collection &obj) {
+        jclass bytes_clazz = env->FindClass("network/loki/messenger/libsession_util/util/Bytes");
+        jmethodID init = env->GetMethodID(bytes_clazz, "<init>", "([B)V");
+
+        auto bytes_array = env->NewByteArray(static_cast<jsize>(obj.size()));
+        env->SetByteArrayRegion(bytes_array, 0, static_cast<jsize>(obj.size()), reinterpret_cast<const jbyte *>(obj.data()));
+        return env->NewObject(bytes_clazz, init, bytes_array);
     }
 }
 

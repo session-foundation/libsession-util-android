@@ -29,24 +29,17 @@ Java_network_loki_messenger_libsession_1util_ConfigBase_push(JNIEnv *env, jobjec
     return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=] {
         std::lock_guard lock{util::util_mutex_};
         auto config = ptrToConfigBase(env, thiz);
-        auto push_tuple = config->push();
-        auto to_push_str = std::get<1>(push_tuple);
-        auto to_delete = std::get<2>(push_tuple);
+        auto [seq_no, to_push, to_delete] = config->push();
 
-        jbyteArray returnByteArray = util::bytes_from_vector(env, to_push_str);
-        jlong seqNo = std::get<0>(push_tuple);
+        jobject messages = jni_utils::jlist_from_collection(env, to_push, [](JNIEnv *env, const std::vector<unsigned char> &data) {
+            return jni_utils::session_bytes_from_range(env, data);
+        });
+
+        jobject obsoleteHashes = jni_utils::jstring_list_from_collection(env, to_delete);
+
         jclass returnObjectClass = env->FindClass("network/loki/messenger/libsession_util/util/ConfigPush");
-        jclass stackClass = env->FindClass("java/util/Stack");
-        jmethodID methodId = env->GetMethodID(returnObjectClass, "<init>", "([BJLjava/util/List;)V");
-        jmethodID stack_init = env->GetMethodID(stackClass, "<init>", "()V");
-        jobject our_stack = env->NewObject(stackClass, stack_init);
-        jmethodID push_stack = env->GetMethodID(stackClass, "push", "(Ljava/lang/Object;)Ljava/lang/Object;");
-        for (auto entry : to_delete) {
-            auto entry_jstring = env->NewStringUTF(entry.data());
-            env->CallObjectMethod(our_stack, push_stack, entry_jstring);
-        }
-        jobject returnObject = env->NewObject(returnObjectClass, methodId, returnByteArray, seqNo, our_stack);
-        return returnObject;
+        jmethodID methodId = env->GetMethodID(returnObjectClass, "<init>", "(Ljava/util/List;JLjava/util/List;)V");
+        return env->NewObject(returnObjectClass, methodId, messages, static_cast<jlong>(seq_no), obsoleteHashes);
     });
 }
 
@@ -75,12 +68,21 @@ Java_network_loki_messenger_libsession_1util_ConfigBase_encryptionDomain(JNIEnv 
 JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_ConfigBase_confirmPushed(JNIEnv *env, jobject thiz,
                                                                       jlong seq_no,
-                                                                      jstring new_hash_jstring) {
+                                                                      jobjectArray hash_list) {
     std::lock_guard lock{util::util_mutex_};
     auto conf = ptrToConfigBase(env, thiz);
-    auto new_hash = env->GetStringUTFChars(new_hash_jstring, nullptr);
-    conf->confirm_pushed(seq_no, new_hash);
-    env->ReleaseStringUTFChars(new_hash_jstring, new_hash);
+    auto hash_list_size = env->GetArrayLength(hash_list);
+    std::unordered_set<std::string> hashes(hash_list_size);
+
+    for (int i = 0; i < hash_list_size; i++) {
+        auto hash_jstring = (jstring) env->GetObjectArrayElement(hash_list, i);
+        auto hash = env->GetStringUTFChars(hash_jstring, nullptr);
+        hashes.insert(hash);
+        env->ReleaseStringUTFChars(hash_jstring, hash);
+        env->DeleteLocalRef(hash_jstring);
+    }
+
+    conf->confirm_pushed(seq_no, hashes);
 }
 
 #pragma clang diagnostic push
@@ -98,9 +100,7 @@ Java_network_loki_messenger_libsession_1util_ConfigBase_merge___3Lkotlin_Pair_2(
             auto pair = extractHashAndData(env, jElement);
             configs.push_back(pair);
         }
-        auto returned = conf->merge(configs);
-        auto string_stack = util::build_string_stack(env, returned);
-        return string_stack;
+        return jni_utils::jstring_list_from_collection(env, conf->merge(configs));
     });
 }
 
@@ -137,16 +137,8 @@ Java_network_loki_messenger_libsession_1util_ConfigBase_00024Companion_kindFor(J
 
 extern "C"
 JNIEXPORT jobject JNICALL
-Java_network_loki_messenger_libsession_1util_ConfigBase_currentHashes(JNIEnv *env, jobject thiz) {
+Java_network_loki_messenger_libsession_1util_ConfigBase_activeHashes(JNIEnv *env, jobject thiz) {
     std::lock_guard lock{util::util_mutex_};
     auto conf = ptrToConfigBase(env, thiz);
-    jclass stack = env->FindClass("java/util/Stack");
-    jmethodID init = env->GetMethodID(stack, "<init>", "()V");
-    jobject our_stack = env->NewObject(stack, init);
-    jmethodID push = env->GetMethodID(stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;");
-    auto vec = conf->current_hashes();
-    for (std::string element: vec) {
-        env->CallObjectMethod(our_stack, push, env->NewStringUTF(element.data()));
-    }
-    return our_stack;
+    return jni_utils::jstring_list_from_collection(env, conf->active_hashes());
 }

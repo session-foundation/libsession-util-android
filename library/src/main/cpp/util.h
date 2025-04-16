@@ -29,7 +29,7 @@ namespace util {
     jobject serialize_group_member(JNIEnv* env, const session::config::groups::member& member);
     jobject jlongFromOptional(JNIEnv* env, std::optional<long long> optional);
     jstring jstringFromOptional(JNIEnv* env, std::optional<std::string_view> optional);
-    jobject build_string_stack(JNIEnv* env, std::vector<std::string> to_add);
-    jobject deserialize_swarm_auth(JNIEnv *env, session::config::groups::Keys::swarm_auth auth);}
+    jobject deserialize_swarm_auth(JNIEnv *env, session::config::groups::Keys::swarm_auth auth);
+}
 
 #endif

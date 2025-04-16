@@ -4,6 +4,7 @@
 #include <session/multi_encrypt.hpp>
 #include <session/util.hpp>
 #include <string>
+#include "jni_utils.h"
 
 #include <android/log.h>
 
@@ -58,19 +59,19 @@ namespace util {
 
     jobject serialize_user_pic(JNIEnv *env, session::config::profile_pic pic) {
         jclass returnObjectClass = env->FindClass("network/loki/messenger/libsession_util/util/UserPic");
-        jmethodID constructor = env->GetMethodID(returnObjectClass, "<init>", "(Ljava/lang/String;[B)V");
-        jstring url = env->NewStringUTF(pic.url.data());
-        jbyteArray byteArray = util::bytes_from_vector(env, pic.key);
-        return env->NewObject(returnObjectClass, constructor, url, byteArray);
+        jmethodID constructor = env->GetMethodID(returnObjectClass, "<init>", "(Ljava/lang/String;Lnetwork/loki/messenger/libsession_util/util/Bytes;)V");
+        return env->NewObject(returnObjectClass, constructor,
+                              env->NewStringUTF(pic.url.data()),
+                              jni_utils::session_bytes_from_range(env, pic.key)
+                              );
     }
 
     std::pair<jstring, jbyteArray> deserialize_user_pic(JNIEnv *env, jobject user_pic) {
-        jclass userPicClass = env->FindClass("network/loki/messenger/libsession_util/util/UserPic");
-        jfieldID picField = env->GetFieldID(userPicClass, "url", "Ljava/lang/String;");
-        jfieldID keyField = env->GetFieldID(userPicClass, "key", "[B");
-        auto pic = (jstring)env->GetObjectField(user_pic, picField);
-        auto key = (jbyteArray)env->GetObjectField(user_pic, keyField);
-        return {pic, key};
+        jclass userPicClass = env->GetObjectClass(user_pic);
+        return {
+            static_cast<jstring>(env->CallObjectMethod(user_pic, env->GetMethodID(userPicClass, "getUrl", "()Ljava/lang/String;"))),
+            static_cast<jbyteArray>(env->CallObjectMethod(user_pic, env->GetMethodID(userPicClass, "getKeyAsByteArray", "()[B")))
+        };
     }
 
     jobject serialize_base_community(JNIEnv *env, const session::config::community& community) {
@@ -137,17 +138,6 @@ namespace util {
         return std::pair(session::config::expiration_mode::none, 0);
     }
 
-    jobject build_string_stack(JNIEnv* env, std::vector<std::string> to_add) {
-        jclass stack_class = env->FindClass("java/util/Stack");
-        jmethodID constructor = env->GetMethodID(stack_class,"<init>", "()V");
-        jmethodID add = env->GetMethodID(stack_class, "push", "(Ljava/lang/Object;)Ljava/lang/Object;");
-        jobject our_stack = env->NewObject(stack_class, constructor);
-        for (std::basic_string_view<char> string: to_add) {
-            env->CallObjectMethod(our_stack, add, env->NewStringUTF(string.data()));
-        }
-        return our_stack;
-    }
-
     jobject serialize_group_member(JNIEnv* env, const session::config::groups::member& member) {
         jclass group_member_class = env->FindClass("network/loki/messenger/libsession_util/util/GroupMember");
         jmethodID constructor = env->GetMethodID(group_member_class, "<init>", "(J)V");
@@ -194,13 +184,12 @@ Java_network_loki_messenger_libsession_1util_util_Sodium_ed25519KeyPair(JNIEnv *
     crypto_sign_ed25519_seed_keypair(ed_pk.data(), ed_sk.data(), seed_bytes.data());
 
     jclass kp_class = env->FindClass("network/loki/messenger/libsession_util/util/KeyPair");
-    jmethodID kp_constructor = env->GetMethodID(kp_class, "<init>", "([B[B)V");
+    jmethodID kp_constructor = env->GetMethodID(kp_class, "<init>", "(Lnetwork/loki/messenger/libsession_util/util/Bytes;Lnetwork/loki/messenger/libsession_util/util/Bytes;)V");
 
-    jbyteArray pk_jarray = util::bytes_from_span(env, std::span<const unsigned char> {ed_pk.data(), ed_pk.size()});
-    jbyteArray sk_jarray = util::bytes_from_span(env, std::span<const unsigned char> {ed_sk.data(), ed_sk.size()});
-
-    jobject return_obj = env->NewObject(kp_class, kp_constructor, pk_jarray, sk_jarray);
-    return return_obj;
+    return env->NewObject(kp_class, kp_constructor,
+                          jni_utils::session_bytes_from_range(env, ed_pk),
+                          jni_utils::session_bytes_from_range(env, ed_sk)
+    );
 }
 
 extern "C"
