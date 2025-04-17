@@ -16,7 +16,7 @@ steps:
     environment:
       ANDROID_HOME: /usr/lib/android-sdk
     commands:
-      - apt-get -y install ninja-build
+      - apt-get -y update && apt-get -y install ninja-build
       - update-java-alternatives -s java-1.17.0-openjdk-amd64
       - env VERSION=`git describe --tags --dirty` ./gradlew publish
 
@@ -26,5 +26,5 @@ steps:
       SSH_KEY:
         from_secret: SSH_KEY
     commands:
-      - apt-get -y install python3
+      - apt-get -y update && apt-get -y install python3
       - ./scripts/upload-maven-artifacts.py

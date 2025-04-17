@@ -57,16 +57,7 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_groupKeys(JNIEnv *env, jobject thiz) {
     std::lock_guard lock{util::util_mutex_};
     auto config = ptrToKeys(env, thiz);
-    auto keys = config->group_keys();
-    jclass stack = env->FindClass("java/util/Stack");
-    jmethodID init = env->GetMethodID(stack, "<init>", "()V");
-    jobject our_stack = env->NewObject(stack, init);
-    jmethodID push = env->GetMethodID(stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;");
-    for (auto& key : keys) {
-        auto key_bytes = util::bytes_from_span(env, key);
-        env->CallObjectMethod(our_stack, push, key_bytes);
-    }
-    return our_stack;
+    return jni_utils::jlist_from_collection(env, config->group_keys(), util::bytes_from_span);
 }
 
 extern "C"
@@ -206,34 +197,16 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_keys(JNIEnv *env, jobject thiz) {
     std::lock_guard lock{util::util_mutex_};
     auto ptr = ptrToKeys(env, thiz);
-    auto keys = ptr->group_keys();
-    jclass stack = env->FindClass("java/util/Stack");
-    jmethodID init = env->GetMethodID(stack, "<init>", "()V");
-    jobject our_stack = env->NewObject(stack, init);
-    jmethodID push = env->GetMethodID(stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;");
-    for (auto& key : keys) {
-        auto key_bytes = util::bytes_from_span(env, key);
-        env->CallObjectMethod(our_stack, push, key_bytes);
-    }
-    return our_stack;
+    return jni_utils::jlist_from_collection(env, ptr->group_keys(), util::bytes_from_span);
 }
 
 extern "C"
 JNIEXPORT jobject JNICALL
-Java_network_loki_messenger_libsession_1util_GroupKeysConfig_currentHashes(JNIEnv *env,
+Java_network_loki_messenger_libsession_1util_GroupKeysConfig_activeHashes(JNIEnv *env,
                                                                            jobject thiz) {
     std::lock_guard lock{util::util_mutex_};
     auto ptr = ptrToKeys(env, thiz);
-    auto existing = ptr->current_hashes();
-    jclass stack = env->FindClass("java/util/Stack");
-    jmethodID init = env->GetMethodID(stack, "<init>", "()V");
-    jobject our_list = env->NewObject(stack, init);
-    jmethodID push = env->GetMethodID(stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;");
-    for (auto& hash : existing) {
-        auto hash_bytes = env->NewStringUTF(hash.data());
-        env->CallObjectMethod(our_list, push, hash_bytes);
-    }
-    return our_list;
+    return jni_utils::jstring_list_from_collection(env, ptr->active_hashes());
 }
 extern "C"
 JNIEXPORT jbyteArray JNICALL

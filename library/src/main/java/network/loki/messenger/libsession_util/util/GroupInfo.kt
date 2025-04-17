@@ -6,8 +6,8 @@ sealed class GroupInfo {
 
     data class ClosedGroupInfo(
         val groupAccountId: String,
-        val adminKey: ByteArray?,
-        val authData: ByteArray?,
+        val adminKey: Bytes?,
+        val authData: Bytes?,
         val priority: Long,
         val invited: Boolean,
         val name: String,
@@ -16,14 +16,22 @@ sealed class GroupInfo {
         val joinedAtSecs: Long
     ): GroupInfo() {
         init {
-            require(adminKey == null || adminKey.isNotEmpty()) {
+            require(adminKey == null || adminKey.data.isNotEmpty()) {
                 "Admin key must be non-empty if present"
             }
 
-            require(authData == null || authData.isNotEmpty()) {
+            require(authData == null || authData.data.isNotEmpty()) {
                 "Auth data must be non-empty if present"
             }
         }
+
+        // For native code
+        val authDataAsByteArray: ByteArray?
+            get() = authData?.data
+
+        // For native code
+        val adminKeyAsByteArray: ByteArray?
+            get() = adminKey?.data
 
         fun hasAdminKey() = adminKey != null
 
@@ -46,8 +54,8 @@ sealed class GroupInfo {
         val accountId: String,
         val name: String,
         val members: Map<String, Boolean>,
-        val encPubKey: ByteArray,
-        val encSecKey: ByteArray,
+        val encPubKey: Bytes,
+        val encSecKey: Bytes,
         val priority: Long,
         val disappearingTimer: Long,
         val joinedAtSecs: Long
@@ -57,36 +65,12 @@ sealed class GroupInfo {
             external fun NAME_MAX_LENGTH(): Int
         }
 
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
+        // For native code
+        val encPubKeyAsByteArray: ByteArray
+            get() = encPubKey.data
 
-            other as LegacyGroupInfo
-
-            if (accountId != other.accountId) return false
-            if (name != other.name) return false
-            if (members != other.members) return false
-            if (!encPubKey.contentEquals(other.encPubKey)) return false
-            if (!encSecKey.contentEquals(other.encSecKey)) return false
-            if (priority != other.priority) return false
-            if (disappearingTimer != other.disappearingTimer) return false
-            if (joinedAtSecs != other.joinedAtSecs) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = accountId.hashCode()
-            result = 31 * result + name.hashCode()
-            result = 31 * result + members.hashCode()
-            result = 31 * result + encPubKey.contentHashCode()
-            result = 31 * result + encSecKey.contentHashCode()
-            result = 31 * result + priority.hashCode()
-            result = 31 * result + disappearingTimer.hashCode()
-            result = 31 * result + joinedAtSecs.hashCode()
-            return result
-        }
-
+        // For native code
+        val encSecKeyAsByteArray: ByteArray
+            get() = encSecKey.data
     }
-
 }

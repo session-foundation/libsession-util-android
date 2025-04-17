@@ -9,7 +9,6 @@ import network.loki.messenger.libsession_util.util.GroupInfo
 import network.loki.messenger.libsession_util.util.GroupMember
 import network.loki.messenger.libsession_util.util.UserPic
 import java.io.Closeable
-import java.util.Stack
 
 sealed class Config(initialPointer: Long): Closeable {
     var pointer = initialPointer
@@ -35,14 +34,14 @@ interface ReadableConfig {
     fun namespace(): Int
     fun needsPush(): Boolean
     fun needsDump(): Boolean
-    fun currentHashes(): List<String>
+    fun activeHashes(): List<String>
 }
 
 interface MutableConfig : ReadableConfig {
     fun push(): ConfigPush
     fun dump(): ByteArray
     fun encryptionDomain(): String
-    fun confirmPushed(seqNo: Long, newHash: String)
+    fun confirmPushed(seqNo: Long, hashes: Array<String>)
     fun dirty(): Boolean
 }
 
@@ -65,9 +64,9 @@ sealed class ConfigBase(pointer: Long): Config(pointer), MutableConfig {
     external override fun push(): ConfigPush
     external override fun dump(): ByteArray
     external override fun encryptionDomain(): String
-    external override fun confirmPushed(seqNo: Long, newHash: String)
-    external fun merge(toMerge: Array<Pair<String,ByteArray>>): Stack<String>
-    external override fun currentHashes(): List<String>
+    external override fun confirmPushed(seqNo: Long, hashes: Array<String>)
+    external fun merge(toMerge: Array<Pair<String, ByteArray>>): List<String>
+    external override fun activeHashes(): List<String>
 }
 
 
@@ -398,7 +397,7 @@ class GroupMembersConfig private constructor(pointer: Long): ConfigBase(pointer)
 
     override fun namespace() = Namespace.GROUP_MEMBERS()
 
-    external override fun all(): Stack<GroupMember>
+    external override fun all(): List<GroupMember>
     external override fun erase(pubKeyHex: String): Boolean
     external override fun get(pubKeyHex: String): GroupMember?
     external override fun getOrConstruct(pubKeyHex: String): GroupMember
@@ -415,17 +414,17 @@ class GroupMembersConfig private constructor(pointer: Long): ConfigBase(pointer)
 sealed class ConfigSig(pointer: Long) : Config(pointer)
 
 interface ReadableGroupKeysConfig {
-    fun groupKeys(): Stack<ByteArray>
+    fun groupKeys(): List<ByteArray>
     fun needsDump(): Boolean
     fun dump(): ByteArray
     fun needsRekey(): Boolean
     fun pendingKey(): ByteArray?
     fun supplementFor(userSessionIds: List<String>): ByteArray
     fun pendingConfig(): ByteArray?
-    fun currentHashes(): List<String>
+    fun activeHashes(): List<String>
     fun encrypt(plaintext: ByteArray): ByteArray
     fun decrypt(ciphertext: ByteArray): Pair<ByteArray, String>?
-    fun keys(): Stack<ByteArray>
+    fun keys(): List<ByteArray>
     fun subAccountSign(message: ByteArray, signingValue: ByteArray): GroupKeysConfig.SwarmAuth
     fun getSubAccountToken(sessionId: String, canWrite: Boolean = true, canDelete: Boolean = false): ByteArray
     fun currentGeneration(): Int
@@ -476,7 +475,7 @@ class GroupKeysConfig private constructor(
 
     override fun namespace() = Namespace.GROUP_KEYS()
 
-    external override fun groupKeys(): Stack<ByteArray>
+    external override fun groupKeys(): List<ByteArray>
     external override fun needsDump(): Boolean
     external override fun dump(): ByteArray
     external fun loadKey(message: ByteArray,
@@ -503,13 +502,13 @@ class GroupKeysConfig private constructor(
     }
 
     external override fun pendingConfig(): ByteArray?
-    external override fun currentHashes(): List<String>
+    external override fun activeHashes(): List<String>
     external fun rekey(infoPtr: Long, membersPtr: Long): ByteArray
 
     external override fun encrypt(plaintext: ByteArray): ByteArray
     external override fun decrypt(ciphertext: ByteArray): Pair<ByteArray, String>?
 
-    external override fun keys(): Stack<ByteArray>
+    external override fun keys(): List<ByteArray>
 
     external override fun makeSubAccount(sessionId: String, canWrite: Boolean, canDelete: Boolean): ByteArray
     external override fun getSubAccountToken(sessionId: String, canWrite: Boolean, canDelete: Boolean): ByteArray

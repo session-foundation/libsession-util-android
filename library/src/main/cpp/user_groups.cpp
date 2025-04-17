@@ -153,15 +153,9 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_size(JNIEnv *env, 
     return conf->size();
 }
 
-inline jobject iterator_as_java_stack(JNIEnv *env, const session::config::UserGroups::iterator& begin, const session::config::UserGroups::iterator& end) {
-    jclass stack = env->FindClass("java/util/Stack");
-    jmethodID init = env->GetMethodID(stack, "<init>", "()V");
-    jobject our_stack = env->NewObject(stack, init);
-    jmethodID push = env->GetMethodID(stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;");
-    for (auto it = begin; it != end;) {
-        // do something with it
-        auto item = *it;
-        jobject serialized = nullptr;
+inline jobject iterator_as_java_list(JNIEnv *env, session::config::UserGroups::iterator begin, session::config::UserGroups::iterator end) {
+    return jni_utils::jlist_from_iterator(env, begin, end, [](JNIEnv *env, const session::config::UserGroups::value_type &item) {
+        std::optional<jobject> serialized = std::nullopt;
         if (auto* lgc = std::get_if<session::config::legacy_group_info>(&item)) {
             serialized = serialize_legacy_group_info(env, *lgc);
         } else if (auto* community = std::get_if<session::config::community_info>(&item)) {
@@ -169,12 +163,9 @@ inline jobject iterator_as_java_stack(JNIEnv *env, const session::config::UserGr
         } else if (auto* closed = std::get_if<session::config::group_info>(&item)) {
             serialized = serialize_closed_group_info(env, *closed);
         }
-        if (serialized != nullptr) {
-            env->CallObjectMethod(our_stack, push, serialized);
-        }
-        it++;
-    }
-    return our_stack;
+
+        return serialized;
+    });
 }
 
 extern "C"
@@ -182,8 +173,7 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_UserGroupsConfig_all(JNIEnv *env, jobject thiz) {
     std::lock_guard lock{util::util_mutex_};
     auto conf = ptrToUserGroups(env, thiz);
-    jobject all_stack = iterator_as_java_stack(env, conf->begin(), conf->end());
-    return all_stack;
+    return iterator_as_java_list(env, conf->begin(), conf->end());
 }
 
 extern "C"
@@ -192,8 +182,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_allCommunityInfo(J
                                                                                jobject thiz) {
     std::lock_guard lock{util::util_mutex_};
     auto conf = ptrToUserGroups(env, thiz);
-    jobject community_stack = iterator_as_java_stack(env, conf->begin_communities(), conf->end());
-    return community_stack;
+    return iterator_as_java_list(env, conf->begin_communities(), conf->end());
 }
 
 extern "C"
@@ -202,8 +191,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_allLegacyGroupInfo
                                                                                  jobject thiz) {
     std::lock_guard lock{util::util_mutex_};
     auto conf = ptrToUserGroups(env, thiz);
-    jobject legacy_stack = iterator_as_java_stack(env, conf->begin_legacy_groups(), conf->end());
-    return legacy_stack;
+    return iterator_as_java_list(env, conf->begin_legacy_groups(), conf->end());
 }
 
 extern "C"
@@ -289,9 +277,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_allClosedGroupInfo
                                                                                  jobject thiz) {
     std::lock_guard lock{util::util_mutex_};
     auto conf = ptrToUserGroups(env, thiz);
-    auto closed_group_stack = iterator_as_java_stack(env, conf->begin_groups(), conf->end());
-
-    return closed_group_stack;
+    return iterator_as_java_list(env, conf->begin_groups(), conf->end());
 }
 
 extern "C"
