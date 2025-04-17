@@ -75,11 +75,10 @@ Java_network_loki_messenger_libsession_1util_ConfigBase_confirmPushed(JNIEnv *en
     std::unordered_set<std::string> hashes(hash_list_size);
 
     for (int i = 0; i < hash_list_size; i++) {
-        auto hash_jstring = (jstring) env->GetObjectArrayElement(hash_list, i);
-        auto hash = env->GetStringUTFChars(hash_jstring, nullptr);
+        auto hash_jstring = jni_utils::JavaLocalRef(env, (jstring) env->GetObjectArrayElement(hash_list, i));
+        auto hash = env->GetStringUTFChars(hash_jstring.get(), nullptr);
         hashes.insert(hash);
-        env->ReleaseStringUTFChars(hash_jstring, hash);
-        env->DeleteLocalRef(hash_jstring);
+        env->ReleaseStringUTFChars(hash_jstring.get(), hash);
     }
 
     conf->confirm_pushed(seq_no, hashes);
