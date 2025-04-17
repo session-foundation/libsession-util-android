@@ -5,9 +5,11 @@
 #include <jni.h>
 #include <string>
 
+#include "jni_utils.h"
+
 inline session::config::UserProfile* ptrToProfile(JNIEnv* env, jobject obj) {
-    jclass configClass = env->FindClass("network/loki/messenger/libsession_util/UserProfile");
-    jfieldID pointerField = env->GetFieldID(configClass, "pointer", "J");
+    auto configClass = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/UserProfile"));
+    jfieldID pointerField = env->GetFieldID(configClass.get(), "pointer", "J");
     return (session::config::UserProfile*) env->GetLongField(obj, pointerField);
 }
 

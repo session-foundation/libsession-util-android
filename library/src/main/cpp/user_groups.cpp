@@ -155,15 +155,13 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_size(JNIEnv *env, 
 
 inline jobject iterator_as_java_list(JNIEnv *env, session::config::UserGroups::iterator begin, session::config::UserGroups::iterator end) {
     return jni_utils::jlist_from_iterator(env, begin, end, [](JNIEnv *env, const session::config::UserGroups::value_type &item) {
-        jobject serialized = nullptr;
+        std::optional<jobject> serialized = std::nullopt;
         if (auto* lgc = std::get_if<session::config::legacy_group_info>(&item)) {
             serialized = serialize_legacy_group_info(env, *lgc);
         } else if (auto* community = std::get_if<session::config::community_info>(&item)) {
             serialized = serialize_community_info(env, *community);
         } else if (auto* closed = std::get_if<session::config::group_info>(&item)) {
             serialized = serialize_closed_group_info(env, *closed);
-        } else {
-            env->ThrowNew(env->FindClass("java/lang/IllegalArgumentException"), "Unknown group type");
         }
 
         return serialized;

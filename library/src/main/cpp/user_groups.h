@@ -9,62 +9,62 @@
 #include "session/config/user_groups.hpp"
 
 inline session::config::UserGroups* ptrToUserGroups(JNIEnv *env, jobject obj) {
-    jclass configClass = env->FindClass("network/loki/messenger/libsession_util/UserGroupsConfig");
-    jfieldID pointerField = env->GetFieldID(configClass, "pointer", "J");
+    auto configClass = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/UserGroupsConfig"));
+    jfieldID pointerField = env->GetFieldID(configClass.get(), "pointer", "J");
     return (session::config::UserGroups*) env->GetLongField(obj, pointerField);
 }
 
 inline void deserialize_members_into(JNIEnv *env, jobject members_map, session::config::legacy_group_info& to_append_group) {
-    jclass map_class = env->FindClass("java/util/Map");
-    jclass map_entry_class = env->FindClass("java/util/Map$Entry");
-    jclass set_class = env->FindClass("java/util/Set");
-    jclass iterator_class = env->FindClass("java/util/Iterator");
-    jclass boxed_bool = env->FindClass("java/lang/Boolean");
+    auto map_class = jni_utils::JavaLocalRef(env, env->FindClass("java/util/Map"));
+    auto map_entry_class = jni_utils::JavaLocalRef(env, env->FindClass("java/util/Map$Entry"));
+    auto set_class = jni_utils::JavaLocalRef(env, env->FindClass("java/util/Set"));
+    auto iterator_class = jni_utils::JavaLocalRef(env, env->FindClass("java/util/Iterator"));
+    auto boxed_bool = jni_utils::JavaLocalRef(env, env->FindClass("java/lang/Boolean"));
 
-    jmethodID get_entry_set = env->GetMethodID(map_class, "entrySet", "()Ljava/util/Set;");
-    jmethodID get_at = env->GetMethodID(set_class, "iterator", "()Ljava/util/Iterator;");
-    jmethodID has_next = env->GetMethodID(iterator_class, "hasNext", "()Z");
-    jmethodID next = env->GetMethodID(iterator_class, "next", "()Ljava/lang/Object;");
-    jmethodID get_key = env->GetMethodID(map_entry_class, "getKey", "()Ljava/lang/Object;");
-    jmethodID get_value = env->GetMethodID(map_entry_class, "getValue", "()Ljava/lang/Object;");
-    jmethodID get_bool_value = env->GetMethodID(boxed_bool, "booleanValue", "()Z");
+    jmethodID get_entry_set = env->GetMethodID(map_class.get(), "entrySet", "()Ljava/util/Set;");
+    jmethodID get_at = env->GetMethodID(set_class.get(), "iterator", "()Ljava/util/Iterator;");
+    jmethodID has_next = env->GetMethodID(iterator_class.get(), "hasNext", "()Z");
+    jmethodID next = env->GetMethodID(iterator_class.get(), "next", "()Ljava/lang/Object;");
+    jmethodID get_key = env->GetMethodID(map_entry_class.get(), "getKey", "()Ljava/lang/Object;");
+    jmethodID get_value = env->GetMethodID(map_entry_class.get(), "getValue", "()Ljava/lang/Object;");
+    jmethodID get_bool_value = env->GetMethodID(boxed_bool.get(), "booleanValue", "()Z");
 
-    jobject entry_set = env->CallObjectMethod(members_map, get_entry_set);
-    jobject iterator = env->CallObjectMethod(entry_set, get_at);
+    auto entry_set = jni_utils::JavaLocalRef(env, env->CallObjectMethod(members_map, get_entry_set));
+    auto iterator = jni_utils::JavaLocalRef(env, env->CallObjectMethod(entry_set.get(), get_at));
 
-    while (env->CallBooleanMethod(iterator, has_next)) {
-        jobject entry = env->CallObjectMethod(iterator, next);
-        jstring key = static_cast<jstring>(env->CallObjectMethod(entry, get_key));
-        jobject boxed = env->CallObjectMethod(entry, get_value);
-        bool is_admin = env->CallBooleanMethod(boxed, get_bool_value);
-        auto member_string = env->GetStringUTFChars(key, nullptr);
+    while (env->CallBooleanMethod(iterator.get(), has_next)) {
+        auto entry = jni_utils::JavaLocalRef(env, env->CallObjectMethod(iterator.get(), next));
+        auto key = jni_utils::JavaLocalRef(env, static_cast<jstring>(env->CallObjectMethod(entry.get(), get_key)));
+        auto boxed = jni_utils::JavaLocalRef(env, env->CallObjectMethod(entry.get(), get_value));
+        bool is_admin = env->CallBooleanMethod(boxed.get(), get_bool_value);
+        auto member_string = env->GetStringUTFChars(key.get(), nullptr);
         to_append_group.insert(member_string, is_admin);
-        env->ReleaseStringUTFChars(key, member_string);
+        env->ReleaseStringUTFChars(key.get(), member_string);
     }
 }
 
 inline session::config::legacy_group_info deserialize_legacy_group_info(JNIEnv *env, jobject info, session::config::UserGroups* conf) {
-    auto clazz = env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$LegacyGroupInfo");
-    auto id_field = env->GetFieldID(clazz, "accountId", "Ljava/lang/String;");
-    auto name_field = env->GetFieldID(clazz, "name", "Ljava/lang/String;");
-    auto members_field = env->GetFieldID(clazz, "members", "Ljava/util/Map;");
-    auto enc_pub_key_method = env->GetMethodID(clazz, "getEncPubKeyAsByteArray", "()[B");
-    auto enc_sec_key_method = env->GetMethodID(clazz, "getEncSecKeyAsByteArray", "()[B");
-    auto priority_field = env->GetFieldID(clazz, "priority", "J");
-    auto disappearing_timer_field = env->GetFieldID(clazz, "disappearingTimer", "J");
-    auto joined_at_field = env->GetFieldID(clazz, "joinedAtSecs", "J");
-    auto id = static_cast<jstring>(env->GetObjectField(info, id_field));
-    jstring name = static_cast<jstring>(env->GetObjectField(info, name_field));
-    jobject members_map = env->GetObjectField(info, members_field);
-    jbyteArray enc_pub_key = static_cast<jbyteArray>(env->CallObjectMethod(info, enc_pub_key_method));
-    jbyteArray enc_sec_key = static_cast<jbyteArray>(env->CallObjectMethod(info, enc_sec_key_method));
+    auto clazz = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$LegacyGroupInfo"));
+    auto id_field = env->GetFieldID(clazz.get(), "accountId", "Ljava/lang/String;");
+    auto name_field = env->GetFieldID(clazz.get(), "name", "Ljava/lang/String;");
+    auto members_field = env->GetFieldID(clazz.get(), "members", "Ljava/util/Map;");
+    auto enc_pub_key_method = env->GetMethodID(clazz.get(), "getEncPubKeyAsByteArray", "()[B");
+    auto enc_sec_key_method = env->GetMethodID(clazz.get(), "getEncSecKeyAsByteArray", "()[B");
+    auto priority_field = env->GetFieldID(clazz.get(), "priority", "J");
+    auto disappearing_timer_field = env->GetFieldID(clazz.get(), "disappearingTimer", "J");
+    auto joined_at_field = env->GetFieldID(clazz.get(), "joinedAtSecs", "J");
+    auto id = jni_utils::JavaLocalRef(env, static_cast<jstring>(env->GetObjectField(info, id_field)));
+    auto name = jni_utils::JavaLocalRef(env, static_cast<jstring>(env->GetObjectField(info, name_field)));
+    auto members_map = jni_utils::JavaLocalRef(env, env->GetObjectField(info, members_field));
+    auto enc_pub_key = jni_utils::JavaLocalRef(env, static_cast<jbyteArray>(env->CallObjectMethod(info, enc_pub_key_method)));
+    auto enc_sec_key = jni_utils::JavaLocalRef(env, static_cast<jbyteArray>(env->CallObjectMethod(info, enc_sec_key_method)));
     int priority = env->GetLongField(info, priority_field);
     long joined_at = env->GetLongField(info, joined_at_field);
 
-    auto id_bytes = util::string_from_jstring(env, id);
-    auto name_bytes = env->GetStringUTFChars(name, nullptr);
-    auto enc_pub_key_bytes = util::vector_from_bytes(env, enc_pub_key);
-    auto enc_sec_key_bytes = util::vector_from_bytes(env, enc_sec_key);
+    auto id_bytes = util::string_from_jstring(env, id.get());
+    auto name_bytes = env->GetStringUTFChars(name.get(), nullptr);
+    auto enc_pub_key_bytes = util::vector_from_bytes(env, enc_pub_key.get());
+    auto enc_sec_key_bytes = util::vector_from_bytes(env, enc_sec_key.get());
 
     auto info_deserialized = conf->get_or_construct_legacy_group(id_bytes);
 
@@ -72,23 +72,23 @@ inline session::config::legacy_group_info deserialize_legacy_group_info(JNIEnv *
     for (auto member = current_members.begin(); member != current_members.end(); ++member) {
         info_deserialized.erase(member->first);
     }
-    deserialize_members_into(env, members_map, info_deserialized);
+    deserialize_members_into(env, members_map.get(), info_deserialized);
     info_deserialized.name = name_bytes;
     info_deserialized.enc_pubkey = enc_pub_key_bytes;
     info_deserialized.enc_seckey = enc_sec_key_bytes;
     info_deserialized.priority = priority;
     info_deserialized.disappearing_timer = std::chrono::seconds(env->GetLongField(info, disappearing_timer_field));
     info_deserialized.joined_at = joined_at;
-    env->ReleaseStringUTFChars(name, name_bytes);
+    env->ReleaseStringUTFChars(name.get(), name_bytes);
     return info_deserialized;
 }
 
 inline session::config::community_info deserialize_community_info(JNIEnv *env, jobject info, session::config::UserGroups* conf) {
-    auto clazz = env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$CommunityGroupInfo");
-    auto base_info = env->GetFieldID(clazz, "community", "Lnetwork/loki/messenger/libsession_util/util/BaseCommunityInfo;");
-    auto priority = env->GetFieldID(clazz, "priority", "J");
-    jobject base_community_info = env->GetObjectField(info, base_info);
-    auto deserialized_base_info = util::deserialize_base_community(env, base_community_info);
+    auto clazz = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$CommunityGroupInfo"));
+    auto base_info = env->GetFieldID(clazz.get(), "community", "Lnetwork/loki/messenger/libsession_util/util/BaseCommunityInfo;");
+    auto priority = env->GetFieldID(clazz.get(), "priority", "J");
+    auto base_community_info = jni_utils::JavaLocalRef(env, env->GetObjectField(info, base_info));
+    auto deserialized_base_info = util::deserialize_base_community(env, base_community_info.get());
     int deserialized_priority = env->GetLongField(info, priority);
     auto community_info = conf->get_or_construct_community(deserialized_base_info.base_url(), deserialized_base_info.room(), deserialized_base_info.pubkey_hex());
     community_info.priority = deserialized_priority;
@@ -96,73 +96,71 @@ inline session::config::community_info deserialize_community_info(JNIEnv *env, j
 }
 
 inline jobject serialize_members(JNIEnv *env, std::map<std::string, bool> members_map) {
-    jclass map_class = env->FindClass("java/util/HashMap");
-    jclass boxed_bool = env->FindClass("java/lang/Boolean");
-    jmethodID map_constructor = env->GetMethodID(map_class, "<init>", "()V");
-    jmethodID insert = env->GetMethodID(map_class, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
-    jmethodID new_bool = env->GetMethodID(boxed_bool, "<init>", "(Z)V");
+    auto map_class = jni_utils::JavaLocalRef(env, env->FindClass("java/util/HashMap"));
+    auto boxed_bool = jni_utils::JavaLocalRef(env, env->FindClass("java/lang/Boolean"));
+    jmethodID map_constructor = env->GetMethodID(map_class.get(), "<init>", "()V");
+    jmethodID insert = env->GetMethodID(map_class.get(), "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
+    jmethodID new_bool = env->GetMethodID(boxed_bool.get(), "<init>", "(Z)V");
 
-    jobject new_map = env->NewObject(map_class, map_constructor);
+    auto new_map = env->NewObject(map_class.get(), map_constructor);
     for (auto it = members_map.begin(); it != members_map.end(); it++) {
-        auto account_id = env->NewStringUTF(it->first.data());
+        auto account_id = jni_utils::JavaLocalRef(env, env->NewStringUTF(it->first.data()));
         bool is_admin = it->second;
-        auto jbool = env->NewObject(boxed_bool, new_bool, is_admin);
-        env->CallObjectMethod(new_map, insert, account_id, jbool);
+        auto jbool = jni_utils::JavaLocalRef(env, env->NewObject(boxed_bool.get(), new_bool, is_admin));
+        env->CallObjectMethod(new_map, insert, account_id.get(), jbool.get());
     }
     return new_map;
 }
 
 inline jobject serialize_legacy_group_info(JNIEnv *env, session::config::legacy_group_info info) {
-    jstring account_id = env->NewStringUTF(info.session_id.data());
-    jstring name = env->NewStringUTF(info.name.data());
-    jobject members = serialize_members(env, info.members());
+    auto account_id = jni_utils::JavaLocalRef(env, env->NewStringUTF(info.session_id.data()));
+    auto name = jni_utils::JavaLocalRef(env, env->NewStringUTF(info.name.data()));
+    auto members = jni_utils::JavaLocalRef(env, serialize_members(env, info.members()));
     auto enc_pubkey = jni_utils::session_bytes_from_range(env, info.enc_pubkey);
     auto enc_seckey = jni_utils::session_bytes_from_range(env, info.enc_seckey);
     long long priority = info.priority;
     long long joined_at = info.joined_at;
 
-    jclass legacy_group_class = env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$LegacyGroupInfo");
-    jmethodID constructor = env->GetMethodID(legacy_group_class, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Lnetwork/loki/messenger/libsession_util/util/Bytes;Lnetwork/loki/messenger/libsession_util/util/Bytes;JJJ)V");
-    jobject serialized = env->NewObject(legacy_group_class, constructor, account_id, name, members, enc_pubkey, enc_seckey, priority, (jlong) info.disappearing_timer.count(), joined_at);
-    return serialized;
+    auto legacy_group_class = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$LegacyGroupInfo"));
+    jmethodID constructor = env->GetMethodID(legacy_group_class.get(), "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Lnetwork/loki/messenger/libsession_util/util/Bytes;Lnetwork/loki/messenger/libsession_util/util/Bytes;JJJ)V");
+    return env->NewObject(legacy_group_class.get(), constructor, account_id.get(), name.get(), members.get(), enc_pubkey, enc_seckey, priority, (jlong) info.disappearing_timer.count(), joined_at);
 }
 
 inline jobject serialize_closed_group_info(JNIEnv* env, session::config::group_info info) {
     auto session_id = util::jstringFromOptional(env, info.id);
-    jobject admin_bytes = info.secretkey.empty() ? nullptr : jni_utils::session_bytes_from_range(env, info.secretkey);
-    jobject auth_bytes = info.auth_data.empty() ? nullptr : jni_utils::session_bytes_from_range(env, info.auth_data);
-    jstring name = util::jstringFromOptional(env, info.name);
+    auto admin_bytes = jni_utils::JavaLocalRef(env, info.secretkey.empty() ? nullptr : jni_utils::session_bytes_from_range(env, info.secretkey));
+    auto auth_bytes = jni_utils::JavaLocalRef(env, info.auth_data.empty() ? nullptr : jni_utils::session_bytes_from_range(env, info.auth_data));
+    auto name = jni_utils::JavaLocalRef(env, util::jstringFromOptional(env, info.name));
 
-    jclass group_info_class = env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$ClosedGroupInfo");
-    jmethodID constructor = env->GetMethodID(group_info_class, "<init>","(Ljava/lang/String;Lnetwork/loki/messenger/libsession_util/util/Bytes;Lnetwork/loki/messenger/libsession_util/util/Bytes;JZLjava/lang/String;ZZJ)V");
-    jobject return_object = env->NewObject(group_info_class,constructor,
-                                           session_id, admin_bytes, auth_bytes, (jlong)info.priority, info.invited, name,
-                                           info.kicked(), info.is_destroyed(), info.joined_at);
-    return return_object;
+    auto group_info_class = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$ClosedGroupInfo"));
+    jmethodID constructor = env->GetMethodID(group_info_class.get(), "<init>","(Ljava/lang/String;Lnetwork/loki/messenger/libsession_util/util/Bytes;Lnetwork/loki/messenger/libsession_util/util/Bytes;JZLjava/lang/String;ZZJ)V");
+    return env->NewObject(group_info_class.get(), constructor,
+                          session_id, admin_bytes.get(), auth_bytes.get(), (jlong)info.priority, info.invited, name.get(),
+                          info.kicked(), info.is_destroyed(), info.joined_at);
 }
 
 inline session::config::group_info deserialize_closed_group_info(JNIEnv* env, jobject info_serialized) {
-    jclass closed_group_class = env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$ClosedGroupInfo");
-    jfieldID id_field = env->GetFieldID(closed_group_class, "groupAccountId", "Ljava/lang/String;");
-    auto secret_method = env->GetMethodID(closed_group_class, "getAdminKeyAsByteArray", "()[B");
-    auto auth_method = env->GetMethodID(closed_group_class, "getAuthDataAsByteArray", "()[B");
-    jfieldID priority_field = env->GetFieldID(closed_group_class, "priority", "J");
-    jfieldID invited_field = env->GetFieldID(closed_group_class, "invited", "Z");
-    jfieldID name_field = env->GetFieldID(closed_group_class, "name", "Ljava/lang/String;");
-    jfieldID destroy_field = env->GetFieldID(closed_group_class, "destroyed", "Z");
-    jfieldID kicked_field = env->GetFieldID(closed_group_class, "kicked", "Z");
-    jfieldID joined_at_field = env->GetFieldID(closed_group_class, "joinedAtSecs", "J");
+    auto closed_group_class = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$ClosedGroupInfo"));
+    jfieldID id_field = env->GetFieldID(closed_group_class.get(), "groupAccountId", "Ljava/lang/String;");
+    auto secret_method = env->GetMethodID(closed_group_class.get(), "getAdminKeyAsByteArray", "()[B");
+    auto auth_method = env->GetMethodID(closed_group_class.get(), "getAuthDataAsByteArray", "()[B");
+    jfieldID priority_field = env->GetFieldID(closed_group_class.get(), "priority", "J");
+    jfieldID invited_field = env->GetFieldID(closed_group_class.get(), "invited", "Z");
+    jfieldID name_field = env->GetFieldID(closed_group_class.get(), "name", "Ljava/lang/String;");
+    jfieldID destroy_field = env->GetFieldID(closed_group_class.get(), "destroyed", "Z");
+    jfieldID kicked_field = env->GetFieldID(closed_group_class.get(), "kicked", "Z");
+    jfieldID joined_at_field = env->GetFieldID(closed_group_class.get(), "joinedAtSecs", "J");
 
 
-    auto id_jobject = static_cast<jstring>(env->GetObjectField(info_serialized, id_field));
-    jbyteArray secret_jBytes = (jbyteArray)env->CallObjectMethod(info_serialized, secret_method);
-    jbyteArray auth_jBytes = (jbyteArray)env->CallObjectMethod(info_serialized, auth_method);
-    jstring name_jstring = (jstring)env->GetObjectField(info_serialized, name_field);
+    auto id_jobject = jni_utils::JavaLocalRef(env, static_cast<jstring>(env->GetObjectField(info_serialized, id_field)));
+    auto secret_jBytes = jni_utils::JavaLocalRef(env, (jbyteArray)env->CallObjectMethod(info_serialized, secret_method));
+    auto auth_jBytes = jni_utils::JavaLocalRef(env, (jbyteArray)env->CallObjectMethod(info_serialized, auth_method));
+    auto name_jstring = jni_utils::JavaLocalRef(env, (jstring)env->GetObjectField(info_serialized, name_field));
 
-    auto id_bytes = util::string_from_jstring(env, id_jobject);
-    auto secret_bytes = util::vector_from_bytes(env, secret_jBytes);
-    auto auth_bytes = util::vector_from_bytes(env, auth_jBytes);
-    auto name = util::string_from_jstring(env, name_jstring);
+    auto id_bytes = util::string_from_jstring(env, id_jobject.get());
+    auto secret_bytes = util::vector_from_bytes(env, secret_jBytes.get());
+    auto auth_bytes = util::vector_from_bytes(env, auth_jBytes.get());
+    auto name = util::string_from_jstring(env, name_jstring.get());
 
     session::config::group_info group_info(id_bytes);
     group_info.auth_data = auth_bytes;
@@ -186,9 +184,9 @@ inline session::config::group_info deserialize_closed_group_info(JNIEnv* env, jo
 inline jobject serialize_community_info(JNIEnv *env, session::config::community_info info) {
     auto priority = (long long)info.priority;
     auto serialized_info = util::serialize_base_community(env, info);
-    auto clazz = env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$CommunityGroupInfo");
-    jmethodID constructor = env->GetMethodID(clazz, "<init>", "(Lnetwork/loki/messenger/libsession_util/util/BaseCommunityInfo;J)V");
-    jobject serialized = env->NewObject(clazz, constructor, serialized_info, priority);
+    auto clazz = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$CommunityGroupInfo"));
+    jmethodID constructor = env->GetMethodID(clazz.get(), "<init>", "(Lnetwork/loki/messenger/libsession_util/util/BaseCommunityInfo;J)V");
+    jobject serialized = env->NewObject(clazz.get(), constructor, serialized_info, priority);
     return serialized;
 }
 
