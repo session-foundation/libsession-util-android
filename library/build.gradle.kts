@@ -4,6 +4,9 @@ plugins {
     id("maven-publish")
 }
 
+group = "org.sessionfoundation"
+version = System.getenv("VERSION") ?: "dev-snapshot"
+
 android {
     namespace = "org.sessionfoundation.libsession_util"
     compileSdk = 35
@@ -56,9 +59,9 @@ android {
 publishing {
     publications {
         create<MavenPublication>("release") {
-            groupId = "org.sessionfoundation"
-            artifactId = "libsession-util-android"
-            version = System.getenv("VERSION") ?: "dev-snapshot"
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
 
             pom {
                 url = "getsession.org"
