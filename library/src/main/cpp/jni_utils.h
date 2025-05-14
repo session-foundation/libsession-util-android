@@ -141,8 +141,14 @@ namespace jni_utils {
         return env->NewObject(bytes_clazz.get(), init, bytes_array.get());
     }
 
+    /**
+     * Create a Kotlin Pair object
+     */
     jobject new_kotlin_pair(JNIEnv *env, jobject first, jobject second);
 
+    /**
+     * A RAII wrapper for a Java byte array. This will automatically release the byte array when it goes out of scope.
+     */
     class JavaByteArrayRef {
         JNIEnv *env;
         jbyteArray byte_array;
