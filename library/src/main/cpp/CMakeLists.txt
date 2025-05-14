@@ -39,6 +39,8 @@ set(SOURCES
         group_info.cpp
         config_common.cpp
         logging.cpp
+        encryption.cpp
+        jni_utils.cpp
 )
 
 add_library( # Sets the name of the library.

@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "libsession-util-android"
 include(":library")
+project(":library").name = "libsession-util-android"
  
