@@ -41,6 +41,7 @@ set(SOURCES
         logging.cpp
         encryption.cpp
         jni_utils.cpp
+        ed25519.cpp
 )
 
 add_library( # Sets the name of the library.
