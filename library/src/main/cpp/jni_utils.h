@@ -140,6 +140,34 @@ namespace jni_utils {
         env->SetByteArrayRegion(bytes_array.get(), 0, static_cast<jsize>(obj.size()), reinterpret_cast<const jbyte *>(obj.data()));
         return env->NewObject(bytes_clazz.get(), init, bytes_array.get());
     }
+
+    /**
+     * Create a Kotlin Pair object
+     */
+    jobject new_kotlin_pair(JNIEnv *env, jobject first, jobject second);
+
+    /**
+     * A RAII wrapper for a Java byte array. This will automatically release the byte array when it goes out of scope.
+     */
+    class JavaByteArrayRef {
+        JNIEnv *env;
+        jbyteArray byte_array;
+        std::span<unsigned char> data;
+
+        public:
+            JavaByteArrayRef(JNIEnv *env, jbyteArray byte_array) : env(env), byte_array(byte_array) {
+                jsize length = env->GetArrayLength(byte_array);
+                data = std::span<unsigned char>(reinterpret_cast<unsigned char *>(env->GetByteArrayElements(byte_array, nullptr)), length);
+            }
+
+            ~JavaByteArrayRef() {
+                env->ReleaseByteArrayElements(byte_array, reinterpret_cast<jbyte *>(data.data()), 0);
+            }
+
+            std::span<unsigned char> get() const {
+                return data;
+            }
+    };
 }
 
 #endif //SESSION_ANDROID_JNI_UTILS_H
