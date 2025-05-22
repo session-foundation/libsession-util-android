@@ -147,6 +147,11 @@ namespace jni_utils {
     jobject new_kotlin_pair(JNIEnv *env, jobject first, jobject second);
 
     /**
+     * Create a new KeyPair object
+     */
+    jobject new_key_pair(JNIEnv *env, jbyteArray pubKey, jbyteArray secKey);
+
+    /**
      * A RAII wrapper for a Java byte array. This will automatically release the byte array when it goes out of scope.
      */
     class JavaByteArrayRef {
