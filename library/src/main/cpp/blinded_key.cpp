@@ -9,6 +9,7 @@
 // Created by Thomas Ruffie on 29/7/2024.
 //
 
+
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blindVersionKeyPair(JNIEnv *env,
@@ -16,10 +17,7 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blindVersionKeyPai
                                                                                   jbyteArray ed25519_secret_key) {
     return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=] {
         const auto [pk, sk] = session::blind_version_key_pair(util::vector_from_bytes(env, ed25519_secret_key));
-
-        jclass kp_class = env->FindClass("network/loki/messenger/libsession_util/util/KeyPair");
-        jmethodID kp_constructor = env->GetMethodID(kp_class, "<init>", "([B[B)V");
-        return env->NewObject(kp_class, kp_constructor, util::bytes_from_vector(env, {pk.data(), pk.data() + pk.size()}), util::bytes_from_vector(env, {sk.data(), sk.data() + sk.size()}));
+        return jni_utils::new_key_pair(env, util::bytes_from_span(env, pk), util::bytes_from_span(env, sk));
     });
 }
 extern "C"
@@ -29,7 +27,11 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blindVersionSign(J
                                                                                jbyteArray ed25519_secret_key,
                                                                                jlong timestamp) {
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
-        auto bytes = session::blind_version_sign(util::vector_from_bytes(env, ed25519_secret_key), session::Platform::android, timestamp);
+        auto bytes = session::blind_version_sign(
+                jni_utils::JavaByteArrayRef(env, ed25519_secret_key).get(),
+                session::Platform::android,
+                timestamp
+        );
         return util::bytes_from_vector(env, bytes);
     });
 }
@@ -46,16 +48,63 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blindVersionSignRe
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
         auto methodC = util::string_from_jstring(env, method);
         auto pathC = util::string_from_jstring(env, path);
-        auto keyBytes = util::vector_from_bytes(env, ed25519_secret_key);
-        auto bodyBytes = body ? std::optional(util::vector_from_bytes(env, body)) : std::nullopt;
 
         auto bytes = session::blind_version_sign_request(
-                session::to_span(keyBytes),
+                jni_utils::JavaByteArrayRef(env, ed25519_secret_key).get(),
                 timestamp,
                 methodC,
                 pathC,
-                body ? std::optional(session::to_span(*bodyBytes)) : std::nullopt
+                body ? std::make_optional(jni_utils::JavaByteArrayRef(env, body).get()) : std::nullopt
         );
         return util::bytes_from_vector(env, bytes);
+    });
+}
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blind15KeyPair(JNIEnv *env,
+                                                                             jobject thiz,
+                                                                             jbyteArray ed25519_secret_key,
+                                                                             jbyteArray server_pub_key) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=] {
+        auto [pk, sk] = session::blind15_key_pair(
+                jni_utils::JavaByteArrayRef(env, ed25519_secret_key).get(),
+                jni_utils::JavaByteArrayRef(env, server_pub_key).get()
+                );
+        return jni_utils::new_key_pair(env, util::bytes_from_span(env, pk), util::bytes_from_span(env, sk));
+    });
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blind15Sign(JNIEnv *env, jobject thiz,
+                                                                          jbyteArray ed25519_secret_key,
+                                                                          jstring server_pub_key,
+                                                                          jbyteArray message) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        auto data = session::blind15_sign(
+                jni_utils::JavaByteArrayRef(env, ed25519_secret_key).get(),
+                jni_utils::JavaStringRef(env, server_pub_key).view(),
+                jni_utils::JavaByteArrayRef(env, message).get()
+                );
+        return util::bytes_from_vector(env, data);
+    });
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_sessionIdMatchesBlindedId(JNIEnv *env,
+                                                                                        jobject thiz,
+                                                                                        jstring session_id,
+                                                                                        jstring blinded_id,
+                                                                                        jstring server_pub_key) {
+    return jni_utils::run_catching_cxx_exception_or<jboolean>([=]() -> jboolean {
+        return session::session_id_matches_blinded_id(
+                jni_utils::JavaStringRef(env, session_id).view(),
+                jni_utils::JavaStringRef(env, blinded_id).view(),
+                jni_utils::JavaStringRef(env, server_pub_key).view()
+        );
+    }, [](const char *) -> jboolean {
+        return false;
     });
 }

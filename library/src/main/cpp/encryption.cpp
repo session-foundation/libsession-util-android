@@ -92,3 +92,37 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_encryptForBlindedRec
         return jni_utils::session_bytes_from_range(env, data);
     });
 }
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_SessionEncrypt_decryptPushNotification(JNIEnv *env,
+                                                                                    jobject thiz,
+                                                                                    jbyteArray message,
+                                                                                    jbyteArray secret_key) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=] {
+        auto data = session::decrypt_push_notification(
+                jni_utils::JavaByteArrayRef(env, message).get(),
+                jni_utils::JavaByteArrayRef(env, secret_key).get()
+        );
+
+        return jni_utils::session_bytes_from_range(env, data);
+    });
+}
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_network_loki_messenger_libsession_1util_SessionEncrypt_decryptOnsResponse(JNIEnv *env,
+                                                                               jobject thiz,
+                                                                               jstring lowercase_name,
+                                                                               jbyteArray ciphertext,
+                                                                               jbyteArray nonce) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jstring>(env, [=] {
+        auto data = session::decrypt_ons_response(
+                jni_utils::JavaStringRef(env, lowercase_name).view(),
+                jni_utils::JavaByteArrayRef(env, ciphertext).get(),
+                nonce ? std::make_optional(jni_utils::JavaByteArrayRef(env, nonce).get()) : std::nullopt
+        );
+
+        return util::jstringFromOptional(env, data);
+    });
+}

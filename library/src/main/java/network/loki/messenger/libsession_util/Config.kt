@@ -10,7 +10,7 @@ import network.loki.messenger.libsession_util.util.GroupMember
 import network.loki.messenger.libsession_util.util.UserPic
 import java.io.Closeable
 
-sealed class Config(initialPointer: Long): Closeable {
+sealed class Config(initialPointer: Long): Closeable, LibSessionUtilCApi() {
     var pointer = initialPointer
         private set
 

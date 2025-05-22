@@ -31,3 +31,16 @@ Java_network_loki_messenger_libsession_1util_ED25519_verify(JNIEnv *env, jobject
                 );
     });
 }
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_ED25519_generate(JNIEnv *env, jobject thiz,
+                                                              jbyteArray seed) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=] {
+        auto [pk, sk] = seed
+                ? session::ed25519::ed25519_key_pair(jni_utils::JavaByteArrayRef(env, seed).get())
+                : session::ed25519::ed25519_key_pair();
+
+        return jni_utils::new_key_pair(env, util::bytes_from_span(env, pk), util::bytes_from_span(env, sk));
+    });
+}

@@ -173,43 +173,10 @@ namespace util {
     }
 }
 
-extern "C"
-JNIEXPORT jobject JNICALL
-Java_network_loki_messenger_libsession_1util_util_Sodium_ed25519KeyPair(JNIEnv *env, jobject thiz, jbyteArray seed) {
-    std::array<unsigned char, 32> ed_pk; // NOLINT(cppcoreguidelines-pro-type-member-init)
-    std::array<unsigned char, 64> ed_sk; // NOLINT(cppcoreguidelines-pro-type-member-init)
-    auto seed_bytes = util::vector_from_bytes(env, seed);
-    crypto_sign_ed25519_seed_keypair(ed_pk.data(), ed_sk.data(), seed_bytes.data());
-
-    auto kp_class = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/KeyPair"));
-    jmethodID kp_constructor = env->GetMethodID(kp_class.get(), "<init>", "(Lnetwork/loki/messenger/libsession_util/util/Bytes;Lnetwork/loki/messenger/libsession_util/util/Bytes;)V");
-
-    return env->NewObject(kp_class.get(), kp_constructor,
-                          jni_utils::JavaLocalRef(env, jni_utils::session_bytes_from_range(env, ed_pk)).get(),
-                          jni_utils::JavaLocalRef(env, jni_utils::session_bytes_from_range(env, ed_sk)).get()
-    );
-}
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_network_loki_messenger_libsession_1util_util_Sodium_ed25519PkToCurve25519(JNIEnv *env,
-                                                                               jobject thiz,
-                                                                               jbyteArray pk) {
-    auto ed_pk = util::vector_from_bytes(env, pk);
-    std::array<unsigned char, 32> curve_pk; // NOLINT(cppcoreguidelines-pro-type-member-init)
-    int success = crypto_sign_ed25519_pk_to_curve25519(curve_pk.data(), ed_pk.data());
-    if (success != 0) {
-        jclass exception = env->FindClass("java/lang/Exception");
-        env->ThrowNew(exception, "Invalid crypto_sign_ed25519_pk_to_curve25519 operation");
-        return nullptr;
-    }
-    jbyteArray curve_pk_jarray = util::bytes_from_span(env, std::span<const unsigned char> {curve_pk.data(), curve_pk.size()});
-    return curve_pk_jarray;
-}
-
-extern "C"
-JNIEXPORT jbyteArray JNICALL
-Java_network_loki_messenger_libsession_1util_util_Sodium_encryptForMultipleSimple(
+Java_network_loki_messenger_libsession_1util_util_MultiEncrypt_encryptForMultipleSimple(
         JNIEnv *env, jobject thiz, jobjectArray messages, jobjectArray recipients,
         jbyteArray ed25519_secret_key, jstring domain) {
     // messages and recipients have to be the same size
@@ -258,12 +225,12 @@ Java_network_loki_messenger_libsession_1util_util_Sodium_encryptForMultipleSimpl
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_network_loki_messenger_libsession_1util_util_Sodium_decryptForMultipleSimple(JNIEnv *env,
-                                                                                  jobject thiz,
-                                                                                  jbyteArray encoded,
-                                                                                  jbyteArray secret_key,
-                                                                                  jbyteArray sender_pub_key,
-                                                                                  jstring domain) {
+Java_network_loki_messenger_libsession_1util_util_MultiEncrypt_decryptForMultipleSimple(JNIEnv *env,
+                                                                                        jobject thiz,
+                                                                                        jbyteArray encoded,
+                                                                                        jbyteArray secret_key,
+                                                                                        jbyteArray sender_pub_key,
+                                                                                        jstring domain) {
     auto sk_vector = util::vector_from_bytes(env, secret_key);
     auto encoded_vector = util::vector_from_bytes(env, encoded);
     auto pub_vector = util::vector_from_bytes(env, sender_pub_key);

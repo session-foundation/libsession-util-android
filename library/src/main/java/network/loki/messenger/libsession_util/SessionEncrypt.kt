@@ -4,7 +4,7 @@ import network.loki.messenger.libsession_util.util.Bytes
 
 private typealias SessionId = String
 
-object SessionEncrypt {
+object SessionEncrypt : LibSessionUtilCApi() {
     /**
      * Decrypts data using the Session protocol for a blinded recipient.
      *
@@ -66,4 +66,15 @@ object SessionEncrypt {
         x25519PrivKey: ByteArray,
         ciphertext: ByteArray
     ): Pair<SessionId, Bytes>
+
+    external fun decryptPushNotification(
+        message: ByteArray,
+        secretKey: ByteArray,
+    ): Bytes
+
+    external fun decryptOnsResponse(
+        lowercaseName: String,
+        ciphertext: ByteArray,
+        nonce: ByteArray?,
+    ): SessionId
 }

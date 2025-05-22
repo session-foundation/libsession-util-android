@@ -1,6 +1,8 @@
 package network.loki.messenger.libsession_util
 
-object ED25519 {
+import network.loki.messenger.libsession_util.util.KeyPair
+
+object ED25519 : LibSessionUtilCApi() {
     /**
      * Sign a message using the ed25519 private key
      *
@@ -25,4 +27,6 @@ object ED25519 {
         message: ByteArray,
         signature: ByteArray,
     ): Boolean
+
+    external fun generate(seed: ByteArray?): KeyPair
 }

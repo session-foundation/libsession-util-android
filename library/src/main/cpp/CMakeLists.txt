@@ -42,6 +42,8 @@ set(SOURCES
         encryption.cpp
         jni_utils.cpp
         ed25519.cpp
+        curve25519.cpp
+        hash.cpp
 )
 
 add_library( # Sets the name of the library.
