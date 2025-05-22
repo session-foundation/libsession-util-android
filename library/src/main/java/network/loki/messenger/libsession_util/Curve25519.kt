@@ -2,7 +2,7 @@ package network.loki.messenger.libsession_util
 
 import network.loki.messenger.libsession_util.util.KeyPair
 
-object Curve25519 {
+object Curve25519 : LibSessionUtilCApi() {
     private external fun fromED25519(
         ed25519PublicKey: ByteArray,
         ed25519PrivateKey: ByteArray,

@@ -1,15 +1,8 @@
 package network.loki.messenger.libsession_util.util
 
-object BlindKeyAPI {
-    private val loadLibrary by lazy {
-        System.loadLibrary("session_util")
-    }
+import network.loki.messenger.libsession_util.LibSessionUtilCApi
 
-    init {
-        // Ensure the library is loaded at initialization
-        loadLibrary
-    }
-
+object BlindKeyAPI : LibSessionUtilCApi() {
     external fun blindVersionKeyPair(ed25519SecretKey: ByteArray): KeyPair
     external fun blindVersionSign(ed25519SecretKey: ByteArray, timestamp: Long): ByteArray
     external fun blindVersionSignRequest(

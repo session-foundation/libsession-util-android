@@ -1,6 +1,6 @@
 package network.loki.messenger.libsession_util
 
-object Namespace {
+object Namespace : LibSessionUtilCApi() {
     fun ALL() = "all"
 
     // Namespaces used for legacy group

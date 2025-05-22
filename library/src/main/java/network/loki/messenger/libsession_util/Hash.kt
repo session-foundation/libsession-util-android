@@ -1,6 +1,6 @@
 package network.loki.messenger.libsession_util
 
-object Hash {
+object Hash : LibSessionUtilCApi() {
     private external fun hash(message: ByteArray, hashOut: ByteArray, key: ByteArray?)
 
     fun hash64(message: ByteArray, key: ByteArray? = null): ByteArray {

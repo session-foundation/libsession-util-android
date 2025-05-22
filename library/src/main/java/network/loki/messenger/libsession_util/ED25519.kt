@@ -2,7 +2,7 @@ package network.loki.messenger.libsession_util
 
 import network.loki.messenger.libsession_util.util.KeyPair
 
-object ED25519 {
+object ED25519 : LibSessionUtilCApi() {
     /**
      * Sign a message using the ed25519 private key
      *
