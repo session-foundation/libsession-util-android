@@ -74,3 +74,37 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blind15KeyPair(JNI
         return jni_utils::new_key_pair(env, util::bytes_from_span(env, pk), util::bytes_from_span(env, sk));
     });
 }
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blind15Sign(JNIEnv *env, jobject thiz,
+                                                                          jbyteArray ed25519_secret_key,
+                                                                          jstring server_pub_key,
+                                                                          jbyteArray message) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        auto data = session::blind15_sign(
+                jni_utils::JavaByteArrayRef(env, ed25519_secret_key).get(),
+                jni_utils::JavaStringRef(env, server_pub_key).view(),
+                jni_utils::JavaByteArrayRef(env, message).get()
+                );
+        return util::bytes_from_vector(env, data);
+    });
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_sessionIdMatchesBlindedId(JNIEnv *env,
+                                                                                        jobject thiz,
+                                                                                        jstring session_id,
+                                                                                        jstring blinded_id,
+                                                                                        jstring server_pub_key) {
+    return jni_utils::run_catching_cxx_exception_or<jboolean>([=]() -> jboolean {
+        return session::session_id_matches_blinded_id(
+                jni_utils::JavaStringRef(env, session_id).view(),
+                jni_utils::JavaStringRef(env, blinded_id).view(),
+                jni_utils::JavaStringRef(env, server_pub_key).view()
+        );
+    }, [](const char *) -> jboolean {
+        return false;
+    });
+}

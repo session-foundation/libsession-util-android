@@ -151,6 +151,32 @@ namespace jni_utils {
      */
     jobject new_key_pair(JNIEnv *env, jbyteArray pubKey, jbyteArray secKey);
 
+    class JavaStringRef {
+        JNIEnv *env;
+        jstring s;
+        std::span<char> data;
+
+        public:
+            JavaStringRef(JNIEnv *env, jstring s) : env(env), s(s) {
+                const char *c_str = env->GetStringUTFChars(s, nullptr);
+                data = std::span<char>(const_cast<char *>(c_str), env->GetStringUTFLength(s));
+            }
+
+            ~JavaStringRef() {
+                env->ReleaseStringUTFChars(s, data.data());
+            }
+
+            // Get the data as a string view. Only valid during the lifetime of this object.
+            std::string_view view() const {
+                return std::string_view(data.data(), data.size());
+            }
+
+            // Get the data as a span. Only valid during the lifetime of this object.
+            std::span<char> get() const {
+                return data;
+            }
+    };
+
     /**
      * A RAII wrapper for a Java byte array. This will automatically release the byte array when it goes out of scope.
      */
@@ -169,6 +195,7 @@ namespace jni_utils {
                 env->ReleaseByteArrayElements(byte_array, reinterpret_cast<jbyte *>(data.data()), 0);
             }
 
+            // Get the data as a span. Only valid during the lifetime of this object.
             std::span<unsigned char> get() const {
                 return data;
             }

@@ -66,4 +66,15 @@ object SessionEncrypt {
         x25519PrivKey: ByteArray,
         ciphertext: ByteArray
     ): Pair<SessionId, Bytes>
+
+    external fun decryptPushNotification(
+        message: ByteArray,
+        secretKey: ByteArray,
+    ): Bytes
+
+    external fun decryptOnsResponse(
+        lowercaseName: String,
+        ciphertext: ByteArray,
+        nonce: ByteArray?,
+    ): SessionId
 }

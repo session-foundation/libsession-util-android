@@ -37,4 +37,31 @@ object BlindKeyAPI {
         ed25519SecretKey: ByteArray,
         serverPubKey: ByteArray,
     ): KeyPair? = kotlin.runCatching { blind15KeyPair(ed25519SecretKey, serverPubKey) }.getOrNull()
+
+    /**
+     * Sign a message with a 15 blinded key.
+     *
+     * @param ed25519SecretKey The Ed25519 secret key, 32/64 bytes
+     * @param serverPubKey The server public key in hex
+     * @param message The message to sign
+     */
+    external fun blind15Sign(
+        ed25519SecretKey: ByteArray,
+        serverPubKey: String,
+        message: ByteArray,
+    ): ByteArray
+
+    /**
+     * Takes in a standard sessionId and returns a flag indicating whether it matches the given
+     * blindedId for a given serverPubKey
+     *
+     * @param sessionId The session ID to check, 66bytes string
+     * @param blindedId The blinded ID to check against, 66bytes string
+     * @param serverPubKey The server public key, 64bytes string
+     */
+    external fun sessionIdMatchesBlindedId(
+        sessionId: String,
+        blindedId: String,
+        serverPubKey: String,
+    ): Boolean
 }
