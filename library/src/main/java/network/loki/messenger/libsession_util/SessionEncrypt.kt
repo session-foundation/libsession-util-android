@@ -77,4 +77,9 @@ object SessionEncrypt : LibSessionUtilCApi() {
         ciphertext: ByteArray,
         nonce: ByteArray?,
     ): SessionId
+
+    external fun calculateECHDAgreement(
+        x25519PubKey: ByteArray,
+        x25519PrivKey: ByteArray,
+    ): ByteArray
 }
