@@ -25,3 +25,14 @@ Java_network_loki_messenger_libsession_1util_Curve25519_pubKeyFromED25519(JNIEnv
         return util::bytes_from_span(env, pk);
     });
 }
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_Curve25519_generateKeyPair(JNIEnv *env, jobject thiz) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=] {
+        auto [sk, pk] = session::curve25519::curve25519_key_pair();
+        return jni_utils::new_key_pair(env,
+                                       util::bytes_from_span(env, sk),
+                                        util::bytes_from_span(env, pk));
+    });
+}

@@ -17,4 +17,6 @@ object Curve25519 : LibSessionUtilCApi() {
     external fun pubKeyFromED25519(
         ed25519PublicKey: ByteArray,
     ): ByteArray
+
+    external fun generateKeyPair(): KeyPair
 }

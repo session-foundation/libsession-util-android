@@ -4,6 +4,8 @@
 
 #include "jni_utils.h"
 
+#include <sodium.h>
+
 using jni_utils::JavaByteArrayRef;
 
 extern "C"
@@ -125,4 +127,33 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_decryptOnsResponse(J
 
         return util::jstringFromOptional(env, data);
     });
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_network_loki_messenger_libsession_1util_SessionEncrypt_calculateECHDAgreement(JNIEnv *env,
+                                                                                   jobject thiz,
+                                                                                   jbyteArray x25519_pub_key,
+                                                                                   jbyteArray x25519_priv_key) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        JavaByteArrayRef sk(env, x25519_priv_key);
+        JavaByteArrayRef pk(env, x25519_pub_key);
+
+        if (sk.get().size() != crypto_scalarmult_SCALARBYTES) {
+            throw std::invalid_argument{"Invalid x25519_priv_key: expected 32 bytes"};
+        }
+
+        if (pk.get().size() != crypto_scalarmult_BYTES) {
+            throw std::invalid_argument{"Invalid x25519_pub_key: expected 32 bytes"};
+        }
+
+        std::array<unsigned char, crypto_scalarmult_BYTES> shared_secret {0};
+        if (crypto_scalarmult(shared_secret.data(),sk.get().data(), pk.get().data()) != 0) {
+            throw std::runtime_error{"An error occurred while attempting to calculate the shared "
+                                      "secret; is the key valid?"};
+        }
+
+        return util::bytes_from_span(env, shared_secret);
+    });
+
 }
