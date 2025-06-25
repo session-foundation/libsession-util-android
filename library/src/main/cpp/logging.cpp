@@ -31,9 +31,13 @@ Java_network_loki_messenger_libsession_1util_util_Logger_00024Companion_addLogge
             return; // Failed to attach thread, cannot log
         }
 
+        // Java strings need null-terminated C strings, we'll have to copy them here unfortunately
+        std::string msg_str(msg);
+        std::string category_str(category);
+
         env->CallVoidMethod(loggerRef, logMethod,
-                            JavaLocalRef(env, env->NewStringUTF(msg.data())).get(),
-                            JavaLocalRef(env, env->NewStringUTF(category.data())).get(),
+                            JavaLocalRef(env, env->NewStringUTF(msg_str.c_str())).get(),
+                            JavaLocalRef(env, env->NewStringUTF(category_str.c_str())).get(),
                             static_cast<jint>(level.level)
         );
     });
