@@ -44,6 +44,16 @@ object BlindKeyAPI : LibSessionUtilCApi() {
         message: ByteArray,
     ): ByteArray
 
+    external fun blind15Ids(
+        sessionId: String,
+        serverPubKey: String,
+    ): List<String>
+
+    external fun blind25Id(
+        sessionId: String,
+        serverPubKey: String,
+    ): String
+
     /**
      * Takes in a standard sessionId and returns a flag indicating whether it matches the given
      * blindedId for a given serverPubKey

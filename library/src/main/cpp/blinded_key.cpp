@@ -108,3 +108,32 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_sessionIdMatchesBl
         return false;
     });
 }
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blind15Ids(JNIEnv *env, jobject thiz,
+                                                                         jstring session_id,
+                                                                         jstring server_pub_key) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=]() -> jobject {
+        return jni_utils::jstring_list_from_collection(
+                env,
+                session::blind15_id(
+                        jni_utils::JavaStringRef(env, session_id).view(),
+                        jni_utils::JavaStringRef(env, server_pub_key).view()
+                )
+        );
+    });
+}
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blind25Id(JNIEnv *env, jobject thiz,
+                                                                        jstring session_id,
+                                                                        jstring server_pub_key) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jstring>(env, [=]() -> jstring {
+        return util::jstringFromOptional(env, session::blind25_id(
+                jni_utils::JavaStringRef(env, session_id).view(),
+                jni_utils::JavaStringRef(env, server_pub_key).view()
+        ));
+    });
+}
