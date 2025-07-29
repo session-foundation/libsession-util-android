@@ -199,12 +199,7 @@ JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_util_GroupMember_setProfilePic(JNIEnv *env,
                                                                             jobject thiz,
                                                                             jobject pic) {
-    const auto [jurl, jkey] = util::deserialize_user_pic(env, pic);
-    auto url = util::string_from_jstring(env, jurl);
-    auto key = util::vector_from_bytes(env, jkey);
-    auto &picture = ptrToMember(env, thiz)->profile_picture;
-    picture.url = url;
-    picture.key = key;
+    ptrToMember(env, thiz)->profile_picture = util::deserialize_user_pic(env, pic);
 }
 
 extern "C"

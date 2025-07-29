@@ -157,11 +157,7 @@ Java_network_loki_messenger_libsession_1util_GroupInfoConfig_setProfilePic(JNIEn
                                                                            jobject new_profile_pic) {
     std::lock_guard guard{util::util_mutex_};
     auto group_info = ptrToInfo(env, thiz);
-    auto user_pic = util::deserialize_user_pic(env, new_profile_pic);
-    auto url = env->GetStringUTFChars(user_pic.first, nullptr);
-    auto key = util::vector_from_bytes(env, user_pic.second);
-    group_info->set_profile_pic(url, key);
-    env->ReleaseStringUTFChars(user_pic.first, url);
+    group_info->set_profile_pic(util::deserialize_user_pic(env, new_profile_pic));
 }
 
 extern "C"

@@ -39,12 +39,7 @@ JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_UserProfile_setPic(JNIEnv *env, jobject thiz,
                                                                 jobject user_pic) {
     std::lock_guard lock{util::util_mutex_};
-    auto profile = ptrToProfile(env, thiz);
-    auto pic = util::deserialize_user_pic(env, user_pic);
-    auto url = env->GetStringUTFChars(pic.first, nullptr);
-    auto key = util::vector_from_bytes(env, pic.second);
-    profile->set_profile_pic(url, key);
-    env->ReleaseStringUTFChars(pic.first, url);
+    ptrToProfile(env, thiz)->set_profile_pic(util::deserialize_user_pic(env, user_pic));
 }
 
 }
