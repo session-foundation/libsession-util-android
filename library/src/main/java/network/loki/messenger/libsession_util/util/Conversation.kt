@@ -28,4 +28,10 @@ sealed class Conversation {
         override var lastRead: Long,
         override var unread: Boolean
     ): Conversation()
+
+    data class BlindedOneToOne(
+        val blindedAccountId: String,
+        override var lastRead: Long,
+        override var unread: Boolean
+    ) : Conversation()
 }
