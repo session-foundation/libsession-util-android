@@ -6,6 +6,7 @@
 #include <optional>
 #include <span>
 #include <vector>
+
 #include "session/types.hpp"
 #include "session/config/groups/info.hpp"
 #include "session/config/groups/keys.hpp"
@@ -15,7 +16,6 @@
 #include "session/config/expiring.hpp"
 
 namespace util {
-    extern std::mutex util_mutex_;
     jbyteArray bytes_from_vector(JNIEnv* env, const std::vector<unsigned char> &from_str);
     std::vector<unsigned char> vector_from_bytes(JNIEnv* env, jbyteArray byteArray);
     jbyteArray bytes_from_span(JNIEnv* env, std::span<const unsigned char> from_str);

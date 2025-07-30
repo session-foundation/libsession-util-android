@@ -17,8 +17,6 @@
 
 namespace util {
 
-    std::mutex util_mutex_ = std::mutex();
-
     jbyteArray bytes_from_vector(JNIEnv* env, const std::vector<unsigned char> &from_str) {
         size_t length = from_str.size();
         auto jlength = (jsize)length;

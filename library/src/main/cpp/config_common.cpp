@@ -23,7 +23,6 @@ Java_network_loki_messenger_libsession_1util_ConfigKt_createConfigObject(
                        : std::nullopt;
 
 
-        std::lock_guard lock{util::util_mutex_};
         if (config_name.view() == "Contacts") {
             return reinterpret_cast<jlong>(new session::config::Contacts(secret_key.get(), initial));
         } else if (config_name.view() == "UserProfile") {
