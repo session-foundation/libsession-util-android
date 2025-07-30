@@ -17,9 +17,7 @@ Java_network_loki_messenger_libsession_1util_Contacts_get(JNIEnv *env, jobject t
             [=]() -> jobject {
                 std::lock_guard lock{util::util_mutex_};
                 auto contacts = ptrToContacts(env, thiz);
-                auto account_id_chars = env->GetStringUTFChars(account_id, nullptr);
-                auto contact = contacts->get(account_id_chars);
-                env->ReleaseStringUTFChars(account_id, account_id_chars);
+                auto contact = contacts->get(jni_utils::JavaStringRef(env, account_id).view());
                 if (!contact) return nullptr;
                 jobject j_contact = serialize_contact(env, contact.value());
                 return j_contact;
@@ -35,9 +33,7 @@ Java_network_loki_messenger_libsession_1util_Contacts_getOrConstruct(JNIEnv *env
     return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=] {
         std::lock_guard lock{util::util_mutex_};
         auto contacts = ptrToContacts(env, thiz);
-        auto account_id_chars = env->GetStringUTFChars(account_id, nullptr);
-        auto contact = contacts->get_or_construct(account_id_chars);
-        env->ReleaseStringUTFChars(account_id, account_id_chars);
+        auto contact = contacts->get_or_construct(jni_utils::JavaStringRef(env, account_id).view());
         return serialize_contact(env, contact);
     });
 }
@@ -61,10 +57,7 @@ Java_network_loki_messenger_libsession_1util_Contacts_erase(JNIEnv *env, jobject
     return jni_utils::run_catching_cxx_exception_or_throws<jboolean>(env, [=] {
         std::lock_guard lock{util::util_mutex_};
         auto contacts = ptrToContacts(env, thiz);
-        auto account_id_chars = env->GetStringUTFChars(account_id, nullptr);
-
-        bool result = contacts->erase(account_id_chars);
-        env->ReleaseStringUTFChars(account_id, account_id_chars);
+        bool result = contacts->erase(jni_utils::JavaStringRef(env, account_id).view());
         return result;
     });
 }
@@ -152,8 +145,8 @@ jobject serialize_blinded_contact(JNIEnv *env, const session::config::blinded_co
             clazz.get(),
             constructor,
             jni_utils::JavaLocalRef(env, env->NewStringUTF(info.session_id().c_str())).get(),
-            jni_utils::JavaLocalRef(env, env->NewStringUTF(info.comm.base_url().data())).get(),
-            jni_utils::JavaLocalRef(env, env->NewStringUTF(info.comm.pubkey_hex().data())).get(),
+            jni_utils::JavaLocalRef(env, env->NewStringUTF(info.community_base_url().data())).get(),
+            jni_utils::JavaLocalRef(env, env->NewStringUTF(info.community_pubkey_hex().data())).get(),
             jni_utils::JavaLocalRef(env, env->NewStringUTF(info.name.c_str())).get(),
             (jlong) (info.created.time_since_epoch().count()),
             jni_utils::JavaLocalRef(env, util::serialize_user_pic(env, info.profile_picture)).get()
@@ -164,15 +157,16 @@ session::config::blinded_contact_info deserialize_blinded_contact(JNIEnv *env, j
     jni_utils::JavaLocalRef<jclass> clazz(env, env->GetObjectClass(jInfo));
     auto idField = env->GetFieldID(clazz.get(), "id", "Ljava/lang/String;");
     auto communityServerField = env->GetFieldID(clazz.get(), "communityServer", "Ljava/lang/String;");
-    auto communityPubkeyField = env->GetFieldID(clazz.get(), "communityServerPubKeyHex", "Ljava/lang/String;");
+    auto getCommunityServerPubKey = env->GetMethodID(clazz.get(), "getCommunityServerPubKey", "()[B");
     auto nameField = env->GetFieldID(clazz.get(), "name", "Ljava/lang/String;");
     auto createdEpochSecondsField = env->GetFieldID(clazz.get(), "createdEpochSeconds", "J");
     auto profilePicField = env->GetFieldID(clazz.get(), "profilePic", "Lnetwork/loki/messenger/libsession_util/util/UserPic;");
 
-    session::config::blinded_contact_info info;
-    info.set_base_url(jni_utils::JavaStringRef(env, (jstring) env->GetObjectField(jInfo, communityServerField)).view());
-    info.set_pubkey(jni_utils::JavaStringRef(env, (jstring) env->GetObjectField(jInfo, communityPubkeyField)).view());
-    info.set_room(jni_utils::JavaStringRef(env, (jstring) env->GetObjectField(jInfo, idField)).view());
+    session::config::blinded_contact_info info(
+            jni_utils::JavaStringRef(env, (jstring) env->GetObjectField(jInfo, communityServerField)).view(),
+            jni_utils::JavaByteArrayRef(env, (jbyteArray) env->CallObjectMethod(jInfo, getCommunityServerPubKey)).get(),
+            jni_utils::JavaStringRef(env, (jstring) env->GetObjectField(jInfo, idField)).view()
+    );
     info.created = std::chrono::sys_seconds{std::chrono::seconds{env->GetLongField(jInfo, createdEpochSecondsField)}};
     info.profile_picture = util::deserialize_user_pic(env, jni_utils::JavaLocalRef(env, env->GetObjectField(jInfo, profilePicField)).get());
 
@@ -189,8 +183,7 @@ Java_network_loki_messenger_libsession_1util_Contacts_getOrConstructBlinded(JNIE
     return serialize_blinded_contact(env, ptrToContacts(env, thiz)->get_or_construct_blinded(
             jni_utils::JavaStringRef(env, community_server_url).view(),
             jni_utils::JavaStringRef(env, community_server_pub_key_hex).view(),
-            jni_utils::JavaStringRef(env, blinded_id).view(),
-            false
+            jni_utils::JavaStringRef(env, blinded_id).view()
     ));
 }
 
@@ -210,8 +203,7 @@ Java_network_loki_messenger_libsession_1util_Contacts_eraseBlinded(JNIEnv *env, 
                                                                    jstring blinded_id) {
     ptrToContacts(env, thiz)->erase_blinded(
             jni_utils::JavaStringRef(env, community_server_url).view(),
-            jni_utils::JavaStringRef(env, blinded_id).view(),
-            false,
+            jni_utils::JavaStringRef(env, blinded_id).view()
     );
 }
 
@@ -230,10 +222,7 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_Contacts_getBlinded(JNIEnv *env,
                                                                  jobject thiz,
                                                                  jstring blinded_id) {
-    auto result = ptrToContacts(env, thiz)->get_blinded(
-            jni_utils::JavaStringRef(env, blinded_id).view(),
-            false
-            );
+    auto result = ptrToContacts(env, thiz)->get_blinded(jni_utils::JavaStringRef(env, blinded_id).view());
 
     if (result) {
         return serialize_blinded_contact(env, *result);

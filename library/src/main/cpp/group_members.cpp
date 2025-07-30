@@ -36,9 +36,7 @@ extern "C"
 JNIEXPORT jboolean JNICALL
 Java_network_loki_messenger_libsession_1util_GroupMembersConfig_erase(JNIEnv *env, jobject thiz, jstring pub_key_hex) {
     auto config = ptrToMembers(env, thiz);
-    auto member_id = env->GetStringUTFChars(pub_key_hex, nullptr);
-    auto erased = config->erase(member_id);
-    env->ReleaseStringUTFChars(pub_key_hex, member_id);
+    auto erased = config->erase(jni_utils::JavaStringRef(env, pub_key_hex).view());
     return erased;
 }
 
@@ -49,13 +47,11 @@ Java_network_loki_messenger_libsession_1util_GroupMembersConfig_get(JNIEnv *env,
     return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=]() -> jobject {
         std::lock_guard lock{util::util_mutex_};
         auto config = ptrToMembers(env, thiz);
-        auto pub_key_bytes = env->GetStringUTFChars(pub_key_hex, nullptr);
-        auto member = config->get(pub_key_bytes);
+        auto member = config->get(jni_utils::JavaStringRef(env, pub_key_hex).view());
         if (!member) {
             return nullptr;
         }
         auto serialized = util::serialize_group_member(env, *member);
-        env->ReleaseStringUTFChars(pub_key_hex, pub_key_bytes);
         return serialized;
     });
 }
@@ -67,10 +63,8 @@ Java_network_loki_messenger_libsession_1util_GroupMembersConfig_getOrConstruct(J
                                                                                jstring pub_key_hex) {
     std::lock_guard lock{util::util_mutex_};
     auto config = ptrToMembers(env, thiz);
-    auto pub_key_bytes = env->GetStringUTFChars(pub_key_hex, nullptr);
-    auto member = config->get_or_construct(pub_key_bytes);
+    auto member = config->get_or_construct(jni_utils::JavaStringRef(env, pub_key_hex).view());
     auto serialized = util::serialize_group_member(env, member);
-    env->ReleaseStringUTFChars(pub_key_hex, pub_key_bytes);
     return serialized;
 }
 
@@ -149,9 +143,7 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_util_GroupMember_setName(JNIEnv *env, jobject thiz,
                                                                       jstring name) {
-    auto name_bytes = env->GetStringUTFChars(name, nullptr);
-    ptrToMember(env, thiz)->set_name(name_bytes);
-    env->ReleaseStringUTFChars(name, name_bytes);
+    ptrToMember(env, thiz)->set_name(std::string(jni_utils::JavaStringRef(env, name).view()));
 }
 
 extern "C"
@@ -223,5 +215,5 @@ Java_network_loki_messenger_libsession_1util_GroupMembersConfig_setPendingSend(J
                                                                                jobject thiz,
                                                                                jstring pub_key_hex,
                                                                                jboolean pending) {
-    ptrToMembers(env, thiz)->set_pending_send(util::string_from_jstring(env, pub_key_hex), pending);
+    ptrToMembers(env, thiz)->set_pending_send(jni_utils::JavaStringRef(env, pub_key_hex).copy(), pending);
 }

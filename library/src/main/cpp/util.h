@@ -19,7 +19,6 @@ namespace util {
     jbyteArray bytes_from_vector(JNIEnv* env, const std::vector<unsigned char> &from_str);
     std::vector<unsigned char> vector_from_bytes(JNIEnv* env, jbyteArray byteArray);
     jbyteArray bytes_from_span(JNIEnv* env, std::span<const unsigned char> from_str);
-    std::string string_from_jstring(JNIEnv* env, jstring string);
     jobject serialize_user_pic(JNIEnv *env, session::config::profile_pic pic);
     session::config::profile_pic deserialize_user_pic(JNIEnv *env, jobject user_pic);
     jobject serialize_base_community(JNIEnv *env, const session::config::community& base_community);

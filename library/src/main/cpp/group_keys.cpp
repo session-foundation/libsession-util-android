@@ -70,16 +70,16 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_loadKey(JNIEnv *env
                                                                      jlong members_ptr) {
     std::lock_guard lock{util::util_mutex_};
     auto keys = ptrToKeys(env, thiz);
-    auto message_bytes = util::vector_from_bytes(env, message);
-    auto hash_bytes = env->GetStringUTFChars(hash, nullptr);
     auto info = reinterpret_cast<session::config::groups::Info*>(info_ptr);
     auto members = reinterpret_cast<session::config::groups::Members*>(members_ptr);
 
     auto processed = jni_utils::run_catching_cxx_exception_or_throws<jboolean>(env, [&] {
-        return keys->load_key_message(hash_bytes, message_bytes, timestamp_ms, *info, *members);
+        return keys->load_key_message(
+                jni_utils::JavaStringRef(env, hash).view(),
+                jni_utils::JavaByteArrayRef(env, message).get(),
+                timestamp_ms, *info, *members);
     });
 
-    env->ReleaseStringUTFChars(hash, hash_bytes);
     return processed;
 }
 
@@ -217,8 +217,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_makeSubAccount(JNIE
                                                                             jboolean can_delete) {
     std::lock_guard lock{util::util_mutex_};
     auto ptr = ptrToKeys(env, thiz);
-    auto deserialized_id = util::string_from_jstring(env, session_id);
-    auto new_subaccount_key = ptr->swarm_make_subaccount(deserialized_id.data(), can_write, can_delete);
+    auto new_subaccount_key = ptr->swarm_make_subaccount(jni_utils::JavaStringRef(env, session_id).view(), can_write, can_delete);
     auto jbytes = util::bytes_from_vector(env, new_subaccount_key);
     return jbytes;
 }
@@ -232,8 +231,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_getSubAccountToken(
                                                                                 jboolean can_delete) {
     std::lock_guard lock{util::util_mutex_};
     auto ptr = ptrToKeys(env, thiz);
-    auto deserialized_id = util::string_from_jstring(env, session_id);
-    auto token = ptr->swarm_subaccount_token(deserialized_id, can_write, can_delete);
+    auto token = ptr->swarm_subaccount_token(jni_utils::JavaStringRef(env, session_id).view(), can_write, can_delete);
     auto jbytes = util::bytes_from_vector(env, token);
     return jbytes;
 }
@@ -261,7 +259,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_supplementFor(JNIEn
     auto ptr = ptrToKeys(env, thiz);
     std::vector<std::string> user_session_ids;
     for (int i = 0, size = env->GetArrayLength(j_user_session_ids); i < size; i++) {
-        user_session_ids.push_back(util::string_from_jstring(env, (jstring)(env->GetObjectArrayElement(j_user_session_ids, i))));
+        user_session_ids.push_back(jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, (jstring)(env->GetObjectArrayElement(j_user_session_ids, i))).get()).copy());
     }
     auto supplement = ptr->key_supplement(user_session_ids);
     return util::bytes_from_vector(env, supplement);

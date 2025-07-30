@@ -7,4 +7,8 @@ data class BlindedContact(
     var name: String,
     var createdEpochSeconds: Long,
     var profilePic: UserPic
-)
+) {
+    @OptIn(ExperimentalStdlibApi::class)
+    val communityServerPubKey: ByteArray
+        get() = communityServerPubKeyHex.hexToByteArray()
+}

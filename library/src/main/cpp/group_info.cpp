@@ -145,9 +145,7 @@ Java_network_loki_messenger_libsession_1util_GroupInfoConfig_setName(JNIEnv *env
                                                                      jstring new_name) {
     std::lock_guard guard{util::util_mutex_};
     auto group_info = ptrToInfo(env, thiz);
-    auto bytes = env->GetStringUTFChars(new_name, nullptr);
-    group_info->set_name(bytes);
-    env->ReleaseStringUTFChars(new_name, bytes);
+    group_info->set_name(jni_utils::JavaStringRef(env, new_name).view());
 }
 
 extern "C"
@@ -198,7 +196,5 @@ Java_network_loki_messenger_libsession_1util_GroupInfoConfig_setDescription(JNIE
                                                                             jstring new_description) {
     std::lock_guard guard{util::util_mutex_};
     auto group_info = ptrToInfo(env, thiz);
-    auto description = env->GetStringUTFChars(new_description, nullptr);
-    group_info->set_description(description);
-    env->ReleaseStringUTFChars(new_description, description);
+    group_info->set_description(jni_utils::JavaStringRef(env, new_description).view());
 }

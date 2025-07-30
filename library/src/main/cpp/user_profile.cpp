@@ -9,9 +9,7 @@ Java_network_loki_messenger_libsession_1util_UserProfile_setName(
         jstring newName) {
     std::lock_guard lock{util::util_mutex_};
     auto profile = ptrToProfile(env, thiz);
-    auto name_chars = env->GetStringUTFChars(newName, nullptr);
-    profile->set_name(name_chars);
-    env->ReleaseStringUTFChars(newName, name_chars);
+    profile->set_name(jni_utils::JavaStringRef(env, newName).view());
 }
 
 JNIEXPORT jstring JNICALL

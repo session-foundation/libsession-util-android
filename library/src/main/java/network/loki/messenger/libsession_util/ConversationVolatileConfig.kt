@@ -16,23 +16,38 @@ class ConversationVolatileConfig private constructor(pointer: Long): ConfigBase(
     external override fun getOneToOne(pubKeyHex: String): Conversation.OneToOne?
     external override fun getOrConstructOneToOne(pubKeyHex: String): Conversation.OneToOne
     external override fun eraseOneToOne(pubKeyHex: String): Boolean
+    external override fun setOneToOne(o: Conversation.OneToOne)
 
     external override fun getCommunity(baseUrl: String, room: String): Conversation.Community?
     external override fun getOrConstructCommunity(baseUrl: String, room: String, pubKeyHex: String): Conversation.Community
     external override fun getOrConstructCommunity(baseUrl: String, room: String, pubKey: ByteArray): Conversation.Community
     external override fun eraseCommunity(community: Conversation.Community): Boolean
     external override fun eraseCommunity(baseUrl: String, room: String): Boolean
+    external override fun setCommunity(o: Conversation.Community)
 
     external override fun getLegacyClosedGroup(groupId: String): Conversation.LegacyGroup?
     external override fun getOrConstructLegacyGroup(groupId: String): Conversation.LegacyGroup
     external override fun eraseLegacyClosedGroup(groupId: String): Boolean
+    external override fun setLegacyGroup(o: Conversation.LegacyGroup)
 
     external override fun getClosedGroup(sessionId: String): Conversation.ClosedGroup?
     external override fun getOrConstructClosedGroup(sessionId: String): Conversation.ClosedGroup
     external override fun eraseClosedGroup(sessionId: String): Boolean
+    external override fun setClosedGroup(o: Conversation.ClosedGroup)
 
-    external override fun erase(conversation: Conversation): Boolean
-    external override fun set(toStore: Conversation)
+    external override fun setBlindedOneToOne(o: Conversation.BlindedOneToOne)
+    external override fun getOrConstructedBlindedOneToOne(blindedId: String): Conversation.BlindedOneToOne
+    external override fun eraseBlindedOneToOne(blindedId: String): Boolean
+
+    override fun set(conv: Conversation) {
+        when (conv) {
+            is Conversation.BlindedOneToOne -> setBlindedOneToOne(conv)
+            is Conversation.ClosedGroup -> setClosedGroup(conv)
+            is Conversation.Community -> setCommunity(conv)
+            is Conversation.LegacyGroup -> setLegacyGroup(conv)
+            is Conversation.OneToOne -> setOneToOne(conv)
+        }
+    }
 
     /**
      * Erase all conversations that do not satisfy the `predicate`, similar to [MutableList.removeAll]

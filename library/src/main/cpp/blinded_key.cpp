@@ -46,14 +46,11 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blindVersionSignRe
                                                                                       jstring path,
                                                                                       jbyteArray body) {
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
-        auto methodC = util::string_from_jstring(env, method);
-        auto pathC = util::string_from_jstring(env, path);
-
         auto bytes = session::blind_version_sign_request(
                 jni_utils::JavaByteArrayRef(env, ed25519_secret_key).get(),
                 timestamp,
-                methodC,
-                pathC,
+                jni_utils::JavaStringRef(env, method).view(),
+                jni_utils::JavaStringRef(env, path).view(),
                 body ? std::make_optional(jni_utils::JavaByteArrayRef(env, body).get()) : std::nullopt
         );
         return util::bytes_from_vector(env, bytes);

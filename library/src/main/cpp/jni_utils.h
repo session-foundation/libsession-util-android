@@ -171,6 +171,10 @@ namespace jni_utils {
                 return std::string_view(data.data(), data.size());
             }
 
+            std::string copy() const {
+                return std::string(view());
+            }
+
             // Get the data as a span. Only valid during the lifetime of this object.
             std::span<char> get() const {
                 return data;
@@ -198,6 +202,10 @@ namespace jni_utils {
             // Get the data as a span. Only valid during the lifetime of this object.
             std::span<unsigned char> get() const {
                 return data;
+            }
+
+            std::vector<unsigned char> copy() const {
+                return std::vector(data.begin(), data.end());
             }
     };
 }

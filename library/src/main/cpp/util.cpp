@@ -31,13 +31,8 @@ namespace util {
         if (byteArray == nullptr) {
             return {};
         }
-        size_t len = env->GetArrayLength(byteArray);
-        auto bytes = env->GetByteArrayElements(byteArray, nullptr);
 
-        auto begin = reinterpret_cast<const unsigned char *>(bytes);
-        std::vector<unsigned char> st{begin, begin + len};
-        env->ReleaseByteArrayElements(byteArray, bytes, 0);
-        return st;
+        return jni_utils::JavaByteArrayRef(env, byteArray).copy();
     }
 
     jbyteArray bytes_from_span(JNIEnv* env, std::span<const unsigned char> from_str) {
@@ -48,20 +43,11 @@ namespace util {
         return new_array;
     }
 
-    std::string string_from_jstring(JNIEnv* env, jstring string) {
-        size_t len = env->GetStringUTFLength(string);
-        auto chars = env->GetStringUTFChars(string, nullptr);
-
-        std::string st(chars, len);
-        env->ReleaseStringUTFChars(string, chars);
-        return st;
-    }
-
     jobject serialize_user_pic(JNIEnv *env, session::config::profile_pic pic) {
-        auto returnObjectClass = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/UserPic"));
+        jni_utils::JavaLocalRef returnObjectClass(env, env->FindClass("network/loki/messenger/libsession_util/util/UserPic"));
         jmethodID constructor = env->GetMethodID(returnObjectClass.get(), "<init>", "(Ljava/lang/String;Lnetwork/loki/messenger/libsession_util/util/Bytes;)V");
         return env->NewObject(returnObjectClass.get(), constructor,
-                              env->NewStringUTF(pic.url.data()),
+                              jni_utils::JavaLocalRef(env, env->NewStringUTF(pic.url.data())).get(),
                               jni_utils::session_bytes_from_range(env, pic.key)
                               );
     }
@@ -89,19 +75,15 @@ namespace util {
         jfieldID base_url_field = env->GetFieldID(base_community_clazz, "baseUrl", "Ljava/lang/String;");
         jfieldID room_field = env->GetFieldID(base_community_clazz, "room", "Ljava/lang/String;");
         jfieldID pubkey_hex_field = env->GetFieldID(base_community_clazz, "pubKeyHex", "Ljava/lang/String;");
-        auto base_url = jni_utils::JavaLocalRef(env, (jstring)env->GetObjectField(base_community,base_url_field));
-        auto room = jni_utils::JavaLocalRef(env, (jstring)env->GetObjectField(base_community, room_field));
-        auto pub_key_hex = jni_utils::JavaLocalRef(env, (jstring)env->GetObjectField(base_community, pubkey_hex_field));
-        auto base_url_chars = env->GetStringUTFChars(base_url.get(), nullptr);
-        auto room_chars = env->GetStringUTFChars(room.get(), nullptr);
-        auto pub_key_hex_chars = env->GetStringUTFChars(pub_key_hex.get(), nullptr);
+        jni_utils::JavaLocalRef base_url(env, (jstring)env->GetObjectField(base_community,base_url_field));
+        jni_utils::JavaLocalRef room(env, (jstring)env->GetObjectField(base_community, room_field));
+        jni_utils::JavaLocalRef pub_key_hex(env, (jstring)env->GetObjectField(base_community, pubkey_hex_field));
 
-        auto community = session::config::community(base_url_chars, room_chars, pub_key_hex_chars);
-
-        env->ReleaseStringUTFChars(base_url.get(), base_url_chars);
-        env->ReleaseStringUTFChars(room.get(), room_chars);
-        env->ReleaseStringUTFChars(pub_key_hex.get(), pub_key_hex_chars);
-        return community;
+        return session::config::community(
+                jni_utils::JavaStringRef(env, base_url.get()).view(),
+                jni_utils::JavaStringRef(env, room.get()).view(),
+                jni_utils::JavaStringRef(env, pub_key_hex.get()).view()
+        );
     }
 
     jobject serialize_expiry(JNIEnv *env, const session::config::expiration_mode& mode, const std::chrono::seconds& time_seconds) {
@@ -189,13 +171,11 @@ Java_network_loki_messenger_libsession_1util_util_MultiEncrypt_encryptForMultipl
     std::vector<std::vector<unsigned char>> message_vec{};
     std::vector<std::vector<unsigned char>> recipient_vec{};
     for (int i = 0; i < size; i++) {
-        jbyteArray message_j = static_cast<jbyteArray>(env->GetObjectArrayElement(messages, i));
-        jbyteArray recipient_j = static_cast<jbyteArray>(env->GetObjectArrayElement(recipients, i));
-        std::vector<unsigned char> message = util::vector_from_bytes(env, message_j);
-        std::vector<unsigned char> recipient = util::vector_from_bytes(env, recipient_j);
+        jni_utils::JavaLocalRef message_j(env, static_cast<jbyteArray>(env->GetObjectArrayElement(messages, i)));
+        jni_utils::JavaLocalRef recipient_j(env, static_cast<jbyteArray>(env->GetObjectArrayElement(recipients, i)));
 
-        message_vec.emplace_back(message);
-        recipient_vec.emplace_back(recipient);
+        message_vec.emplace_back(jni_utils::JavaByteArrayRef(env, message_j.get()).copy());
+        recipient_vec.emplace_back(jni_utils::JavaByteArrayRef(env, recipient_j.get()).copy());
     }
 
     std::vector<std::span<const unsigned char>> message_sv_vec{};
@@ -205,21 +185,17 @@ Java_network_loki_messenger_libsession_1util_util_MultiEncrypt_encryptForMultipl
         recipient_sv_vec.emplace_back(session::to_span(recipient_vec[i]));
     }
 
-    auto sk = util::vector_from_bytes(env, ed25519_secret_key);
     std::array<unsigned char, 24> random_nonce;
     randombytes_buf(random_nonce.data(), random_nonce.size());
-
-    auto domain_string = env->GetStringUTFChars(domain, nullptr);
 
     auto result = session::encrypt_for_multiple_simple(
             message_sv_vec,
             recipient_sv_vec,
-            sk,
-            domain_string,
+            jni_utils::JavaByteArrayRef(env, ed25519_secret_key).get(),
+            jni_utils::JavaStringRef(env, domain).view(),
             std::span<const unsigned char> {random_nonce.data(), 24}
     );
 
-    env->ReleaseStringUTFChars(domain, domain_string);
     auto encoded = util::bytes_from_vector(env, result);
     return encoded;
 }
@@ -232,17 +208,13 @@ Java_network_loki_messenger_libsession_1util_util_MultiEncrypt_decryptForMultipl
                                                                                         jbyteArray secret_key,
                                                                                         jbyteArray sender_pub_key,
                                                                                         jstring domain) {
-    auto sk_vector = util::vector_from_bytes(env, secret_key);
-    auto encoded_vector = util::vector_from_bytes(env, encoded);
-    auto pub_vector = util::vector_from_bytes(env, sender_pub_key);
-    auto domain_bytes = env->GetStringUTFChars(domain, nullptr);
     auto result = session::decrypt_for_multiple_simple(
-            encoded_vector,
-            sk_vector,
-            pub_vector,
-            domain_bytes
+            jni_utils::JavaByteArrayRef(env, encoded).get(),
+            jni_utils::JavaByteArrayRef(env, secret_key).get(),
+            jni_utils::JavaByteArrayRef(env, sender_pub_key).get(),
+            jni_utils::JavaStringRef(env, domain).view()
             );
-    env->ReleaseStringUTFChars(domain,domain_bytes);
+
     if (result) {
         return util::bytes_from_vector(env, *result);
     } else {
@@ -255,9 +227,7 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_util_BaseCommunityInfo_00024Companion_parseFullUrl(
         JNIEnv *env, jobject thiz, jstring full_url) {
-    auto bytes = env->GetStringUTFChars(full_url, nullptr);
-    auto [base, room, pk] = session::config::community::parse_full_url(bytes);
-    env->ReleaseStringUTFChars(full_url, bytes);
+    auto [base, room, pk] = session::config::community::parse_full_url(jni_utils::JavaStringRef(env, full_url).view());
 
     jclass clazz = env->FindClass("kotlin/Triple");
     jmethodID constructor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V");

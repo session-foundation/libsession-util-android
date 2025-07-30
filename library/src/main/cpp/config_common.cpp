@@ -16,24 +16,24 @@ Java_network_loki_messenger_libsession_1util_ConfigKt_createConfigObject(
         jbyteArray ed25519_secret_key,
         jbyteArray initial_dump) {
     return jni_utils::run_catching_cxx_exception_or_throws<jlong>(env, [=] {
-        auto config_name = util::string_from_jstring(env, java_config_name);
-        auto secret_key = util::vector_from_bytes(env, ed25519_secret_key);
+        jni_utils::JavaStringRef config_name(env, java_config_name);
+        jni_utils::JavaByteArrayRef secret_key(env, ed25519_secret_key);
         auto initial = initial_dump
                        ? std::optional(util::vector_from_bytes(env, initial_dump))
                        : std::nullopt;
 
 
         std::lock_guard lock{util::util_mutex_};
-        if (config_name == "Contacts") {
-            return reinterpret_cast<jlong>(new session::config::Contacts(secret_key, initial));
-        } else if (config_name == "UserProfile") {
-            return reinterpret_cast<jlong>(new session::config::UserProfile(secret_key, initial));
-        } else if (config_name == "UserGroups") {
-            return reinterpret_cast<jlong>(new session::config::UserGroups(secret_key, initial));
-        } else if (config_name == "ConvoInfoVolatile") {
-            return reinterpret_cast<jlong>(new session::config::ConvoInfoVolatile(secret_key, initial));
+        if (config_name.view() == "Contacts") {
+            return reinterpret_cast<jlong>(new session::config::Contacts(secret_key.get(), initial));
+        } else if (config_name.view() == "UserProfile") {
+            return reinterpret_cast<jlong>(new session::config::UserProfile(secret_key.get(), initial));
+        } else if (config_name.view() == "UserGroups") {
+            return reinterpret_cast<jlong>(new session::config::UserGroups(secret_key.get(), initial));
+        } else if (config_name.view() == "ConvoInfoVolatile") {
+            return reinterpret_cast<jlong>(new session::config::ConvoInfoVolatile(secret_key.get(), initial));
         } else {
-            throw std::invalid_argument("Unknown config name: " + config_name);
+            throw std::invalid_argument("Unknown config name: " + std::string(config_name.view()));
         }
     });
 }

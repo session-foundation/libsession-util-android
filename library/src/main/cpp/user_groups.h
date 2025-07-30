@@ -33,13 +33,11 @@ inline void deserialize_members_into(JNIEnv *env, jobject members_map, session::
     auto iterator = jni_utils::JavaLocalRef(env, env->CallObjectMethod(entry_set.get(), get_at));
 
     while (env->CallBooleanMethod(iterator.get(), has_next)) {
-        auto entry = jni_utils::JavaLocalRef(env, env->CallObjectMethod(iterator.get(), next));
-        auto key = jni_utils::JavaLocalRef(env, static_cast<jstring>(env->CallObjectMethod(entry.get(), get_key)));
-        auto boxed = jni_utils::JavaLocalRef(env, env->CallObjectMethod(entry.get(), get_value));
+        jni_utils::JavaLocalRef entry(env, env->CallObjectMethod(iterator.get(), next));
+        jni_utils::JavaLocalRef key(env, static_cast<jstring>(env->CallObjectMethod(entry.get(), get_key)));
+        jni_utils::JavaLocalRef boxed(env, env->CallObjectMethod(entry.get(), get_value));
         bool is_admin = env->CallBooleanMethod(boxed.get(), get_bool_value);
-        auto member_string = env->GetStringUTFChars(key.get(), nullptr);
-        to_append_group.insert(member_string, is_admin);
-        env->ReleaseStringUTFChars(key.get(), member_string);
+        to_append_group.insert(std::string(jni_utils::JavaStringRef(env, key.get()).view()), is_admin);
     }
 }
 
@@ -61,25 +59,19 @@ inline session::config::legacy_group_info deserialize_legacy_group_info(JNIEnv *
     int priority = env->GetLongField(info, priority_field);
     long joined_at = env->GetLongField(info, joined_at_field);
 
-    auto id_bytes = util::string_from_jstring(env, id.get());
-    auto name_bytes = env->GetStringUTFChars(name.get(), nullptr);
-    auto enc_pub_key_bytes = util::vector_from_bytes(env, enc_pub_key.get());
-    auto enc_sec_key_bytes = util::vector_from_bytes(env, enc_sec_key.get());
-
-    auto info_deserialized = conf->get_or_construct_legacy_group(id_bytes);
+    auto info_deserialized = conf->get_or_construct_legacy_group(jni_utils::JavaStringRef(env, id.get()).view());
 
     auto current_members = info_deserialized.members();
     for (auto member = current_members.begin(); member != current_members.end(); ++member) {
         info_deserialized.erase(member->first);
     }
     deserialize_members_into(env, members_map.get(), info_deserialized);
-    info_deserialized.name = name_bytes;
-    info_deserialized.enc_pubkey = enc_pub_key_bytes;
-    info_deserialized.enc_seckey = enc_sec_key_bytes;
+    info_deserialized.name = jni_utils::JavaStringRef(env, name.get()).view();
+    info_deserialized.enc_pubkey = jni_utils::JavaByteArrayRef(env, enc_pub_key.get()).copy();
+    info_deserialized.enc_seckey = jni_utils::JavaByteArrayRef(env, enc_sec_key.get()).copy();
     info_deserialized.priority = priority;
     info_deserialized.disappearing_timer = std::chrono::seconds(env->GetLongField(info, disappearing_timer_field));
     info_deserialized.joined_at = joined_at;
-    env->ReleaseStringUTFChars(name.get(), name_bytes);
     return info_deserialized;
 }
 
@@ -157,17 +149,15 @@ inline session::config::group_info deserialize_closed_group_info(JNIEnv* env, jo
     auto auth_jBytes = jni_utils::JavaLocalRef(env, (jbyteArray)env->CallObjectMethod(info_serialized, auth_method));
     auto name_jstring = jni_utils::JavaLocalRef(env, (jstring)env->GetObjectField(info_serialized, name_field));
 
-    auto id_bytes = util::string_from_jstring(env, id_jobject.get());
     auto secret_bytes = util::vector_from_bytes(env, secret_jBytes.get());
     auto auth_bytes = util::vector_from_bytes(env, auth_jBytes.get());
-    auto name = util::string_from_jstring(env, name_jstring.get());
 
-    session::config::group_info group_info(id_bytes);
+    session::config::group_info group_info(jni_utils::JavaStringRef(env, id_jobject.get()).copy());
     group_info.auth_data = auth_bytes;
     group_info.secretkey = secret_bytes;
     group_info.priority = env->GetLongField(info_serialized, priority_field);
     group_info.invited = env->GetBooleanField(info_serialized, invited_field);
-    group_info.name = name;
+    group_info.name = jni_utils::JavaStringRef(env, name_jstring.get()).view();
     group_info.joined_at = env->GetLongField(info_serialized, joined_at_field);
 
     if (env->GetBooleanField(info_serialized, kicked_field)) {

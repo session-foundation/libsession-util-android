@@ -109,21 +109,27 @@ interface ReadableConversationVolatileConfig: ReadableConfig {
 interface MutableConversationVolatileConfig : ReadableConversationVolatileConfig, MutableConfig {
     fun getOrConstructOneToOne(pubKeyHex: String): Conversation.OneToOne
     fun eraseOneToOne(pubKeyHex: String): Boolean
+    fun setOneToOne(o: Conversation.OneToOne)
 
     fun getOrConstructCommunity(baseUrl: String, room: String, pubKeyHex: String): Conversation.Community
     fun getOrConstructCommunity(baseUrl: String, room: String, pubKey: ByteArray): Conversation.Community
     fun eraseCommunity(community: Conversation.Community): Boolean
     fun eraseCommunity(baseUrl: String, room: String): Boolean
+    fun setCommunity(o: Conversation.Community)
 
     fun getOrConstructLegacyGroup(groupId: String): Conversation.LegacyGroup
     fun eraseLegacyClosedGroup(groupId: String): Boolean
+    fun setLegacyGroup(o: Conversation.LegacyGroup)
 
     fun getOrConstructClosedGroup(sessionId: String): Conversation.ClosedGroup
     fun eraseClosedGroup(sessionId: String): Boolean
+    fun setClosedGroup(o: Conversation.ClosedGroup)
 
-    fun erase(conversation: Conversation): Boolean
-    fun set(toStore: Conversation)
+    fun getOrConstructedBlindedOneToOne(blindedId: String): Conversation.BlindedOneToOne
+    fun eraseBlindedOneToOne(blindedId: String): Boolean
+    fun setBlindedOneToOne(o: Conversation.BlindedOneToOne)
 
+    fun set(conv: Conversation)
     fun eraseAll(predicate: (Conversation) -> Boolean): Int
 }
 
