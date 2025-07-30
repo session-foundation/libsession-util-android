@@ -16,8 +16,6 @@ steps:
     environment:
       ANDROID_HOME: /usr/lib/android-sdk
     commands:
-      - apt-get -y update && apt-get -y install ninja-build
-      - update-java-alternatives -s java-1.17.0-openjdk-amd64
       - env VERSION=`git describe --tags --dirty` ./gradlew publish
 
   - name: upload the artifact
