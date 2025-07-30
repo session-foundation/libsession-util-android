@@ -54,7 +54,7 @@ namespace util {
     session::config::profile_pic deserialize_user_pic(JNIEnv *env, jobject user_pic) {
         jni_utils::JavaLocalRef clazz(env, env->GetObjectClass(user_pic));
         return {
-            jni_utils::JavaStringRef(env, (jstring) (env->CallObjectMethod(user_pic, env->GetMethodID(clazz.get(), "getUrl", "Ljava/lang/String;")))).view(),
+            jni_utils::JavaStringRef(env, (jstring) (env->CallObjectMethod(user_pic, env->GetMethodID(clazz.get(), "getUrl", "()Ljava/lang/String;")))).view(),
             util::vector_from_bytes(env, static_cast<jbyteArray>(env->CallObjectMethod(user_pic, env->GetMethodID(clazz.get(), "getKeyAsByteArray", "()[B"))))
         };
     }
