@@ -164,6 +164,7 @@ session::config::blinded_contact_info deserialize_blinded_contact(JNIEnv *env, j
     );
     info.created = std::chrono::sys_seconds{std::chrono::seconds{env->GetLongField(jInfo, createdEpochSecondsField)}};
     info.profile_picture = util::deserialize_user_pic(env, jni_utils::JavaLocalRef(env, env->GetObjectField(jInfo, profilePicField)).get());
+    info.name = jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, (jstring) env->GetObjectField(jInfo, nameField)).get()).view();
 
     return info;
 }
