@@ -125,7 +125,7 @@ session::config::convo::blinded_one_to_one deserialize_blinded_one_to_one(JNIEnv
     auto unread_field_id = env->GetFieldID(clazz.get(), "unread", "Z");
 
     session::config::convo::blinded_one_to_one r(
-            jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, (jstring) env->GetObjectField(info, id_field_id)).get()).view(), true);
+            jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, (jstring) env->GetObjectField(info, id_field_id)).get()).view());
 
     r.last_read = env->GetLongField(info, last_read_field_id);
     r.unread = env->GetBooleanField(info, unread_field_id);
@@ -142,6 +142,8 @@ jobject serialize_any(JNIEnv *env, session::config::convo::any any) {
         return serialize_legacy_group(env, *lgc);
     } else if (auto* gc = std::get_if<session::config::convo::group>(&any)) {
         return serialize_closed_group(env, *gc);
+    } else if (auto *bc = std::get_if<session::config::convo::blinded_one_to_one>(&any)) {
+        return serialize_blinded_one_to_one(env, *bc);
     }
     return nullptr;
 }

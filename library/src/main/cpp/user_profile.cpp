@@ -99,3 +99,10 @@ Java_network_loki_messenger_libsession_1util_UserProfile_isBlockCommunityMessage
     auto profile = ptrToProfile(env, thiz);
     return profile->get_blinded_msgreqs().has_value();
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_setLastUpdated(JNIEnv *env, jobject thiz,
+                                                                        jlong last_updated_epoch_seconds) {
+    ptrToProfile(env, thiz)->set_profile_pic()
+}

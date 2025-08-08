@@ -6,6 +6,7 @@ data class BlindedContact(
     val communityServerPubKeyHex: String,
     var name: String,
     var createdEpochSeconds: Long,
+    var profileUpdatedEpochSeconds: Long,
     var profilePic: UserPic
 ) {
     @OptIn(ExperimentalStdlibApi::class)
