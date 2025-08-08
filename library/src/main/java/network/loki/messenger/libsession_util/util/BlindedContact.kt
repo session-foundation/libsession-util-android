@@ -7,7 +7,8 @@ data class BlindedContact(
     var name: String,
     var createdEpochSeconds: Long,
     var profileUpdatedEpochSeconds: Long,
-    var profilePic: UserPic
+    var profilePic: UserPic,
+    var priority: Long,
 ) {
     @OptIn(ExperimentalStdlibApi::class)
     val communityServerPubKey: ByteArray
