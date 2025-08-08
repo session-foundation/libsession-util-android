@@ -439,12 +439,12 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getOrConstructedBlindedOneToOne(
         JNIEnv *env, jobject thiz, jstring blinded_id) {
-    return serialize_blinded_one_to_one(env, ptrToConvoInfo(env, thiz)->get_or_construct_blinded_1to1(jni_utils::JavaStringRef(env, blinded_id).view(), true));
+    return serialize_blinded_one_to_one(env, ptrToConvoInfo(env, thiz)->get_or_construct_blinded_1to1(jni_utils::JavaStringRef(env, blinded_id).view()));
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_eraseBlindedOneToOne(
         JNIEnv *env, jobject thiz, jstring blinded_id) {
-    return ptrToConvoInfo(env, thiz)->erase_blinded_1to1(jni_utils::JavaStringRef(env, blinded_id).view(), true);
+    return ptrToConvoInfo(env, thiz)->erase_blinded_1to1(jni_utils::JavaStringRef(env, blinded_id).view());
 }
