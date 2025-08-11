@@ -134,7 +134,7 @@ session::config::contact_info deserialize_contact(JNIEnv *env, jobject info, ses
 
 jobject serialize_blinded_contact(JNIEnv *env, const session::config::blinded_contact_info &info) {
     jni_utils::JavaLocalRef<jclass> clazz(env, env->FindClass("network/loki/messenger/libsession_util/util/BlindedContact"));
-    auto constructor = env->GetMethodID(clazz.get(), "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JLnetwork/loki/messenger/libsession_util/util/UserPic;)V");
+    auto constructor = env->GetMethodID(clazz.get(), "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJLnetwork/loki/messenger/libsession_util/util/UserPic;L)V");
 
     return env->NewObject(
             clazz.get(),
@@ -144,7 +144,9 @@ jobject serialize_blinded_contact(JNIEnv *env, const session::config::blinded_co
             jni_utils::JavaLocalRef(env, env->NewStringUTF(info.community_pubkey_hex().data())).get(),
             jni_utils::JavaLocalRef(env, env->NewStringUTF(info.name.c_str())).get(),
             (jlong) (info.created.time_since_epoch().count()),
-            jni_utils::JavaLocalRef(env, util::serialize_user_pic(env, info.profile_picture)).get()
+            (jlong) (info.profile_updated.time_since_epoch().count()),
+            jni_utils::JavaLocalRef(env, util::serialize_user_pic(env, info.profile_picture)).get(),
+            (jlong) info.priority
     );
 }
 
@@ -155,7 +157,9 @@ session::config::blinded_contact_info deserialize_blinded_contact(JNIEnv *env, j
     auto getCommunityServerPubKey = env->GetMethodID(clazz.get(), "getCommunityServerPubKey", "()[B");
     auto nameField = env->GetFieldID(clazz.get(), "name", "Ljava/lang/String;");
     auto createdEpochSecondsField = env->GetFieldID(clazz.get(), "createdEpochSeconds", "J");
+    auto profileUpdatedEpochSecondsField = env->GetFieldID(clazz.get(), "profileUpdatedEpochSeconds", "J");
     auto profilePicField = env->GetFieldID(clazz.get(), "profilePic", "Lnetwork/loki/messenger/libsession_util/util/UserPic;");
+    auto priorityField = env->GetFieldID(clazz.get(), "priority", "J");
 
     session::config::blinded_contact_info info(
             jni_utils::JavaStringRef(env, (jstring) env->GetObjectField(jInfo, communityServerField)).view(),
@@ -165,6 +169,8 @@ session::config::blinded_contact_info deserialize_blinded_contact(JNIEnv *env, j
     info.created = std::chrono::sys_seconds{std::chrono::seconds{env->GetLongField(jInfo, createdEpochSecondsField)}};
     info.profile_picture = util::deserialize_user_pic(env, jni_utils::JavaLocalRef(env, env->GetObjectField(jInfo, profilePicField)).get());
     info.name = jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, (jstring) env->GetObjectField(jInfo, nameField)).get()).view();
+    info.profile_updated = std::chrono::sys_seconds{std::chrono::seconds{env->GetLongField(jInfo, profileUpdatedEpochSecondsField)}};
+    info.priority = env->GetLongField(jInfo, priorityField);
 
     return info;
 }
