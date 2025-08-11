@@ -157,3 +157,134 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_calculateECHDAgreeme
     });
 
 }
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_network_loki_messenger_libsession_1util_encrypt_EncryptionStream_00024Companion_createEncryptionStreamState(
+        JNIEnv *env, jobject thiz, jbyteArray javaKey, jbyteArray javaHeaderOut) {
+    JavaByteArrayRef key(env, javaKey);
+    JavaByteArrayRef headerOut(env, javaHeaderOut);
+
+    if (headerOut.get().size() < crypto_secretstream_xchacha20poly1305_HEADERBYTES) {
+        env->ThrowNew(env->FindClass("java/lang/IllegalArgumentException"),
+                      "Invalid headerOut: not enough space");
+        return 0;
+    }
+
+    if (key.get().size() != crypto_secretstream_xchacha20poly1305_KEYBYTES) {
+        env->ThrowNew(env->FindClass("java/lang/IllegalArgumentException"),
+                      "Invalid key: unexpected size");
+        return 0;
+    }
+
+    auto state = std::make_unique<crypto_secretstream_xchacha20poly1305_state>();
+    crypto_secretstream_xchacha20poly1305_init_push(state.get(),
+                                                    reinterpret_cast<unsigned char*>(env->GetDirectBufferAddress(javaHeaderOut)),
+                                                    key.get().data());
+
+    return reinterpret_cast<jlong>(state.release());
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_network_loki_messenger_libsession_1util_encrypt_EncryptionStream_00024Companion_encryptionStreamHeaderSize(
+        JNIEnv *env, jobject thiz) {
+    return static_cast<jint>(crypto_secretstream_xchacha20poly1305_HEADERBYTES);
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_network_loki_messenger_libsession_1util_encrypt_EncryptionStream_00024Companion_encryptionStreamChunkOverhead(
+        JNIEnv *env, jobject thiz) {
+    return static_cast<jint>(crypto_secretstream_xchacha20poly1305_ABYTES);
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_network_loki_messenger_libsession_1util_encrypt_EncryptionStream_00024Companion_encryptStreamPush(
+        JNIEnv *env, jobject thiz, jlong state_ptr, jbyteArray java_in_buf, jint in_buf_size, jbyteArray java_out_buf) {
+    auto state = reinterpret_cast<crypto_secretstream_xchacha20poly1305_state*>(state_ptr);
+
+    JavaByteArrayRef in_buf(env, java_in_buf);
+    JavaByteArrayRef out_buf(env, java_out_buf);
+
+    unsigned long long cipher_len = out_buf.get().size();
+
+    if (crypto_secretstream_xchacha20poly1305_push(
+            state,
+            out_buf.get().data(), &cipher_len, // Cipher data out
+            in_buf.get().data(), in_buf_size, // Plaintext data in
+            nullptr, 0, // Additional data (not used here)
+            0 // Tag (not used here, can be 0 for message)
+    )) {
+        env->ThrowNew(env->FindClass("java/lang/IllegalStateException"),
+                      "Failed to push data into encryption stream");
+        return 0;
+    }
+
+    // Return the size of the ciphertext written to the output buffer
+    return cipher_len;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_network_loki_messenger_libsession_1util_encrypt_EncryptionStream_00024Companion_destroyEncryptionStreamState(
+        JNIEnv *env, jobject thiz, jlong state_ptr) {
+    delete reinterpret_cast<crypto_secretstream_xchacha20poly1305_state*>(state_ptr);
+}
+
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_network_loki_messenger_libsession_1util_encrypt_DecryptionStream_00024Companion_createDecryptionStreamState(
+        JNIEnv *env, jobject thiz, jbyteArray javaKey, jbyteArray javaHeader) {
+    JavaByteArrayRef key(env, javaKey);
+    JavaByteArrayRef header(env, javaHeader);
+
+    if (header.get().size() < crypto_secretstream_xchacha20poly1305_HEADERBYTES) {
+        env->ThrowNew(env->FindClass("java/lang/IllegalArgumentException"),
+                      "Invalid header: unexpected size");
+        return 0;
+    }
+
+    if (key.get().size() != crypto_secretstream_xchacha20poly1305_KEYBYTES) {
+        env->ThrowNew(env->FindClass("java/lang/IllegalArgumentException"),
+                      "Invalid key: unexpected size");
+        return 0;
+    }
+
+    auto state = std::make_unique<crypto_secretstream_xchacha20poly1305_state>();
+
+    if (crypto_secretstream_xchacha20poly1305_init_pull(state.get(), header.get().data(), key.get().data()) != 0) {
+        env->ThrowNew(env->FindClass("java/lang/IllegalArgumentException"),
+                      "Failed to initialize decryption stream state");
+        return 0;
+    }
+
+    return reinterpret_cast<jlong>(state.release());
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_network_loki_messenger_libsession_1util_encrypt_DecryptionStream_00024Companion_decryptionStreamPull(
+        JNIEnv *env, jobject thiz, jlong native_state_ptr, jbyteArray java_in_buf, jint in_buf_len, jbyteArray java_out_buf) {
+    JavaByteArrayRef out_buf(env, java_out_buf);
+    JavaByteArrayRef in_buf(env, java_in_buf);
+
+    unsigned long long mlen = out_buf.get().size();
+    unsigned char tag;
+
+    if (crypto_secretstream_xchacha20poly1305_pull(
+            reinterpret_cast<crypto_secretstream_xchacha20poly1305_state*>(native_state_ptr),
+            out_buf.get().data(), &mlen, // Plaintext data out
+            &tag,
+            in_buf.get().data(), in_buf_len, // Ciphertext data in
+            nullptr, 0 // Additional data (not used here)
+            )) {
+        env->ThrowNew(env->FindClass("java/lang/IllegalStateException"),
+                      "Failed to pull data from decryption stream");
+        return 0;
+    }
+
+    return mlen;
+}
