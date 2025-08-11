@@ -134,7 +134,7 @@ session::config::contact_info deserialize_contact(JNIEnv *env, jobject info, ses
 
 jobject serialize_blinded_contact(JNIEnv *env, const session::config::blinded_contact_info &info) {
     jni_utils::JavaLocalRef<jclass> clazz(env, env->FindClass("network/loki/messenger/libsession_util/util/BlindedContact"));
-    auto constructor = env->GetMethodID(clazz.get(), "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJLnetwork/loki/messenger/libsession_util/util/UserPic;L)V");
+    auto constructor = env->GetMethodID(clazz.get(), "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJLnetwork/loki/messenger/libsession_util/util/UserPic;J)V");
 
     return env->NewObject(
             clazz.get(),
