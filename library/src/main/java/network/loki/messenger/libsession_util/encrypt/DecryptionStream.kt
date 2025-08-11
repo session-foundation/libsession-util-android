@@ -28,6 +28,7 @@ class DecryptionStream(
             ))
 
             plaintextBuffer = ByteBuffer.allocate(chunkSize)
+            plaintextBuffer.limit(0) // Should be empty initially
 
             // Read the initial header from the input stream
             check(inStream.read(cipherBuffer, 0, EncryptionStream.encryptionStreamHeaderSize())

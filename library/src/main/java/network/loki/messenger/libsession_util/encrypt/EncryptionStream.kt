@@ -87,6 +87,10 @@ class EncryptionStream(
 
 
     companion object {
+        init {
+            System.loadLibrary("session_util")
+        }
+
         external fun encryptionStreamHeaderSize(): Int
         external fun encryptionStreamChunkOverhead(): Int
 

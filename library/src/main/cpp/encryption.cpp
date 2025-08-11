@@ -179,7 +179,7 @@ Java_network_loki_messenger_libsession_1util_encrypt_EncryptionStream_00024Compa
 
     auto state = std::make_unique<crypto_secretstream_xchacha20poly1305_state>();
     crypto_secretstream_xchacha20poly1305_init_push(state.get(),
-                                                    reinterpret_cast<unsigned char*>(env->GetDirectBufferAddress(javaHeaderOut)),
+                                                    headerOut.get().data(),
                                                     key.get().data());
 
     return reinterpret_cast<jlong>(state.release());
@@ -272,12 +272,11 @@ Java_network_loki_messenger_libsession_1util_encrypt_DecryptionStream_00024Compa
     JavaByteArrayRef in_buf(env, java_in_buf);
 
     unsigned long long mlen = out_buf.get().size();
-    unsigned char tag;
 
     if (crypto_secretstream_xchacha20poly1305_pull(
             reinterpret_cast<crypto_secretstream_xchacha20poly1305_state*>(native_state_ptr),
             out_buf.get().data(), &mlen, // Plaintext data out
-            &tag,
+            nullptr, // Tag (not used here)
             in_buf.get().data(), in_buf_len, // Ciphertext data in
             nullptr, 0 // Additional data (not used here)
             )) {
