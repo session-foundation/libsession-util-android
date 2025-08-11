@@ -3,6 +3,15 @@ package network.loki.messenger.libsession_util.encrypt
 import java.io.InputStream
 import java.nio.ByteBuffer
 
+/**
+ * A stream for decrypting data that was encrypted using [EncryptionStream].
+ *
+ * Note that you don't need to specify the chunk size as it would have been encoded into the stream.
+ *
+ * @param inStream the underlying input stream to read encrypted data from.
+ * @param key the decryption key to use for decrypting data, must be 32 bytes long.
+ * @param autoClose whether to automatically close the underlying input stream when this stream is
+ */
 class DecryptionStream(
     private val inStream: InputStream,
     key: ByteArray,

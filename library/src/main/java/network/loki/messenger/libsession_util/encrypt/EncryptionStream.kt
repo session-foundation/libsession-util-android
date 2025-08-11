@@ -3,6 +3,18 @@ package network.loki.messenger.libsession_util.encrypt
 import java.io.OutputStream
 import java.nio.ByteBuffer
 
+/**
+ * An [OutputStream] that encrypts data on the fly, using libsodium's encryption stream API.
+ *
+ * Note that you must ensure this stream is flushed at the end, or you can call [close] (which you
+ * should always do) to make sure all data is written out.
+ *
+ * @param out the underlying output stream to write encrypted data to.
+ * @param key the encryption key to use for encrypting data, must be 32 bytes long.
+ * @param chunkSize the size of chunks to write to the output stream. The bigger the chunk size,
+ * the more memory is used, but the less overhead there is for each write operation.
+ * @param autoClose whether to automatically close the underlying output stream when this stream is closed.
+ */
 class EncryptionStream(
     private val out: OutputStream,
     key: ByteArray,
