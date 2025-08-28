@@ -69,6 +69,11 @@ namespace jni_utils {
                 env_->DeleteLocalRef(ref_);
             }
         }
+        JavaLocalRef(JavaLocalRef&& other) : env_(other.env_), ref_(other.ref_) {
+            other.ref_ = nullptr;
+        }
+
+        JavaLocalRef(const JavaLocalRef&) = delete;
 
         inline JNIType get() const {
             return ref_;
@@ -162,6 +167,8 @@ namespace jni_utils {
                 data = std::span<char>(const_cast<char *>(c_str), env->GetStringUTFLength(s));
             }
 
+            JavaStringRef(const JavaStringRef &) = delete;
+
             ~JavaStringRef() {
                 env->ReleaseStringUTFChars(s, data.data());
             }
@@ -195,8 +202,18 @@ namespace jni_utils {
                 data = std::span<unsigned char>(reinterpret_cast<unsigned char *>(env->GetByteArrayElements(byte_array, nullptr)), length);
             }
 
+            JavaByteArrayRef(const JavaByteArrayRef &) = delete;
+
+            JavaByteArrayRef(JavaByteArrayRef&& other) : env(other.env), byte_array(other.byte_array), data(other.data) {
+                other.byte_array = nullptr;
+                other.data = {};
+            }
+
             ~JavaByteArrayRef() {
-                env->ReleaseByteArrayElements(byte_array, reinterpret_cast<jbyte *>(data.data()), 0);
+                if (byte_array) {
+                    env->ReleaseByteArrayElements(byte_array,
+                                                  reinterpret_cast<jbyte *>(data.data()), 0);
+                }
             }
 
             // Get the data as a span. Only valid during the lifetime of this object.

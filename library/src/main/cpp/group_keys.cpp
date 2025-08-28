@@ -189,6 +189,13 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_keys(JNIEnv *env, j
 
 extern "C"
 JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_GroupKeysConfig_groupEncKey(JNIEnv *env, jobject thiz) {
+    auto ptr = ptrToKeys(env, thiz);
+    return util::bytes_from_span(env, ptr->group_enc_key());
+}
+
+extern "C"
+JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_activeHashes(JNIEnv *env,
                                                                            jobject thiz) {
     auto ptr = ptrToKeys(env, thiz);
