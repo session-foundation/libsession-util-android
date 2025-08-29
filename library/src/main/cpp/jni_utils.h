@@ -80,6 +80,7 @@ namespace jni_utils {
         }
     };
 
+
     /**
      * Create a Java List from an iterator.
      *
@@ -225,6 +226,24 @@ namespace jni_utils {
                 return std::vector(data.begin(), data.end());
             }
     };
+
+    template <size_t N>
+    static std::optional<std::array<unsigned char, N>> java_to_cpp_array(JNIEnv *env, jbyteArray array) {
+        if (!array) {
+            return std::nullopt;
+        }
+
+        JavaByteArrayRef bytes(env, array);
+        auto span = bytes.get();
+        if (span.size() != N) {
+            throw std::runtime_error("Invalid byte array length from java, expecting " + std::to_string(N) + " got " + std::to_string(span.size()));
+        }
+
+        std::array<unsigned char, N> out;
+        std::copy(span.begin(), span.end(), out.begin());
+        return out;
+    }
+
 }
 
 #endif //SESSION_ANDROID_JNI_UTILS_H

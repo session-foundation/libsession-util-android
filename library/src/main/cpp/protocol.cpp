@@ -1,219 +1,12 @@
 #include <jni.h>
 #include <session/session_protocol.hpp>
+#include <session/sodium_array.hpp>
 
 #include "jni_utils.h"
 
 using namespace jni_utils;
 
-template <size_t N>
-static std::optional<std::array<unsigned char, N>> java_to_cpp_array(JNIEnv *env, jbyteArray array) {
-    if (!array) {
-        return std::nullopt;
-    }
 
-    JavaByteArrayRef bytes(env, array);
-    auto span = bytes.get();
-    if (span.size() != N) {
-        throw std::runtime_error("Invalid byte array length from java, expecting " + std::to_string(N) + " got " + std::to_string(span.size()));
-    }
-
-    std::array<unsigned char, N> out;
-    std::copy(span.begin(), span.end(), out.begin());
-    return out;
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_network_loki_messenger_libsession_1util_protocol_Destination_00024Contact_toNativeDestination(
-        JNIEnv *env, jobject thiz, jlong native_ptr) {
-    auto &dest = *reinterpret_cast<session::Destination *>(native_ptr);
-
-    JavaLocalRef clazz(env, env->GetObjectClass(thiz));
-
-    JavaLocalRef pub_key(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getRecipientPubKey", "()[B"))));
-
-    JavaLocalRef sig(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getProSignature", "()[B"))));
-    jlong timestamp = env->CallLongMethod(thiz, env->GetMethodID(clazz.get(), "getSentTimestampMs",
-                                                                 "()J"));
-
-    run_catching_cxx_exception_or_throws<void>(env, [&] {
-        dest.type = session::DestinationType::Contact;
-        dest.pro_sig = java_to_cpp_array<64>(env, sig.get());
-        dest.recipient_pubkey = java_to_cpp_array<33>(env, pub_key.get()).value();
-        dest.sent_timestamp_ms = std::chrono::milliseconds{timestamp};
-    });
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_network_loki_messenger_libsession_1util_protocol_Destination_00024Sync_toNativeDestination(
-        JNIEnv *env, jobject thiz, jlong native_ptr) {
-    auto &dest = *reinterpret_cast<session::Destination *>(native_ptr);
-
-    JavaLocalRef clazz(env, env->GetObjectClass(thiz));
-
-    JavaLocalRef pub_key(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getMyPubKey", "()[B"))));
-
-    JavaLocalRef sig(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getProSignature", "()[B"))));
-    jlong timestamp = env->CallLongMethod(thiz, env->GetMethodID(clazz.get(), "getSentTimestampMs",
-                                                                 "()J"));
-
-    run_catching_cxx_exception_or_throws<void>(env, [&] {
-        dest.type = session::DestinationType::SyncMessage;
-        dest.pro_sig = java_to_cpp_array<64>(env, sig.get());
-        dest.recipient_pubkey = java_to_cpp_array<33>(env, pub_key.get()).value();
-        dest.sent_timestamp_ms = std::chrono::milliseconds{timestamp};
-    });
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_network_loki_messenger_libsession_1util_protocol_Destination_00024Group_toNativeDestination(
-        JNIEnv *env, jobject thiz, jlong native_ptr) {
-    auto &dest = *reinterpret_cast<session::Destination *>(native_ptr);
-
-    JavaLocalRef clazz(env, env->GetObjectClass(thiz));
-
-    JavaLocalRef pub_key(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getEd25519PubKey", "()[B"))));
-
-    JavaLocalRef priv_key(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getEd25519PrivKey", "()[B"))));
-
-    JavaLocalRef sig(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getProSignature", "()[B"))));
-
-    jlong timestamp = env->CallLongMethod(thiz, env->GetMethodID(clazz.get(), "getSentTimestampMs",
-                                                                 "()J"));
-
-    run_catching_cxx_exception_or_throws<void>(env, [&] {
-        dest.type = session::DestinationType::Group;
-        dest.pro_sig = java_to_cpp_array<64>(env, sig.get());
-        dest.group_ed25519_privkey = java_to_cpp_array<32>(env, priv_key.get()).value();
-        dest.group_ed25519_pubkey = java_to_cpp_array<33>(env, pub_key.get()).value();
-        dest.sent_timestamp_ms = std::chrono::milliseconds{timestamp};
-    });
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_network_loki_messenger_libsession_1util_protocol_Destination_00024Community_toNativeDestination(
-        JNIEnv *env, jobject thiz, jlong native_ptr) {
-    auto &dest = *reinterpret_cast<session::Destination *>(native_ptr);
-
-    JavaLocalRef clazz(env, env->GetObjectClass(thiz));
-    JavaLocalRef sig(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getProSignature", "()[B"))));
-
-    jlong timestamp = env->CallLongMethod(thiz, env->GetMethodID(clazz.get(), "getSentTimestampMs",
-                                                                 "()J"));
-
-    run_catching_cxx_exception_or_throws<void>(env, [&] {
-        dest.type = session::DestinationType::Community;
-        dest.pro_sig = java_to_cpp_array<64>(env, sig.get());
-        dest.sent_timestamp_ms = std::chrono::milliseconds{timestamp};
-    });
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_network_loki_messenger_libsession_1util_protocol_Destination_00024CommunityInbox_toNativeDestination(
-        JNIEnv *env, jobject thiz, jlong native_ptr) {
-    auto &dest = *reinterpret_cast<session::Destination *>(native_ptr);
-
-    JavaLocalRef clazz(env, env->GetObjectClass(thiz));
-
-    JavaLocalRef recipient_pub_key(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getRecipientPubKey", "()[B"))));
-
-
-    JavaLocalRef pub_key(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getCommunityPubKey", "()[B"))));
-
-    JavaLocalRef sig(
-            env,
-            reinterpret_cast<jbyteArray>(env->CallObjectMethod(
-                    thiz,
-                    env->GetMethodID(clazz.get(), "getProSignature", "()[B"))));
-
-    jlong timestamp = env->CallLongMethod(thiz, env->GetMethodID(clazz.get(), "getSentTimestampMs",
-                                                                 "()J"));
-
-    run_catching_cxx_exception_or_throws<void>(env, [&] {
-        dest.type = session::DestinationType::CommunityInbox;
-        dest.pro_sig = java_to_cpp_array<64>(env, sig.get());
-        dest.community_inbox_server_pubkey = java_to_cpp_array<32>(env, pub_key.get()).value();
-        dest.recipient_pubkey = java_to_cpp_array<33>(env, recipient_pub_key.get()).value();
-        dest.sent_timestamp_ms = std::chrono::milliseconds{timestamp};
-    });
-}
-
-
-extern "C"
-JNIEXPORT jbyteArray JNICALL
-Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encryptForDestination(
-        JNIEnv *env,
-        jobject thiz,
-        jbyteArray java_message,
-        jbyteArray java_my_ed25519_privkey,
-        jobject java_destination,
-        jint java_namespace) {
-    session::Destination dest;
-    auto to_native_method = env->GetMethodID(env->GetObjectClass(java_destination), "toNativeDestination", "(J)V");
-    env->CallVoidMethod(java_destination, to_native_method, reinterpret_cast<jlong>(&dest));
-
-    // Make sure nothing went wrong in toNativeDestination
-    if (env->ExceptionCheck()) {
-        return nullptr;
-    }
-
-    return run_catching_cxx_exception_or_throws<jbyteArray>(env, [&] {
-        auto result = session::encrypt_for_destination(
-                JavaByteArrayRef(env, java_message).get(),
-                JavaByteArrayRef(env, java_my_ed25519_privkey).get(),
-                dest,
-                static_cast<session::config::Namespace>(java_namespace));
-        if (result.encrypted) {
-            return util::bytes_from_vector(env, result.ciphertext);
-        } else {
-            return (jbyteArray) nullptr;
-        }
-    });
-}
 
 static JavaLocalRef<jobject> serializeProStatus(JNIEnv *env, const session::DecryptedEnvelope & envelope) {
     if (!envelope.pro.has_value()) {
@@ -221,22 +14,22 @@ static JavaLocalRef<jobject> serializeProStatus(JNIEnv *env, const session::Decr
         auto fieldId = env->GetStaticFieldID(
                 noneClass.get(),
                 "INSTANCE", "Lnetwork/loki/messenger/libsession_util/protocol/ProStatus$None;");
-        return JavaLocalRef(env, env->GetStaticObjectField(noneClass.get(), fieldId));
+        return {env, env->GetStaticObjectField(noneClass.get(), fieldId)};
     }
 
     if (envelope.pro->status == session::config::ProStatus::Valid) {
         JavaLocalRef validClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/ProStatus$Valid"));
         auto init = env->GetMethodID(validClass.get(), "<init>", "(JJ)V");
-        return JavaLocalRef(env, env->NewObject(validClass.get(), init,
+        return {env, env->NewObject(validClass.get(), init,
                        static_cast<jlong>(envelope.pro->proof.expiry_unix_ts.time_since_epoch().count()),
-                       static_cast<jlong>(envelope.pro->features)));
+                       static_cast<jlong>(envelope.pro->features))};
     }
 
     JavaLocalRef invalidClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/ProStatus$Invalid"));
     auto fieldId = env->GetStaticFieldID(
             invalidClass.get(),
             "INSTANCE", "Lnetwork/loki/messenger/libsession_util/protocol/ProStatus$Invalid;");
-    return JavaLocalRef(env, env->GetStaticObjectField(invalidClass.get(), fieldId));
+    return {env, env->GetStaticObjectField(invalidClass.get(), fieldId)};
 }
 
 extern "C"
@@ -323,3 +116,74 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decryptEnv
     });
 }
 
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encryptFor1o1(JNIEnv *env,
+                                                                                    jobject thiz,
+                                                                                    jbyteArray plaintext,
+                                                                                    jbyteArray my_ed25519_priv_key,
+                                                                                    jlong timestamp_ms,
+                                                                                    jbyteArray recipient_pub_key,
+                                                                                    jbyteArray pro_signature) {
+    return run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        return util::bytes_from_vector(
+                env,
+                session::encrypt_for_1o1(
+                        JavaByteArrayRef(env, plaintext).get(),
+                        JavaByteArrayRef(env, my_ed25519_priv_key).get(),
+                        std::chrono::milliseconds { timestamp_ms },
+                        *java_to_cpp_array<33>(env, recipient_pub_key),
+                        java_to_cpp_array<64>(env, pro_signature)
+        ));
+    });
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encryptForCommunityInbox(
+        JNIEnv *env, jobject thiz, jbyteArray plaintext, jbyteArray my_ed25519_priv_key,
+        jlong timestamp_ms, jbyteArray recipient_pub_key, jbyteArray community_server_pub_key,
+        jbyteArray pro_signature) {
+    return run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        return util::bytes_from_vector(
+                env,
+                session::encrypt_for_community_inbox(
+                        JavaByteArrayRef(env, plaintext).get(),
+                        JavaByteArrayRef(env, my_ed25519_priv_key).get(),
+                        std::chrono::milliseconds { timestamp_ms },
+                        *java_to_cpp_array<33>(env, recipient_pub_key),
+                        *java_to_cpp_array<32>(env, community_server_pub_key),
+                        java_to_cpp_array<64>(env, pro_signature)
+                ));
+    });
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encryptForGroup(JNIEnv *env,
+                                                                                      jobject thiz,
+                                                                                      jbyteArray plaintext,
+                                                                                      jbyteArray my_ed25519_priv_key,
+                                                                                      jlong timestamp_ms,
+                                                                                      jbyteArray group_ed25519_public_key,
+                                                                                      jbyteArray group_ed25519_private_key,
+                                                                                      jbyteArray pro_signature) {
+    return run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        session::cleared_uc32 group_private_key;
+
+        auto array = *java_to_cpp_array<32>(env, group_ed25519_private_key);
+        std::copy(array.begin(), array.end(), group_private_key.begin());
+
+        return util::bytes_from_vector(
+                env,
+                session::encrypt_for_group(
+                        JavaByteArrayRef(env, plaintext).get(),
+                        JavaByteArrayRef(env, my_ed25519_priv_key).get(),
+                        std::chrono::milliseconds { timestamp_ms },
+                        *java_to_cpp_array<33>(env, group_ed25519_public_key),
+                        group_private_key,
+                        java_to_cpp_array<64>(env, pro_signature)
+                ));
+    });
+}
