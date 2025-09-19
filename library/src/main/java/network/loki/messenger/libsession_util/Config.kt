@@ -73,6 +73,7 @@ interface MutableContacts : ReadableContacts, MutableConfig {
 interface ReadableUserProfile: ReadableConfig {
     fun getName(): String?
     fun getPic(): UserPic
+    fun getProfileUpdatedSeconds(): Long
     fun getNtsPriority(): Long
     fun getNtsExpiry(): ExpiryMode
     fun getCommunityMessageRequests(): Boolean
@@ -81,7 +82,16 @@ interface ReadableUserProfile: ReadableConfig {
 
 interface MutableUserProfile : ReadableUserProfile, MutableConfig {
     fun setName(newName: String)
+
+    /**
+     * Called when setting a new user pic
+     */
     fun setPic(userPic: UserPic)
+
+    /**
+     * Called when setting a re-uploaded pic
+     */
+    fun setReuploadedPic(userPic: UserPic)
     fun setNtsPriority(priority: Long)
     fun setNtsExpiry(expiryMode: ExpiryMode)
     fun setCommunityMessageRequests(blocks: Boolean)

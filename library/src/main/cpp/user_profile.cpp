@@ -92,10 +92,25 @@ Java_network_loki_messenger_libsession_1util_UserProfile_setCommunityMessageRequ
     auto profile = ptrToProfile(env, thiz);
     profile->set_blinded_msgreqs(std::optional{(bool)blocks});
 }
+
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_network_loki_messenger_libsession_1util_UserProfile_isBlockCommunityMessageRequestsSet(
         JNIEnv *env, jobject thiz) {
     auto profile = ptrToProfile(env, thiz);
     return profile->get_blinded_msgreqs().has_value();
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_getProfileUpdatedSeconds(JNIEnv *env,
+                                                                                  jobject thiz) {
+    return ptrToProfile(env, thiz)->get_profile_updated().time_since_epoch().count();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_setReuploadedPic(JNIEnv *env, jobject thiz,
+                                                                          jobject user_pic) {
+    ptrToProfile(env, thiz)->set_reupload_profile_pic(util::deserialize_user_pic(env, user_pic));
 }
