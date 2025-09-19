@@ -18,6 +18,8 @@ class UserProfile private constructor(pointer: Long) : ConfigBase(pointer), Muta
     external override fun getName(): String?
     external override fun getPic(): UserPic
     external override fun setPic(userPic: UserPic)
+    external override fun getProfileUpdatedSeconds(): Long
+    external override fun setReuploadedPic(userPic: UserPic)
     external override fun setNtsPriority(priority: Long)
     external override fun getNtsPriority(): Long
     external override fun setNtsExpiry(expiryMode: ExpiryMode)
