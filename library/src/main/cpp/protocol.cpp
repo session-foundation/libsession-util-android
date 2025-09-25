@@ -17,7 +17,7 @@ static JavaLocalRef<jobject> serializeProStatus(JNIEnv *env, const session::Decr
         return {env, env->GetStaticObjectField(noneClass.get(), fieldId)};
     }
 
-    if (envelope.pro->status == session::config::ProStatus::Valid) {
+    if (envelope.pro->status == session::ProStatus::Valid) {
         JavaLocalRef validClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/ProStatus$Valid"));
         auto init = env->GetMethodID(validClass.get(), "<init>", "(JJ)V");
         return {env, env->NewObject(validClass.get(), init,

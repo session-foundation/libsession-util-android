@@ -1,5 +1,6 @@
 package network.loki.messenger.libsession_util.protocol
 
+import androidx.annotation.Keep
 import network.loki.messenger.libsession_util.util.Bytes
 import java.time.Instant
 
@@ -10,6 +11,7 @@ data class DecryptedEnvelope(
     val senderX25519PubKey: Bytes,
     val timestamp: Instant
 ) {
+    @Keep
     constructor(
         proStatus: ProStatus,
         contentPlainText: ByteArray,

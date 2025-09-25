@@ -1,5 +1,6 @@
 package network.loki.messenger.libsession_util.protocol
 
+import androidx.annotation.Keep
 import java.time.Instant
 
 
@@ -11,6 +12,7 @@ sealed interface ProStatus {
         val expiresAt: Instant,
         val proFeatures: Set<ProFeature>
     ) {
+        @Keep
         constructor(
             expiresAtEpochSeconds: Long,
             proFeatures: Long
