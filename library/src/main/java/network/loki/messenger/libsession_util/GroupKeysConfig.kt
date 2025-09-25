@@ -39,6 +39,7 @@ class GroupKeysConfig private constructor(
     override fun namespace() = Namespace.GROUP_KEYS()
 
     external override fun groupKeys(): List<ByteArray>
+    external override fun groupEncKey(): ByteArray
     external override fun needsDump(): Boolean
     external override fun dump(): ByteArray
     external fun loadKey(message: ByteArray,
