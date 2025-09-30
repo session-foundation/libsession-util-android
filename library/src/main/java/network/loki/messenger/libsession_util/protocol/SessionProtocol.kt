@@ -8,7 +8,7 @@ object SessionProtocol : LibSessionUtilCApi() {
         myEd25519PrivKey: ByteArray,
         timestampMs: Long,
         recipientPubKey: ByteArray, // 33 bytes prefixed key
-        proSignature: ByteArray?, // 64 bytes
+        proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
     ): ByteArray
 
     external fun encryptForCommunityInbox(
@@ -17,7 +17,7 @@ object SessionProtocol : LibSessionUtilCApi() {
         timestampMs: Long,
         recipientPubKey: ByteArray, // 33 bytes prefixed key
         communityServerPubKey: ByteArray, // 32 bytes key
-        proSignature: ByteArray?, // 64 bytes
+        proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
     ): ByteArray
 
     external fun encryptForGroup(
@@ -26,7 +26,7 @@ object SessionProtocol : LibSessionUtilCApi() {
         timestampMs: Long,
         groupEd25519PublicKey: ByteArray, // 33 bytes 03 prefixed key
         groupEd25519PrivateKey: ByteArray, // 32 bytes group "encryption" key
-        proSignature: ByteArray?, // 64 bytes
+        proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
     ): ByteArray
 
     external fun decryptEnvelope(
