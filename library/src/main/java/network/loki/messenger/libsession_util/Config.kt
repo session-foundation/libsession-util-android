@@ -231,6 +231,7 @@ sealed class ConfigSig(pointer: Long) : Config(pointer)
 
 interface ReadableGroupKeysConfig {
     fun groupKeys(): List<ByteArray>
+    fun groupEncKey(): ByteArray
     fun needsDump(): Boolean
     fun dump(): ByteArray
     fun needsRekey(): Boolean
