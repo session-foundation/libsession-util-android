@@ -314,6 +314,14 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_eraseLeg
 }
 
 extern "C"
+JNIEXPORT void JNICALL
+Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_setLegacyGroup(JNIEnv *env,
+                                                                                       jobject thiz,
+                                                                                       jobject o) {
+    ptrToConvoInfo(env, thiz)->set(deserialize_legacy_closed_group(env, o));
+}
+
+extern "C"
 JNIEXPORT jint JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_sizeCommunities(JNIEnv *env,
                                                                                        jobject thiz) {
@@ -448,3 +456,4 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_eraseBli
         JNIEnv *env, jobject thiz, jstring blinded_id) {
     return ptrToConvoInfo(env, thiz)->erase_blinded_1to1(jni_utils::JavaStringRef(env, blinded_id).view());
 }
+
