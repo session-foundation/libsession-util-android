@@ -204,6 +204,10 @@ namespace jni_utils {
                 return data;
             }
 
+            std::span<std::byte> get_as_bytes() const {
+                return std::span<std::byte>(reinterpret_cast<std::byte *>(data.data()), data.size());
+            }
+
             std::vector<unsigned char> copy() const {
                 return std::vector(data.begin(), data.end());
             }
