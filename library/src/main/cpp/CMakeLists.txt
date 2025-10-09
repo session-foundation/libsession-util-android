@@ -44,6 +44,7 @@ set(SOURCES
         ed25519.cpp
         curve25519.cpp
         hash.cpp
+        attachments.cpp
 )
 
 add_library( # Sets the name of the library.
