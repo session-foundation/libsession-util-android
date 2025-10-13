@@ -22,7 +22,11 @@ object Attachments : LibSessionUtilCApi() {
     private external fun encryptBytes(
         seed: ByteArray,
         plaintextIn: ByteArray,
+        plaintextInOffset: Int,
+        plaintextInLen: Int,
         cipherOut: ByteArray,
+        cipherOutOffset: Int,
+        cipherOutLen: Int,
         domain: Int
     ): ByteArray
 
@@ -31,11 +35,38 @@ object Attachments : LibSessionUtilCApi() {
         plaintextIn: ByteArray,
         cipherOut: ByteArray,
         domain: Domain
-    ): ByteArray = encryptBytes(seed, plaintextIn, cipherOut, domain.nativeValue)
+    ): ByteArray = encryptBytes(
+        seed = seed,
+        plaintextIn = plaintextIn,
+        plaintextInLen = plaintextIn.size,
+        plaintextInOffset = 0,
+        cipherOut = cipherOut,
+        cipherOutOffset = 0,
+        cipherOutLen = cipherOut.size,
+        domain = domain.nativeValue
+    )
 
     external fun decryptBytes(
         key: ByteArray,
         cipherIn: ByteArray,
+        cipherInOffset: Int,
+        cipherInLen: Int,
         plainOut: ByteArray,
+        plainOutOffset: Int,
+        plainOutLen: Int,
     ): Long
+
+    fun decryptBytes(
+        key: ByteArray,
+        cipherIn: ByteArray,
+        plainOut: ByteArray
+    ): Long = decryptBytes(
+        key = key,
+        cipherIn = cipherIn,
+        cipherInOffset = 0,
+        cipherInLen = cipherIn.size,
+        plainOut = plainOut,
+        plainOutOffset = 0,
+        plainOutLen = plainOut.size
+    )
 }
