@@ -15,4 +15,16 @@ object WebPUtils {
         targetWidth: Int,
         targetHeight: Int,
     ): ByteArray
+
+    /**
+     * Check if the given byte array contains a valid WebP animation.
+     */
+    external fun isWebPAnimation(input: ByteArray): Boolean
+
+    /**
+     * Get the dimensions of the WebP image.
+     *
+     * @return null if the input is not a valid WebP image. or an IntArray of size 2 with width and height.
+     */
+    external fun getWebPDimensions(input: ByteArray): IntArray?
 }

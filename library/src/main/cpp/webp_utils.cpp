@@ -111,3 +111,38 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_reencodeWebPAnimati
 
     return out_ref.java_array();
 }
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_network_loki_messenger_libsession_1util_image_WebPUtils_isWebPAnimation(JNIEnv *env,
+                                                                             jobject thiz,
+                                                                             jbyteArray input) {
+    jni_utils::JavaByteArrayRef input_ref(env, input);
+
+    WebPBitstreamFeatures features;
+
+    if (WebPGetFeatures(input_ref.bytes(), input_ref.size(), &features) != VP8_STATUS_OK) {
+        return false;
+    }
+
+    return features.has_animation != 0;
+}
+
+extern "C"
+JNIEXPORT jintArray JNICALL
+Java_network_loki_messenger_libsession_1util_image_WebPUtils_getWebPDimensions(JNIEnv *env,
+                                                                               jobject thiz,
+                                                                               jbyteArray input) {
+    jni_utils::JavaByteArrayRef input_ref(env, input);
+
+    int width, height;
+    if (!WebPGetInfo(input_ref.bytes(), input_ref.size(), &width, &height)) {
+        return nullptr;
+    }
+
+    jint dimen[] = { width, height };
+
+    jintArray result = env->NewIntArray(2);
+    env->SetIntArrayRegion(result, 0, 2, dimen);
+    return result;
+}
