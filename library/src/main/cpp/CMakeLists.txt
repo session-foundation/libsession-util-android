@@ -26,6 +26,22 @@ set(STATIC_BUNDLE ON)
 set(ENABLE_ONIONREQ OFF)
 add_subdirectory(../../../../libsession-util libsession)
 
+include(FetchContent)
+
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(WEBP_BUILD_ANIM_UTILS ON CACHE BOOL "" FORCE)
+set(WEBP_BUILD_LIBWEBPMUX ON CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+        webp
+        GIT_REPOSITORY https://chromium.googlesource.com/webm/libwebp
+        GIT_TAG        v1.6.0
+)
+
+FetchContent_MakeAvailable(webp)
+
+
 set(SOURCES
         user_profile.cpp
         user_groups.cpp
@@ -45,6 +61,7 @@ set(SOURCES
         curve25519.cpp
         hash.cpp
         attachments.cpp
+        webp_utils.cpp
 )
 
 add_library( # Sets the name of the library.
@@ -79,4 +96,9 @@ target_link_libraries( # Specifies the target library.
         libsodium::sodium-internal
         # Links the target library to the log library
         # included in the NDK.
-        ${log-lib})
+        ${log-lib}
+        webp
+        libwebpmux
+        webpdemux
+        webpdecoder
+)
