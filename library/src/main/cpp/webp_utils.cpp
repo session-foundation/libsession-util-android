@@ -80,7 +80,11 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_reencodeWebPAnimati
         }
 
         // Now add the picture to the encoder
-        auto encode_succeeded = WebPAnimEncoderAdd(encoder.get(), &pic, ts_mills, nullptr);
+        WebPConfig encode_config;
+        WebPConfigInit(&encode_config);
+        encode_config.quality = 95.f;
+
+        auto encode_succeeded = WebPAnimEncoderAdd(encoder.get(), &pic, ts_mills, &encode_config);
 
         // Free the picture as sonn as we're done with it
         WebPPictureFree(&pic);
