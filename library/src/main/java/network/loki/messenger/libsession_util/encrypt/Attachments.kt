@@ -11,7 +11,15 @@ object Attachments : LibSessionUtilCApi() {
         ProfilePic(1),
     }
 
+    /**
+     * Returns the size of the encrypted data given the size of the plaintext.
+     */
     external fun encryptedSize(plaintextSize: Long): Long
+
+    /**
+     * Returns the size of the encrypted data given the size of the plaintext, or null if the size
+     * given is smaller than the minimum encryption overhead.
+     */
     fun decryptedMaxSizeOrNull(ciphertextSize: Long): Long? = runCatching {
         decryptedMaxSize(ciphertextSize)
     }.getOrNull()
@@ -30,6 +38,14 @@ object Attachments : LibSessionUtilCApi() {
         domain: Int
     ): ByteArray
 
+    /**
+     * Encrypts the given plaintext using a key derived from the given seed and the given domain.
+     *
+     * The output needs to be allocated by the caller, its size can be determined by calling
+     * [encryptedSize] with the size of the plaintext.
+     *
+     * @return The key used to encrypt the data.
+     */
     fun encryptBytes(
         seed: ByteArray,
         plaintextIn: ByteArray,
@@ -46,6 +62,16 @@ object Attachments : LibSessionUtilCApi() {
         domain = domain.nativeValue
     )
 
+    /**
+     * Decrypts the given ciphertext using the given key.
+     *
+     * The output needs to be allocated by the caller, its size can be determined by calling
+     * [decryptedMaxSizeOrNull] with the size of the ciphertext.
+     *
+     * Will throw if there's any error during decryption.
+     *
+     * @return The size of the decrypted data.
+     */
     external fun decryptBytes(
         key: ByteArray,
         cipherIn: ByteArray,
@@ -56,6 +82,15 @@ object Attachments : LibSessionUtilCApi() {
         plainOutLen: Int,
     ): Long
 
+    /**
+     * Decrypts the given ciphertext using the given key.
+     *
+     * The output needs to be allocated by the caller, its size can be determined by calling
+     * [decryptedMaxSizeOrNull] with the size of the ciphertext.
+     * Will throw if there's any error during decryption.
+     *
+     * @return The size of the decrypted data.
+     */
     fun decryptBytes(
         key: ByteArray,
         cipherIn: ByteArray,
