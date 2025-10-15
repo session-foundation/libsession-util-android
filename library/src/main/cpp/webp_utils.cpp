@@ -11,11 +11,11 @@ using WebPPtr = std::unique_ptr<T, void (*)(T *)>;
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_network_loki_messenger_libsession_1util_image_WebPUtils_resizeWebPAnimation(JNIEnv *env,
-                                                                                 jobject thiz,
-                                                                                 jbyteArray input,
-                                                                                 jint target_width,
-                                                                                 jint target_height) {
+Java_network_loki_messenger_libsession_1util_image_WebPUtils_reencodeWebPAnimation(JNIEnv *env,
+                                                                                   jobject thiz,
+                                                                                   jbyteArray input,
+                                                                                   jint target_width,
+                                                                                   jint target_height) {
     jni_utils::JavaByteArrayRef input_ref(env, input);
     WebPData input_data = {
         .bytes = input_ref.bytes(),
@@ -25,7 +25,7 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_resizeWebPAnimation
     WebPAnimDecoderOptions opts;
     WebPAnimDecoderOptionsInit(&opts);
 
-    opts.color_mode = MODE_ARGB;
+    opts.color_mode = MODE_RGBA;
     opts.use_threads = 1;
 
     WebPPtr<WebPAnimDecoder> decoder(WebPAnimDecoderNew(&input_data, &opts), &WebPAnimDecoderDelete);
@@ -52,30 +52,37 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_resizeWebPAnimation
 
 
     int ts_mills = 0;
-    uint8_t *frame = nullptr;
-    WebPPicture pic;
-    if (!WebPPictureInit(&pic)) {
-        env->ThrowNew(env->FindClass("java/lang/RuntimeException"),
-                      "Failed to initialize WebPPicture");
-        return nullptr;
-    }
+    uint8_t *frame_data = nullptr;
 
-    // First, point the pic to the decoder' frame
-    pic.width = info.canvas_width;
-    pic.height = info.canvas_height;
-    pic.use_argb = 1;
+    while (WebPAnimDecoderGetNext(decoder.get(), &frame_data, &ts_mills)) {
+        WebPPicture pic;
+        WebPPictureInit(&pic);
 
-    while (WebPAnimDecoderGetNext(decoder.get(), reinterpret_cast<uint8_t **>(&pic.argb), &ts_mills)) {
-        // Re-scale the picture to the target size
-        if (!WebPPictureRescale(&pic, target_width, target_height)) {
+        // First, import the frame into a picture
+        pic.width = info.canvas_width;
+        pic.height = info.canvas_height;
+        pic.use_argb = 0;
+        if (!WebPPictureImportRGBA(&pic, frame_data, info.canvas_width * 4)) {
             env->ThrowNew(env->FindClass("java/lang/RuntimeException"),
-                          "Failed to rescale picture");
+                          "Failed to import frame into picture");
             return nullptr;
         }
 
+        // If the target size is different, rescale the picture
+        if (target_width != info.canvas_width || target_height != info.canvas_height) {
+            // Re-scale the picture to the target size
+            if (!WebPPictureRescale(&pic, target_width, target_height)) {
+                WebPPictureFree(&pic);
+                env->ThrowNew(env->FindClass("java/lang/RuntimeException"),
+                              "Failed to rescale picture");
+                return nullptr;
+            }
+        }
+
+        // Now add the picture to the encoder
         auto encode_succeeded = WebPAnimEncoderAdd(encoder.get(), &pic, ts_mills, nullptr);
 
-        // Free the ARGB buffer allocated by "rescale" as soon as it's used
+        // Free the picture as sonn as we're done with it
         WebPPictureFree(&pic);
 
         if (!encode_succeeded) {
@@ -83,12 +90,6 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_resizeWebPAnimation
                           "Failed to add frame to encoder");
             return nullptr;
         }
-
-        // Reset pic to get ready for the next decoded frame
-        pic.argb = nullptr;
-        pic.width = info.canvas_width;
-        pic.height = info.canvas_height;
-        pic.use_argb = 1;
     }
 
     WebPData out;
