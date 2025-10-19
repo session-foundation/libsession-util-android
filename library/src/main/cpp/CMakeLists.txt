@@ -29,6 +29,7 @@ add_subdirectory(../../../../libsession-util libsession)
 include(FetchContent)
 
 
+## Catering for libwebp
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(WEBP_BUILD_ANIM_UTILS ON CACHE BOOL "" FORCE)
 set(WEBP_BUILD_LIBWEBPMUX ON CACHE BOOL "" FORCE)
@@ -40,6 +41,31 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(webp)
+
+## Catering for libyuv - to rescale images
+FetchContent_Declare(
+        libyuv
+        GIT_REPOSITORY https://chromium.googlesource.com/libyuv/libyuv
+        GIT_TAG stable
+)
+FetchContent_MakeAvailable(libyuv)
+
+## turbo-stitch-gif
+FetchContent_Declare(
+        turbo_stitch_gif
+        GIT_REPOSITORY https://github.com/Ferki-git-creator/TurboStitchGIF-HeaderOnly-Fast-ZeroAllocation-PlatformIndependent-Embedded-C-GIF-Decoder.git
+        GIT_TAG bfb6cf3
+)
+
+FetchContent_MakeAvailable(turbo_stitch_gif)
+
+## cgif
+FetchContent_Declare(
+        cgif
+        GIT_REPOSITORY https://github.com/dloebl/cgif.git
+        GIT_TAG 4ddc417
+)
+FetchContent_MakeAvailable(cgif)
 
 
 set(SOURCES
@@ -62,6 +88,12 @@ set(SOURCES
         hash.cpp
         attachments.cpp
         webp_utils.cpp
+        gif_utils.cpp
+        gif.c
+
+        ${cgif_SOURCE_DIR}/src/cgif.c
+        ${cgif_SOURCE_DIR}/src/cgif_rgb.c
+        ${cgif_SOURCE_DIR}/src/cgif_raw.c
 )
 
 add_library( # Sets the name of the library.
@@ -70,6 +102,14 @@ add_library( # Sets the name of the library.
         SHARED
         # Provides a relative path to your source file(s).
         ${SOURCES})
+
+target_include_directories(session_util
+        PRIVATE
+            ${cgif_SOURCE_DIR}/inc
+            ${libyuv_SOURCE_DIR}/include
+            ${turbo_stitch_gif_SOURCE_DIR}
+)
+
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
@@ -101,4 +141,5 @@ target_link_libraries( # Specifies the target library.
         libwebpmux
         webpdemux
         webpdecoder
+        yuv
 )

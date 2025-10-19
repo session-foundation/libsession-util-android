@@ -1,10 +1,13 @@
 #include <jni.h>
 #include "jni_utils.h"
 
+#include <chrono>
+
 #include <webp/mux.h>
 #include <webp/demux.h>
 #include <webp/decode.h>
 #include <webp/encode.h>
+
 
 template<typename T>
 using WebPPtr = std::unique_ptr<T, void (*)(T *)>;
@@ -14,6 +17,7 @@ JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_image_WebPUtils_reencodeWebPAnimation(JNIEnv *env,
                                                                                    jobject thiz,
                                                                                    jbyteArray input,
+                                                                                   jlong timeout_ms,
                                                                                    jint target_width,
                                                                                    jint target_height) {
     jni_utils::JavaByteArrayRef input_ref(env, input);
@@ -53,6 +57,7 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_reencodeWebPAnimati
 
     int ts_mills = 0;
     uint8_t *frame_data = nullptr;
+    const auto deadline = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(timeout_ms);
 
     while (WebPAnimDecoderGetNext(decoder.get(), &frame_data, &ts_mills)) {
         WebPPicture pic;
@@ -62,6 +67,7 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_reencodeWebPAnimati
         pic.width = info.canvas_width;
         pic.height = info.canvas_height;
         pic.use_argb = 0;
+
         if (!WebPPictureImportRGBA(&pic, frame_data, info.canvas_width * 4)) {
             env->ThrowNew(env->FindClass("java/lang/RuntimeException"),
                           "Failed to import frame into picture");
@@ -94,6 +100,12 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_reencodeWebPAnimati
                           "Failed to add frame to encoder");
             return nullptr;
         }
+
+        if (std::chrono::high_resolution_clock::now() > deadline) {
+            env->ThrowNew(env->FindClass("java/util/concurrent/TimeoutException"),
+                          "Re-encoding animation timed out");
+            return nullptr;
+        }
     }
 
     WebPData out;
@@ -110,39 +122,4 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_reencodeWebPAnimati
     WebPDataClear(&out);
 
     return out_ref.java_array();
-}
-
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_network_loki_messenger_libsession_1util_image_WebPUtils_isWebPAnimation(JNIEnv *env,
-                                                                             jobject thiz,
-                                                                             jbyteArray input) {
-    jni_utils::JavaByteArrayRef input_ref(env, input);
-
-    WebPBitstreamFeatures features;
-
-    if (WebPGetFeatures(input_ref.bytes(), input_ref.size(), &features) != VP8_STATUS_OK) {
-        return false;
-    }
-
-    return features.has_animation != 0;
-}
-
-extern "C"
-JNIEXPORT jintArray JNICALL
-Java_network_loki_messenger_libsession_1util_image_WebPUtils_getWebPDimensions(JNIEnv *env,
-                                                                               jobject thiz,
-                                                                               jbyteArray input) {
-    jni_utils::JavaByteArrayRef input_ref(env, input);
-
-    int width, height;
-    if (!WebPGetInfo(input_ref.bytes(), input_ref.size(), &width, &height)) {
-        return nullptr;
-    }
-
-    jint dimen[] = { width, height };
-
-    jintArray result = env->NewIntArray(2);
-    env->SetIntArrayRegion(result, 0, 2, dimen);
-    return result;
 }

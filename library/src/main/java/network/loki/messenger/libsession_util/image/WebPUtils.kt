@@ -9,22 +9,13 @@ object WebPUtils {
      *
      * If you only want to remove metadata, you can give the original size as targetWidth and targetHeight,
      * this function will then not try to resize the image.
+     *
+     * @throws java.util.concurrent.TimeoutException if the operation takes longer than timeoutMills milliseconds.
      */
     external fun reencodeWebPAnimation(
         input: ByteArray,
+        timeoutMills: Long,
         targetWidth: Int,
         targetHeight: Int,
     ): ByteArray
-
-    /**
-     * Check if the given byte array contains a valid WebP animation.
-     */
-    external fun isWebPAnimation(input: ByteArray): Boolean
-
-    /**
-     * Get the dimensions of the WebP image.
-     *
-     * @return null if the input is not a valid WebP image. or an IntArray of size 2 with width and height.
-     */
-    external fun getWebPDimensions(input: ByteArray): IntArray?
 }
