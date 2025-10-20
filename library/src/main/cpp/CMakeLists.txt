@@ -15,8 +15,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
-set(CMAKE_BUILD_TYPE Release)
-
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds them for you.
@@ -50,15 +48,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(libyuv)
 
-## turbo-stitch-gif
-FetchContent_Declare(
-        turbo_stitch_gif
-        GIT_REPOSITORY https://github.com/Ferki-git-creator/TurboStitchGIF-HeaderOnly-Fast-ZeroAllocation-PlatformIndependent-Embedded-C-GIF-Decoder.git
-        GIT_TAG bfb6cf3
-)
-
-FetchContent_MakeAvailable(turbo_stitch_gif)
-
 ## cgif
 FetchContent_Declare(
         cgif
@@ -66,6 +55,22 @@ FetchContent_Declare(
         GIT_TAG 4ddc417
 )
 FetchContent_MakeAvailable(cgif)
+
+## giflib (only to encode)
+FetchContent_Declare(
+        giflib
+        GIT_REPOSITORY https://git.code.sf.net/p/giflib/code
+        GIT_TAG 5.2.2
+)
+FetchContent_MakeAvailable(giflib)
+
+## EasyGifReader (on top of giflib for easier reading)
+FetchContent_Declare(
+        easy_gif_reader
+        GIT_REPOSITORY https://github.com/Chlumsky/EasyGifReader
+        GIT_TAG eaaa794
+)
+FetchContent_MakeAvailable(easy_gif_reader)
 
 
 set(SOURCES
@@ -89,11 +94,20 @@ set(SOURCES
         attachments.cpp
         webp_utils.cpp
         gif_utils.cpp
-        gif.c
 
         ${cgif_SOURCE_DIR}/src/cgif.c
         ${cgif_SOURCE_DIR}/src/cgif_rgb.c
         ${cgif_SOURCE_DIR}/src/cgif_raw.c
+
+        ${giflib_SOURCE_DIR}/gifalloc.c
+        ${giflib_SOURCE_DIR}/gif_err.c
+        ${giflib_SOURCE_DIR}/dgif_lib.c
+        ${giflib_SOURCE_DIR}/egif_lib.c
+        ${giflib_SOURCE_DIR}/gif_hash.c
+        ${giflib_SOURCE_DIR}/gif_font.c
+        ${giflib_SOURCE_DIR}/openbsd-reallocarray.c
+
+        ${easy_gif_reader_SOURCE_DIR}/EasyGifReader.cpp
 )
 
 add_library( # Sets the name of the library.
@@ -107,7 +121,8 @@ target_include_directories(session_util
         PRIVATE
             ${cgif_SOURCE_DIR}/inc
             ${libyuv_SOURCE_DIR}/include
-            ${turbo_stitch_gif_SOURCE_DIR}
+            ${giflib_SOURCE_DIR}
+            ${easy_gif_reader_SOURCE_DIR}
 )
 
 
