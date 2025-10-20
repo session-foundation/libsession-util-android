@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "jni_utils.h"
+#include "jni_input_stream.h"
 
 #include <cgif.h>
 #include <libyuv.h>
@@ -17,14 +18,16 @@ using GifPtr = std::unique_ptr<T, void (*)(T *)>;
 extern "C"
 JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *env, jobject thiz,
-                                                                        jbyteArray input,
+                                                                        jobject input,
                                                                         jlong timeout_mills,
                                                                         jint target_width,
                                                                         jint target_height) {
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=]() -> jbyteArray {
-        jni_utils::JavaByteArrayRef input_array(env, input);
+        JniInputStream input_stream(env, input);
 
-        EasyGifReader decoder = EasyGifReader::openMemory(input_array.bytes(), input_array.size());
+        EasyGifReader decoder = EasyGifReader::openCustom([](void *out_buffer, size_t size, void *ctx) {
+            return reinterpret_cast<JniInputStream*>(ctx)->read(reinterpret_cast<uint8_t *>(out_buffer), size);
+        }, &input_stream);
 
         std::vector<uint8_t> output_buffer;
 
@@ -123,5 +126,22 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *
         jni_utils::JavaByteArrayRef output_array(env, env->NewByteArray(output_buffer.size()));
         std::memcpy(output_array.bytes(), output_buffer.data(), output_buffer.size());
         return output_array.java_array();
+    });
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_network_loki_messenger_libsession_1util_image_GifUtils_isAnimatedGif(JNIEnv *env, jobject thiz,
+                                                                          jobject input) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jboolean>(env, [=]() {
+        JniInputStream input_stream(env, input);
+
+        EasyGifReader decoder = EasyGifReader::openCustom(
+                [](void *out_buffer, size_t size, void *ctx) {
+                    return reinterpret_cast<JniInputStream *>(ctx)->read(
+                            reinterpret_cast<uint8_t *>(out_buffer), size);
+                }, &input_stream);
+
+        return decoder.frameCount() > 1;
     });
 }

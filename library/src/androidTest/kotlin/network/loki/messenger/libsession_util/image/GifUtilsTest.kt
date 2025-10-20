@@ -4,6 +4,7 @@ import android.graphics.ImageDecoder
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,20 +14,20 @@ import org.sessionfoundation.libsession_util.test.R
 class GifUtilsTest {
     @Test
     fun testReencodeGif() {
-        val input = InstrumentationRegistry.getInstrumentation()
-            .targetContext
-            .applicationContext
-            .resources
-            .openRawResource(R.raw.earth)
-            .use { it.readBytes() }
 
         for (outputSize in listOf(200, 400, 600)) {
-            val output = GifUtils.reencodeGif(
-                input = input,
-                timeoutMills = 100_000L,
-                targetWidth = outputSize,
-                targetHeight = outputSize
-            )
+            val output = InstrumentationRegistry.getInstrumentation()
+                .targetContext
+                .applicationContext
+                .resources
+                .openRawResource(R.raw.earth).use { input ->
+                    GifUtils.reencodeGif(
+                        input = input,
+                        timeoutMills = 100_000L,
+                        targetWidth = outputSize,
+                        targetHeight = outputSize
+                    )
+                }
 
             ImageDecoder.decodeDrawable(
                 ImageDecoder.createSource(output)
@@ -38,4 +39,24 @@ class GifUtilsTest {
         }
     }
 
+    @Test
+    fun testCheckAnimatedGifWorks() {
+        assertTrue(
+            InstrumentationRegistry.getInstrumentation()
+                .targetContext
+                .applicationContext
+                .resources
+                .openRawResource(R.raw.earth)
+                .use(GifUtils::isAnimatedGif)
+        )
+
+        assertFalse(
+            InstrumentationRegistry.getInstrumentation()
+                .targetContext
+                .applicationContext
+                .resources
+                .openRawResource(R.raw.sunflower_noanim)
+                .use(GifUtils::isAnimatedGif)
+        )
+    }
 }
