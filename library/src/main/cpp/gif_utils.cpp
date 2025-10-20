@@ -135,13 +135,23 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_isAnimatedGif(JNIEnv
                                                                           jobject input) {
     return jni_utils::run_catching_cxx_exception_or_throws<jboolean>(env, [=]() {
         JniInputStream input_stream(env, input);
+        try {
 
-        EasyGifReader decoder = EasyGifReader::openCustom(
-                [](void *out_buffer, size_t size, void *ctx) {
-                    return reinterpret_cast<JniInputStream *>(ctx)->read(
-                            reinterpret_cast<uint8_t *>(out_buffer), size);
-                }, &input_stream);
+            EasyGifReader decoder = EasyGifReader::openCustom(
+                    [](void *out_buffer, size_t size, void *ctx) {
+                        return reinterpret_cast<JniInputStream *>(ctx)->read(
+                                reinterpret_cast<uint8_t *>(out_buffer), size);
+                    }, &input_stream);
 
-        return decoder.frameCount() > 1;
+            return decoder.frameCount() > 1;
+        } catch (...) {
+            // Is there's a java exception pending?
+            if (env->ExceptionCheck()) {
+                return false;
+            }
+
+            // Otherwise, decoding error means we don't have a valid GIF
+            return false;
+        }
     });
 }
