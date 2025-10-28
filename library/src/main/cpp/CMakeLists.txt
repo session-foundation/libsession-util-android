@@ -91,6 +91,7 @@ set(SOURCES
         ed25519.cpp
         curve25519.cpp
         hash.cpp
+        protocol.cpp
         attachments.cpp
         webp_utils.cpp
         gif_utils.cpp
