@@ -89,7 +89,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decryptEnv
         }
     }
 
-    key.ed25519_privkeys = { privateKeysStorage.data(), privateKeysStorage.size() };
+    key.decrypt_keys = { privateKeysStorage.data(), privateKeysStorage.size() };
 
     return run_catching_cxx_exception_or_throws<jobject>(env, [&] {
         auto envelop = session::decode_envelope(key, JavaByteArrayRef(env, java_payload).get(),
