@@ -217,9 +217,29 @@ namespace jni_utils {
                 }
             }
 
+            jbyteArray java_array() const {
+                return byte_array;
+            }
+
+            const unsigned char * bytes() const {
+                return data.data();
+            }
+
+            unsigned char *bytes() {
+                return data.data();
+            }
+
+            size_t size() const {
+                return data.size();
+            }
+
             // Get the data as a span. Only valid during the lifetime of this object.
             std::span<unsigned char> get() const {
                 return data;
+            }
+
+            std::span<std::byte> get_as_bytes() const {
+                return std::span<std::byte>(reinterpret_cast<std::byte *>(data.data()), data.size());
             }
 
             std::vector<unsigned char> copy() const {
