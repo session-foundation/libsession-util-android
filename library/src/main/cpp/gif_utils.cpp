@@ -101,7 +101,7 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *
                         libyuv::kFilterBox
                 );
 
-                // Convert the scaled ARGB32 back to RGB24 for encoding
+                // Convert the scaled ARGB32 back to RGBA for encoding
                 libyuv::ARGBToRGBA(
                         encode_argb_buffer.data(), target_width * 4,
                         encode_rgba_buffer.data(), target_width * 4,
@@ -143,8 +143,6 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_isAnimatedGif(JNIEnv
                         reinterpret_cast<JniInputStream*>(ctx)->read_fully(reinterpret_cast<uint8_t *>(out_buffer), size);
                         return size;
                     }, &input_stream);
-
-            __android_log_print(ANDROID_LOG_DEBUG, "GifUtils", "Frame count: %d", decoder.frameCount());
 
             return decoder.frameCount() > 1;
         } catch (const EasyGifReader::Error &e) {
