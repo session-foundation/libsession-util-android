@@ -148,48 +148,6 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_isAnimatedGif(JNIEnv
 
             return decoder.frameCount() > 1;
         } catch (const EasyGifReader::Error &e) {
-            const char *err_str;
-            switch (e) {
-                case EasyGifReader::Error::OUT_OF_MEMORY:
-                    err_str = "OUT_OF_MEMORY";
-                    break;
-                case EasyGifReader::Error::INVALID_FILENAME:
-                    err_str = "INVALID_FILENAME";
-                    break;
-                case EasyGifReader::Error::OPEN_FAILED:
-                    err_str = "OPEN_FAILED";
-                    break;
-                case EasyGifReader::Error::NOT_A_GIF_FILE:
-                    err_str = "NOT_A_GIF_FILE";
-                    break;
-                case EasyGifReader::Error::READ_FAILED:
-                    err_str = "READ_FAILED";
-                    break;
-                case EasyGifReader::Error::INVALID_OPERATION:
-                    err_str = "INVALID_OPERATION";
-                    break;
-                case EasyGifReader::Error::INVALID_GIF_FILE:
-                    err_str = "INVALID_GIF_FILE";
-                    break;
-                case EasyGifReader::Error::CLOSE_FAILED:
-                    err_str = "CLOSE_FAILED";
-                    break;
-                case EasyGifReader::Error::NOT_READABLE:
-                    err_str = "NOT_READABLE";
-                    break;
-                case EasyGifReader::Error::IMAGE_DEFECT:
-                    err_str = "IMAGE_DEFECT";
-                    break;
-                case EasyGifReader::Error::UNEXPECTED_EOF:
-                    err_str = "UNEXPECTED_EOF";
-                    break;
-                default:
-                    err_str = "UNKNOWN";
-                    break;
-            }
-
-            __android_log_print(ANDROID_LOG_DEBUG, "GifUtils", "Exception in decoding: %s", err_str);
-
             // Is there's a java exception pending?
             if (env->ExceptionCheck()) {
                 return false;
