@@ -32,6 +32,17 @@ public:
 
         return bytes_read;
     }
+
+    void read_fully(uint8_t *buffer, size_t size) {
+        size_t total_bytes_read = 0;
+        while (total_bytes_read < size) {
+            size_t bytes_read = read(buffer + total_bytes_read, size - total_bytes_read);
+            if (bytes_read == 0) {
+                throw std::runtime_error("EOF reached");
+            }
+            total_bytes_read += bytes_read;
+        }
+    }
 };
 
 #endif //LIBSESSION_UTIL_ANDROID_JNI_INPUT_STREAM_H
