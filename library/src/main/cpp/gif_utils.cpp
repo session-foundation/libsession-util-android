@@ -26,7 +26,8 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *
         JniInputStream input_stream(env, input);
 
         EasyGifReader decoder = EasyGifReader::openCustom([](void *out_buffer, size_t size, void *ctx) {
-            return reinterpret_cast<JniInputStream*>(ctx)->read(reinterpret_cast<uint8_t *>(out_buffer), size);
+            reinterpret_cast<JniInputStream*>(ctx)->read_fully(reinterpret_cast<uint8_t *>(out_buffer), size);
+            return size;
         }, &input_stream);
 
         std::vector<uint8_t> output_buffer;
@@ -100,7 +101,7 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *
                         libyuv::kFilterBox
                 );
 
-                // Convert the scaled ARGB32 back to RGB24 for encoding
+                // Convert the scaled ARGB32 back to RGBA for encoding
                 libyuv::ARGBToRGBA(
                         encode_argb_buffer.data(), target_width * 4,
                         encode_rgba_buffer.data(), target_width * 4,
@@ -139,12 +140,12 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_isAnimatedGif(JNIEnv
 
             EasyGifReader decoder = EasyGifReader::openCustom(
                     [](void *out_buffer, size_t size, void *ctx) {
-                        return reinterpret_cast<JniInputStream *>(ctx)->read(
-                                reinterpret_cast<uint8_t *>(out_buffer), size);
+                        reinterpret_cast<JniInputStream*>(ctx)->read_fully(reinterpret_cast<uint8_t *>(out_buffer), size);
+                        return size;
                     }, &input_stream);
 
             return decoder.frameCount() > 1;
-        } catch (...) {
+        } catch (const EasyGifReader::Error &e) {
             // Is there's a java exception pending?
             if (env->ExceptionCheck()) {
                 return false;

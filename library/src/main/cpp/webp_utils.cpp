@@ -1,5 +1,6 @@
 #include <jni.h>
 #include "jni_utils.h"
+#include "jni_input_stream.h"
 
 #include <chrono>
 
@@ -7,6 +8,8 @@
 #include <webp/demux.h>
 #include <webp/decode.h>
 #include <webp/encode.h>
+
+#include <EasyGifReader.h>
 
 
 template<typename T>
@@ -122,4 +125,107 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_reencodeWebPAnimati
     WebPDataClear(&out);
 
     return out_ref.java_array();
+}
+
+
+static void destroyWebPPicture(WebPPicture* pic) {
+    WebPPictureFree(pic);
+    delete pic;
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_network_loki_messenger_libsession_1util_image_WebPUtils_encodeGifToWebP(JNIEnv *env,
+                                                                             jobject thiz,
+                                                                             jobject input,
+                                                                             jlong timeout_mills,
+                                                                             jint target_width,
+                                                                             jint target_height) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=]() -> jbyteArray {
+        JniInputStream input_stream(env, input);
+
+        const auto deadline = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(timeout_mills);
+
+        auto is_timeout = [&]() {
+            if (std::chrono::high_resolution_clock::now() > deadline) {
+                env->ThrowNew(env->FindClass("java/util/concurrent/TimeoutException"),
+                              "GIF re-encoding timed out");
+                return true;
+            }
+            return false;
+        };
+
+        EasyGifReader decoder = EasyGifReader::openCustom([](void *out_buffer, size_t size, void *ctx) {
+            reinterpret_cast<JniInputStream*>(ctx)->read_fully(reinterpret_cast<uint8_t *>(out_buffer), size);
+            return size;
+        }, &input_stream);
+
+        WebPPtr<WebPAnimEncoder> encoder(WebPAnimEncoderNew(target_width, target_height, nullptr), &WebPAnimEncoderDelete);
+        if (!encoder) {
+            env->ThrowNew(env->FindClass("java/lang/RuntimeException"),
+                          "Failed to create animation encoder");
+            return 0;
+        }
+
+        std::vector<uint8_t> decode_argb_buffer(decoder.width() * decoder.height() * 4);
+        std::vector<uint8_t> encode_argb_buffer;
+        int frame_delay_ms = 0;
+
+        WebPPtr<WebPPicture> pic(new WebPPicture, &destroyWebPPicture);
+        WebPPictureInit(pic.get());
+        pic->use_argb = 1;
+
+        for (auto frame = decoder.begin(); frame != decoder.end() && !is_timeout(); ++frame) {
+            // Import the frame into a WebPPicture
+            pic->width = decoder.width();
+            pic->height = decoder.height();
+            pic->argb_stride = decoder.width();
+
+            if (!WebPPictureImportRGBA(pic.get(), frame->pixels(), decoder.width() * 4)) {
+                env->ThrowNew(env->FindClass("java/lang/RuntimeException"),
+                              "Failed to import frame into picture");
+                return nullptr;
+            }
+
+            // If the target size is different, rescale the frame
+            if (target_width != decoder.width() || target_height != decoder.height()) {
+                if (!WebPPictureRescale(pic.get(), target_width, target_height)) {
+                    env->ThrowNew(env->FindClass("java/lang/RuntimeException"),
+                                  "Failed to rescale picture");
+                    return nullptr;
+                }
+            }
+
+            // Now we have a WebPPicture ready to be added to the encoder
+            WebPConfig encode_config;
+            WebPConfigInit(&encode_config);
+            encode_config.quality = 95.f;
+
+            frame_delay_ms += frame.duration().milliseconds();
+
+            auto encode_succeeded = WebPAnimEncoderAdd(encoder.get(), pic.get(),
+                                                       frame_delay_ms, &encode_config);
+
+            if (!encode_succeeded) {
+                env->ThrowNew(env->FindClass("java/lang/RuntimeException"),
+                              WebPAnimEncoderGetError(encoder.get()));
+                return nullptr;
+            }
+        }
+
+        WebPData out;
+        WebPDataInit(&out);
+
+        if (!WebPAnimEncoderAssemble(encoder.get(), &out)) {
+            env->ThrowNew(env->FindClass("java/lang/RuntimeException"),
+                          "Failed to assemble animation");
+            return nullptr;
+        }
+
+        jni_utils::JavaByteArrayRef out_ref(env, env->NewByteArray(out.size));
+        std::memcpy(out_ref.bytes(), out.bytes, out.size);
+        WebPDataClear(&out);
+
+        return out_ref.java_array();
+    });
 }
