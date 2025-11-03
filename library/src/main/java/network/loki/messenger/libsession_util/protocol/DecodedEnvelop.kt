@@ -4,7 +4,7 @@ import androidx.annotation.Keep
 import network.loki.messenger.libsession_util.util.Bytes
 import java.time.Instant
 
-data class DecryptedEnvelope(
+data class DecodedEnvelop(
     val proStatus: ProStatus,
     val contentPlainText: Bytes,
     val senderEd25519PubKey: Bytes,

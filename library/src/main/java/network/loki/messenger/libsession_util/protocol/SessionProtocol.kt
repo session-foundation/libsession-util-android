@@ -3,7 +3,7 @@ package network.loki.messenger.libsession_util.protocol
 import network.loki.messenger.libsession_util.LibSessionUtilCApi
 
 object SessionProtocol : LibSessionUtilCApi() {
-    external fun encryptFor1o1(
+    external fun encodeFor1o1(
         plaintext: ByteArray,
         myEd25519PrivKey: ByteArray,
         timestampMs: Long,
@@ -11,7 +11,7 @@ object SessionProtocol : LibSessionUtilCApi() {
         proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
     ): ByteArray
 
-    external fun encryptForCommunityInbox(
+    external fun encodeForCommunityInbox(
         plaintext: ByteArray,
         myEd25519PrivKey: ByteArray,
         timestampMs: Long,
@@ -20,7 +20,7 @@ object SessionProtocol : LibSessionUtilCApi() {
         proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
     ): ByteArray
 
-    external fun encryptForGroup(
+    external fun encodeForGroup(
         plaintext: ByteArray,
         myEd25519PrivKey: ByteArray,
         timestampMs: Long,
@@ -29,10 +29,16 @@ object SessionProtocol : LibSessionUtilCApi() {
         proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
     ): ByteArray
 
-    external fun decryptEnvelope(
+    external fun decodeEnvelope(
         key: DecryptEnvelopeKey,
         payload: ByteArray,
-        nowEpochSeconds: Long,
+        nowEpochMs: Long,
         proBackendPubKey: ByteArray, // 32 bytes backend key
-    ): DecryptedEnvelope
+    ): DecodedEnvelop
+
+    external fun decodeForCommunity(
+        payload: ByteArray,
+        nowEpochMs: Long,
+        proBackendPubKey: ByteArray, // 32 bytes backend key
+    ): DecodedCommunityMessage
 }

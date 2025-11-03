@@ -14,10 +14,10 @@ sealed interface ProStatus {
     ) {
         @Keep
         constructor(
-            expiresAtEpochSeconds: Long,
+            expiresAtEpochMills: Long,
             proFeatures: Long
         ): this(
-            expiresAt = Instant.ofEpochSecond(expiresAtEpochSeconds),
+            expiresAt = Instant.ofEpochMilli(expiresAtEpochMills),
             proFeatures = proFeatures.toFeatures()
         )
     }
