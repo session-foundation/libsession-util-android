@@ -22,7 +22,7 @@ class GifUtilsTest {
                 .resources
                 .openRawResource(R.raw.earth).use { input ->
                     GifUtils.reencodeGif(
-                        input = input,
+                        input = input.readAllBytes(),
                         timeoutMills = 100_000L,
                         targetWidth = outputSize,
                         targetHeight = outputSize
@@ -50,6 +50,17 @@ class GifUtilsTest {
                 .use(GifUtils::isAnimatedGif)
         )
 
+        assertTrue(
+            InstrumentationRegistry.getInstrumentation()
+                .targetContext
+                .applicationContext
+                .resources
+                .openRawResource(R.raw.earth)
+                .use {
+                    GifUtils.isAnimatedGif(it.readBytes())
+                }
+        )
+
         assertFalse(
             InstrumentationRegistry.getInstrumentation()
                 .targetContext
@@ -57,6 +68,17 @@ class GifUtilsTest {
                 .resources
                 .openRawResource(R.raw.sunflower_noanim)
                 .use(GifUtils::isAnimatedGif)
+        )
+
+        assertFalse(
+            InstrumentationRegistry.getInstrumentation()
+                .targetContext
+                .applicationContext
+                .resources
+                .openRawResource(R.raw.sunflower_noanim)
+                .use {
+                    GifUtils.isAnimatedGif(it.readBytes())
+                }
         )
     }
 }

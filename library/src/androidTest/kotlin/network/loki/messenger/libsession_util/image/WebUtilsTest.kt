@@ -49,7 +49,7 @@ class WebUtilsTest {
                 .resources
                 .openRawResource(R.raw.earth).use { input ->
                     WebPUtils.encodeGifToWebP(
-                        input = input,
+                        input = input.readAllBytes(),
                         timeoutMills = 100_000L,
                         targetWidth = outputSize,
                         targetHeight = outputSize

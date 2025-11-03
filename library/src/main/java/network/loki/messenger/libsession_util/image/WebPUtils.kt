@@ -23,7 +23,7 @@ object WebPUtils : LibSessionUtilCApi() {
     ): ByteArray
 
     external fun encodeGifToWebP(
-        input: InputStream,
+        input: ByteArray,
         timeoutMills: Long,
         targetWidth: Int,
         targetHeight: Int,

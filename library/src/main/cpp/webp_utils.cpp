@@ -137,28 +137,16 @@ extern "C"
 JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_image_WebPUtils_encodeGifToWebP(JNIEnv *env,
                                                                              jobject thiz,
-                                                                             jobject input,
+                                                                             jbyteArray input,
                                                                              jlong timeout_mills,
                                                                              jint target_width,
                                                                              jint target_height) {
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=]() -> jbyteArray {
-        JniInputStream input_stream(env, input);
+        jni_utils::JavaByteArrayRef input_ref(env, input);
 
         const auto deadline = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(timeout_mills);
 
-        auto is_timeout = [&]() {
-            if (std::chrono::high_resolution_clock::now() > deadline) {
-                env->ThrowNew(env->FindClass("java/util/concurrent/TimeoutException"),
-                              "GIF re-encoding timed out");
-                return true;
-            }
-            return false;
-        };
-
-        EasyGifReader decoder = EasyGifReader::openCustom([](void *out_buffer, size_t size, void *ctx) {
-            reinterpret_cast<JniInputStream*>(ctx)->read_fully(reinterpret_cast<uint8_t *>(out_buffer), size);
-            return size;
-        }, &input_stream);
+        EasyGifReader decoder = EasyGifReader::openMemory(input_ref.bytes(), input_ref.size());
 
         WebPPtr<WebPAnimEncoder> encoder(WebPAnimEncoderNew(target_width, target_height, nullptr), &WebPAnimEncoderDelete);
         if (!encoder) {
@@ -175,7 +163,7 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_encodeGifToWebP(JNI
         WebPPictureInit(pic.get());
         pic->use_argb = 1;
 
-        for (auto frame = decoder.begin(); frame != decoder.end() && !is_timeout(); ++frame) {
+        for (auto frame = decoder.begin(); frame != decoder.end(); ++frame) {
             // Import the frame into a WebPPicture
             pic->width = decoder.width();
             pic->height = decoder.height();
@@ -209,6 +197,12 @@ Java_network_loki_messenger_libsession_1util_image_WebPUtils_encodeGifToWebP(JNI
             if (!encode_succeeded) {
                 env->ThrowNew(env->FindClass("java/lang/RuntimeException"),
                               WebPAnimEncoderGetError(encoder.get()));
+                return nullptr;
+            }
+
+            if (std::chrono::high_resolution_clock::now() > deadline) {
+                env->ThrowNew(env->FindClass("java/util/concurrent/TimeoutException"),
+                              "GIF re-encoding timed out");
                 return nullptr;
             }
         }

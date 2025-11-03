@@ -70,6 +70,13 @@ namespace jni_utils {
             }
         }
 
+        void reset(JNIType new_ref) {
+            if (ref_ != new_ref) {
+                env_->DeleteLocalRef(ref_);
+            }
+            ref_ = new_ref;
+        }
+
         inline JNIType get() const {
             return ref_;
         }

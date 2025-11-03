@@ -15,11 +15,23 @@ object GifUtils : LibSessionUtilCApi() {
      * @return A byte array containing the re-encoded GIF data.
      */
     external fun reencodeGif(
-        input: InputStream,
+        input: ByteArray,
         timeoutMills: Long,
         targetWidth: Int,
         targetHeight: Int
     ): ByteArray
+
+    fun isAnimatedGif(input: InputStream): Boolean {
+        return runCatching {
+            isAnimatedGifForStream(input)
+        }.getOrNull() == true
+    }
+
+    fun isAnimatedGif(input: ByteArray): Boolean {
+        return runCatching {
+            isAnimatedGifForBytes(input)
+        }.getOrNull() == true
+    }
 
     /**
      * Determines if the input stream contains an animated GIF.
@@ -28,7 +40,7 @@ object GifUtils : LibSessionUtilCApi() {
      *
      * @param input The input stream of the GIF to be checked. The caller is responsible for closing the stream.
      */
-    external fun isAnimatedGif(
-        input: InputStream
-    ): Boolean
+    private external fun isAnimatedGifForStream(input: InputStream): Boolean
+
+    private external fun isAnimatedGifForBytes(input: ByteArray): Boolean
 }
