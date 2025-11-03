@@ -11,12 +11,24 @@ object SessionProtocol : LibSessionUtilCApi() {
         proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
     ): ByteArray
 
+    external fun decodeFor1o1(
+        myEd25519PrivKey: ByteArray,
+        payload: ByteArray,
+        nowEpochMs: Long,
+        proBackendPubKey: ByteArray, // 32 bytes backend key
+    ): DecodedEnvelop
+
     external fun encodeForCommunityInbox(
         plaintext: ByteArray,
         myEd25519PrivKey: ByteArray,
         timestampMs: Long,
         recipientPubKey: ByteArray, // 33 bytes prefixed key
         communityServerPubKey: ByteArray, // 32 bytes key
+        proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
+    ): ByteArray
+
+    external fun encodeForCommunity(
+        plaintext: ByteArray,
         proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
     ): ByteArray
 

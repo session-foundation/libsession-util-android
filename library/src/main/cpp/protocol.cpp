@@ -134,8 +134,9 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeFor1
                         JavaByteArrayRef(env, my_ed25519_priv_key).get(),
                         std::chrono::milliseconds { timestamp_ms },
                         *java_to_cpp_array<33>(env, recipient_pub_key),
-                        rotating_key ? JavaByteArrayRef(env, rotating_key).get() : std::span<uint8_t>()
-        ));
+                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get()) : std::nullopt
+                )
+        );
     });
 }
 
@@ -154,8 +155,9 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForC
                         std::chrono::milliseconds { timestamp_ms },
                         *java_to_cpp_array<33>(env, recipient_pub_key),
                         *java_to_cpp_array<32>(env, community_server_pub_key),
-                        rotating_key ? JavaByteArrayRef(env, rotating_key).get() : std::span<uint8_t>()
-                ));
+                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get()) : std::nullopt
+                )
+        );
     });
 }
 
@@ -183,8 +185,9 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForG
                         std::chrono::milliseconds { timestamp_ms },
                         *java_to_cpp_array<33>(env, group_ed25519_public_key),
                         group_private_key,
-                        rotating_key ? JavaByteArrayRef(env, rotating_key).get() : std::span<uint8_t>()
-                ));
+                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get()) : std::nullopt
+                )
+        );
     });
 }
 
@@ -216,4 +219,33 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForC
                 util::bytes_from_vector(env, decoded.content_plaintext)
         );
     });
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForCommunity(
+        JNIEnv *env,
+        jobject thiz,
+        jbyteArray plaintext,
+        jbyteArray rotating_key) {
+    return run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        return util::bytes_from_vector(
+                env,
+                session::encode_for_community(
+                        JavaByteArrayRef(env, plaintext).get(),
+                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get()) : std::nullopt
+                )
+        );
+    });
+}
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeFor1o1(JNIEnv *env,
+                                                                                   jobject thiz,
+                                                                                   jobject key,
+                                                                                   jbyteArray payload,
+                                                                                   jlong now_epoch_ms,
+                                                                                   jbyteArray pro_backend_pub_key) {
+    // TODO: implement decodeFor1o1()
 }
