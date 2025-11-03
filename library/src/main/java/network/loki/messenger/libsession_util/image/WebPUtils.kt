@@ -1,6 +1,9 @@
 package network.loki.messenger.libsession_util.image
 
-object WebPUtils {
+import network.loki.messenger.libsession_util.LibSessionUtilCApi
+import java.io.InputStream
+
+object WebPUtils : LibSessionUtilCApi() {
     /**
      * Re-encode the webP animation, resizing each frame to scale to the target width and height.
      * This can serve two purposes:
@@ -13,6 +16,13 @@ object WebPUtils {
      * @throws java.util.concurrent.TimeoutException if the operation takes longer than timeoutMills milliseconds.
      */
     external fun reencodeWebPAnimation(
+        input: ByteArray,
+        timeoutMills: Long,
+        targetWidth: Int,
+        targetHeight: Int,
+    ): ByteArray
+
+    external fun encodeGifToWebP(
         input: ByteArray,
         timeoutMills: Long,
         targetWidth: Int,

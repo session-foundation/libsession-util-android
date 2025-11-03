@@ -8,6 +8,7 @@
 #include <cgif.h>
 #include <libyuv.h>
 #include <android/log.h>
+#include <gif_lib.h>
 
 #include <EasyGifReader.h>
 
@@ -18,16 +19,14 @@ using GifPtr = std::unique_ptr<T, void (*)(T *)>;
 extern "C"
 JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *env, jobject thiz,
-                                                                        jobject input,
+                                                                        jbyteArray input,
                                                                         jlong timeout_mills,
                                                                         jint target_width,
                                                                         jint target_height) {
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=]() -> jbyteArray {
-        JniInputStream input_stream(env, input);
+        jni_utils::JavaByteArrayRef input_ref(env, input);
 
-        EasyGifReader decoder = EasyGifReader::openCustom([](void *out_buffer, size_t size, void *ctx) {
-            return reinterpret_cast<JniInputStream*>(ctx)->read(reinterpret_cast<uint8_t *>(out_buffer), size);
-        }, &input_stream);
+        EasyGifReader decoder = EasyGifReader::openMemory(input_ref.bytes(), input_ref.size());
 
         std::vector<uint8_t> output_buffer;
 
@@ -57,14 +56,6 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *
         const auto needRescale = (src_width != target_width) || (src_height != target_height);
         const auto deadline = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(timeout_mills);
 
-        auto is_timeout = [&]() {
-            if (std::chrono::high_resolution_clock::now() > deadline) {
-                env->ThrowNew(env->FindClass("java/util/concurrent/TimeoutException"),
-                              "GIF re-encoding timed out");
-                return true;
-            }
-            return false;
-        };
 
         std::vector<uint8_t> decode_argb_buffer, encode_argb_buffer, encode_rgba_buffer;
         if (needRescale) {
@@ -73,7 +64,7 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *
             encode_rgba_buffer.resize(target_width * target_height * 4);
         }
 
-        for (auto frame = decoder.begin(); frame != decoder.end() && !is_timeout(); ++frame) {
+        for (auto frame = decoder.begin(); frame != decoder.end(); ++frame) {
             // Here we would add the frame to the encoder
             CGIFrgb_FrameConfig config = {
                     .pImageData = const_cast<uint8_t*>(frame->pixels()),
@@ -100,7 +91,7 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *
                         libyuv::kFilterBox
                 );
 
-                // Convert the scaled ARGB32 back to RGB24 for encoding
+                // Convert the scaled ARGB32 back to RGBA for encoding
                 libyuv::ARGBToRGBA(
                         encode_argb_buffer.data(), target_width * 4,
                         encode_rgba_buffer.data(), target_width * 4,
@@ -111,12 +102,14 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *
                 config.pImageData = encode_rgba_buffer.data();
             }
 
-            if (is_timeout()) {
-                return nullptr;
-            }
-
             if (cgif_rgb_addframe(encoder.get(), &config) != CGIF_OK) {
                 throw std::runtime_error("Failed to encode GIF frame");
+            }
+
+            if (std::chrono::high_resolution_clock::now() > deadline) {
+                env->ThrowNew(env->FindClass("java/util/concurrent/TimeoutException"),
+                              "GIF re-encoding timed out");
+                return nullptr;
             }
         }
 
@@ -129,29 +122,119 @@ Java_network_loki_messenger_libsession_1util_image_GifUtils_reencodeGif(JNIEnv *
     });
 }
 
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_network_loki_messenger_libsession_1util_image_GifUtils_isAnimatedGif(JNIEnv *env, jobject thiz,
-                                                                          jobject input) {
-    return jni_utils::run_catching_cxx_exception_or_throws<jboolean>(env, [=]() {
-        JniInputStream input_stream(env, input);
-        try {
+static bool isAnimatedGif(GifFileType *gif_file) {
+    GifRecordType record_type;
+    std::vector<GifByteType> line_buf;
+    int image_count = 0;
 
-            EasyGifReader decoder = EasyGifReader::openCustom(
-                    [](void *out_buffer, size_t size, void *ctx) {
-                        return reinterpret_cast<JniInputStream *>(ctx)->read(
-                                reinterpret_cast<uint8_t *>(out_buffer), size);
-                    }, &input_stream);
+    while (DGifGetRecordType(gif_file, &record_type) == GIF_OK) {
+        switch (record_type) {
+            case IMAGE_DESC_RECORD_TYPE: {
+                if (DGifGetImageDesc(gif_file) != GIF_OK) {
+                    throw std::runtime_error("Failed to read GIF image descriptor");
+                }
 
-            return decoder.frameCount() > 1;
-        } catch (...) {
-            // Is there's a java exception pending?
-            if (env->ExceptionCheck()) {
-                return false;
+                image_count++;
+
+                if (image_count > 1) {
+                    return true;
+                }
+
+                line_buf.resize(gif_file->Image.Width);
+                for (int i = 0; i < gif_file->Image.Height; ++i) {
+                    if (DGifGetLine(gif_file, line_buf.data(), gif_file->Image.Width) != GIF_OK) {
+                        throw std::runtime_error("Failed to read GIF image line");
+                    }
+                }
+                break;
             }
 
-            // Otherwise, decoding error means we don't have a valid GIF
-            return false;
+            case SCREEN_DESC_RECORD_TYPE: {
+                if (DGifGetScreenDesc(gif_file) != GIF_OK) {
+                    throw std::runtime_error("Failed to read GIF screen descriptor");
+                }
+
+                break;
+            }
+
+            case TERMINATE_RECORD_TYPE: return false;
+
+            case EXTENSION_RECORD_TYPE: {
+                GifByteType *e = nullptr;
+                int ext_code;
+                if (DGifGetExtension(gif_file, &ext_code, &e) != GIF_OK) {
+                    throw std::runtime_error("Failed to read GIF extension");
+                }
+
+                while (e) {
+                    DGifGetExtensionNext(gif_file, &e);
+                }
+
+                break;
+            }
+
+            default: break;
         }
+    }
+
+    return false;
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_network_loki_messenger_libsession_1util_image_GifUtils_isAnimatedGifForStream(JNIEnv *env, jobject thiz,
+                                                                                   jobject input) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jboolean>(env, [=]() {
+        JniInputStream input_stream(env, input);
+
+        int error = D_GIF_SUCCEEDED;
+        GifPtr<GifFileType> gif_file(DGifOpen(
+                    &input_stream,
+                    [](GifFileType *f, GifByteType *out_data, int size) -> int {
+                        return reinterpret_cast<JniInputStream *>(f->UserData)->read_fully(out_data, size);
+                    },
+                    &error
+                ),
+                [](GifFileType *ptr) { DGifCloseFile(ptr, nullptr); }
+        );
+
+        if (!gif_file) {
+            throw std::runtime_error(("Failed to open GIF for reading: " + std::to_string(error)).c_str());
+        }
+
+        return isAnimatedGif(gif_file.get());
     });
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_network_loki_messenger_libsession_1util_image_GifUtils_isAnimatedGifForBytes(JNIEnv *env,
+                                                                                  jobject thiz,
+                                                                                  jbyteArray input) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jboolean>(env, [=]() {
+        jni_utils::JavaByteArrayRef input_ref(env, input);
+        auto input_data = input_ref.get();
+
+        int error = D_GIF_SUCCEEDED;
+        GifPtr<GifFileType> gif_file(DGifOpen(
+                                             &input_data,
+                                             [](GifFileType *f, GifByteType *out_data, int size) -> int {
+                                                 auto input = reinterpret_cast<std::span<unsigned char> *>(f->UserData);
+                                                 auto copy_count = std::min<size_t>(input->size(), static_cast<size_t>(size));
+                                                 std::memcpy(out_data, input->data(), copy_count);
+                                                 *input = input->subspan(copy_count);
+                                                 return copy_count;
+                                             },
+                                             &error
+                                     ),
+                                     [](GifFileType *ptr) { DGifCloseFile(ptr, nullptr); }
+        );
+
+        if (!gif_file) {
+            throw std::runtime_error(("Failed to open GIF for reading: " + std::to_string(error)).c_str());
+        }
+
+        return isAnimatedGif(gif_file.get());
+    });
+
 }
