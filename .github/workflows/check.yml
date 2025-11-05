@@ -15,26 +15,27 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          submodules: 'recursive'
+          submodules: "recursive"
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          java-version: "17"
+          distribution: "temurin"
           cache: gradle
 
       - name: Verify build for PR
         run: ./gradlew check
 
-      
   post_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          submodules: 'recursive'
+          fetch-tags: true
+          fetch-depth: 0
+
       - name: Extract version
         id: extract_version
         run: |
@@ -46,4 +47,3 @@ jobs:
           header: version
           message: |
             The build version for this PR will be: `${{ steps.extract_version.outputs.version }}`
-
