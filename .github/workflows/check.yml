@@ -6,6 +6,11 @@ on:
       - opened
       - synchronize
 
+# Limit to one concurrent run per PR
+concurrency:
+  group: "check-pr-${{ github.event.pull_request.number }}"
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
