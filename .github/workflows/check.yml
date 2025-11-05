@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -26,3 +27,23 @@ jobs:
 
       - name: Verify build for PR
         run: ./gradlew check
+
+      
+  post_version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Extract version
+        id: extract_version
+        run: |
+          VERSION=$(git describe --tags --dirty)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Posting comment about the build
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: version
+          message: |
+            The build version for this PR will be: `${{ steps.extract_version.outputs.version }}`
+
