@@ -32,6 +32,12 @@ object SessionProtocol : LibSessionUtilCApi() {
         proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
     ): ByteArray
 
+    external fun decodeForCommunity(
+        payload: ByteArray,
+        nowEpochMs: Long,
+        proBackendPubKey: ByteArray, // 32 bytes backend key
+    ): DecodedCommunityMessage
+
     external fun encodeForGroup(
         plaintext: ByteArray,
         myEd25519PrivKey: ByteArray,
@@ -41,16 +47,12 @@ object SessionProtocol : LibSessionUtilCApi() {
         proRotatingEd25519PrivKey: ByteArray?, // 64 bytes
     ): ByteArray
 
-    external fun decodeEnvelope(
-        key: DecryptEnvelopeKey,
+    external fun decodeForGroup(
         payload: ByteArray,
+        myEd25519PrivKey: ByteArray,
         nowEpochMs: Long,
+        groupEd25519PublicKey: ByteArray, // 33 bytes 03 prefixed key
+        groupEd25519PrivateKeys: Array<ByteArray>, // all available group private keys
         proBackendPubKey: ByteArray, // 32 bytes backend key
     ): DecodedEnvelop
-
-    external fun decodeForCommunity(
-        payload: ByteArray,
-        nowEpochMs: Long,
-        proBackendPubKey: ByteArray, // 32 bytes backend key
-    ): DecodedCommunityMessage
 }
