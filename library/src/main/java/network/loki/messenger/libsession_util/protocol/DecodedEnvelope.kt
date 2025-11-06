@@ -4,8 +4,8 @@ import androidx.annotation.Keep
 import network.loki.messenger.libsession_util.util.Bytes
 import java.time.Instant
 
-data class DecodedEnvelop(
-    val envelop: Envelop,
+data class DecodedEnvelope(
+    val envelope: Envelope,
     val proStatus: ProStatus,
     val contentPlainText: Bytes,
     val senderEd25519PubKey: Bytes,
@@ -14,14 +14,14 @@ data class DecodedEnvelop(
 ) {
     @Keep
     constructor(
-        envelop: Envelop,
+        envelope: Envelope,
         proStatus: ProStatus,
         contentPlainText: ByteArray,
         senderEd25519PubKey: ByteArray,
         senderX25519PubKey: ByteArray,
         timestampEpochMills: Long
     ): this(
-        envelop = envelop,
+        envelope = envelope,
         proStatus = proStatus,
         contentPlainText = Bytes(contentPlainText),
         senderEd25519PubKey = Bytes(senderEd25519PubKey),

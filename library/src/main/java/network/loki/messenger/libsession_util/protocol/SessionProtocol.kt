@@ -16,7 +16,7 @@ object SessionProtocol : LibSessionUtilCApi() {
         payload: ByteArray,
         nowEpochMs: Long,
         proBackendPubKey: ByteArray, // 32 bytes backend key
-    ): DecodedEnvelop
+    ): DecodedEnvelope
 
     external fun encodeForCommunityInbox(
         plaintext: ByteArray,
@@ -54,5 +54,5 @@ object SessionProtocol : LibSessionUtilCApi() {
         groupEd25519PublicKey: ByteArray, // 33 bytes 03 prefixed key
         groupEd25519PrivateKeys: Array<ByteArray>, // all available group private keys
         proBackendPubKey: ByteArray, // 32 bytes backend key
-    ): DecodedEnvelop
+    ): DecodedEnvelope
 }

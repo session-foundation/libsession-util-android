@@ -37,7 +37,7 @@ static JavaLocalRef<jobject> serializeEnvelop(JNIEnv *env, const session::Envelo
     jmethodID init = env->GetMethodID(
             envelopClass.get(),
             "<init>",
-            "([BJ[B)V"
+            "(J[BJ[B)V"
     );
 
     return {env, env->NewObject(envelopClass.get(),
@@ -57,7 +57,7 @@ static jobject serializeDecodedEnvelope(JNIEnv *env, const session::DecodedEnvel
     JavaLocalRef sender_x25519(env, util::bytes_from_span(env, envelop.sender_x25519_pubkey));
     JavaLocalRef content(env, util::bytes_from_vector(env, envelop.content_plaintext));
 
-    JavaLocalRef envelopClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/DecodedEnvelop"));
+    JavaLocalRef envelopClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/DecodedEnvelope"));
     jmethodID init = env->GetMethodID(
             envelopClass.get(),
             "<init>",

@@ -4,7 +4,7 @@ import androidx.annotation.Keep
 import network.loki.messenger.libsession_util.util.Bytes
 import java.time.Instant
 
-data class Envelop(
+data class Envelope(
     val timestamp: Instant,
     val source: Bytes?, // 33 bytes prefixed public key
     val serverTimestamp: Instant?,
