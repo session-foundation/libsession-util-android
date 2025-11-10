@@ -160,4 +160,6 @@ target_link_libraries( # Specifies the target library.
         webpdemux
         webpdecoder
         yuv
+        nlohmann_json
+        oxenc
 )

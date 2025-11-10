@@ -29,4 +29,13 @@ object ED25519 : LibSessionUtilCApi() {
     ): Boolean
 
     external fun generate(seed: ByteArray?): KeyPair
+
+    /**
+     * Generate the deterministic Master Session Pro key for signing requests to interact with the
+     * Session Pro features of the protocol.
+     *
+     * @param ed25519Seed The seed the user uses to generate their session id
+     * @return The libsodium-style Master Session Pro Ed25519 secret key, 64 bytes.
+     */
+    external fun generateProPrivateKey(ed25519Seed: ByteArray): ByteArray
 }
