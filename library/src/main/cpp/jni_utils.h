@@ -194,6 +194,10 @@ namespace jni_utils {
             std::span<char> get() const {
                 return data;
             }
+
+            std::span<uint8_t> get_raw() const {
+                return std::span<uint8_t>(reinterpret_cast<uint8_t *>(data.data()), data.size());
+            }
     };
 
     /**
