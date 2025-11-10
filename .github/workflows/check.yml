@@ -6,23 +6,49 @@ on:
       - opened
       - synchronize
 
+# Limit to one concurrent run per PR
+concurrency:
+  group: "check-pr-${{ github.event.pull_request.number }}"
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+      pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          submodules: 'recursive'
+          submodules: "recursive"
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          java-version: "17"
+          distribution: "temurin"
           cache: gradle
 
       - name: Verify build for PR
         run: ./gradlew check
+
+  post_version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-tags: true
+          fetch-depth: 0
+
+      - name: Extract version
+        id: extract_version
+        run: |
+          VERSION=$(git describe --tags --dirty)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Posting comment about the build
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: version
+          message: |
+            The build version for this PR will be: `${{ steps.extract_version.outputs.version }}`

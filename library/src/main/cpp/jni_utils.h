@@ -69,6 +69,11 @@ namespace jni_utils {
                 env_->DeleteLocalRef(ref_);
             }
         }
+        JavaLocalRef(JavaLocalRef&& other) : env_(other.env_), ref_(other.ref_) {
+            other.ref_ = nullptr;
+        }
+
+        JavaLocalRef(const JavaLocalRef&) = delete;
 
         void reset(JNIType new_ref) {
             if (ref_ != new_ref) {
@@ -81,6 +86,7 @@ namespace jni_utils {
             return ref_;
         }
     };
+
 
     /**
      * Create a Java List from an iterator.
@@ -169,6 +175,8 @@ namespace jni_utils {
                 data = std::span<char>(const_cast<char *>(c_str), env->GetStringUTFLength(s));
             }
 
+            JavaStringRef(const JavaStringRef &) = delete;
+
             ~JavaStringRef() {
                 env->ReleaseStringUTFChars(s, data.data());
             }
@@ -202,8 +210,18 @@ namespace jni_utils {
                 data = std::span<unsigned char>(reinterpret_cast<unsigned char *>(env->GetByteArrayElements(byte_array, nullptr)), length);
             }
 
+            JavaByteArrayRef(const JavaByteArrayRef &) = delete;
+
+            JavaByteArrayRef(JavaByteArrayRef&& other) : env(other.env), byte_array(other.byte_array), data(other.data) {
+                other.byte_array = nullptr;
+                other.data = {};
+            }
+
             ~JavaByteArrayRef() {
-                env->ReleaseByteArrayElements(byte_array, reinterpret_cast<jbyte *>(data.data()), 0);
+                if (byte_array) {
+                    env->ReleaseByteArrayElements(byte_array,
+                                                  reinterpret_cast<jbyte *>(data.data()), 0);
+                }
             }
 
             jbyteArray java_array() const {
@@ -235,6 +253,24 @@ namespace jni_utils {
                 return std::vector(data.begin(), data.end());
             }
     };
+
+    template <size_t N>
+    static std::optional<std::array<unsigned char, N>> java_to_cpp_array(JNIEnv *env, jbyteArray array) {
+        if (!array) {
+            return std::nullopt;
+        }
+
+        JavaByteArrayRef bytes(env, array);
+        auto span = bytes.get();
+        if (span.size() != N) {
+            throw std::runtime_error("Invalid byte array length from java, expecting " + std::to_string(N) + " got " + std::to_string(span.size()));
+        }
+
+        std::array<unsigned char, N> out;
+        std::copy(span.begin(), span.end(), out.begin());
+        return out;
+    }
+
 }
 
 #endif //SESSION_ANDROID_JNI_UTILS_H
