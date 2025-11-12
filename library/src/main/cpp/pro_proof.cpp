@@ -6,82 +6,62 @@
 #include "util.h"
 #include "jni_utils.h"
 
+using namespace jni_utils;
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_network_loki_messenger_libsession_1util_pro_ProProof_00024Companion_nativeGetVersion(
-        JNIEnv *env, jobject thiz, jlong native_value) {
-    return static_cast<jint>(
-            reinterpret_cast<session::ProProof*>(native_value)->version);
-}
+Java_network_loki_messenger_libsession_1util_pro_ProProof_status(JNIEnv *env, jobject thiz,
+                                                                 jbyteArray verify_pub_key,
+                                                                 jlong now_unix_ts,
+                                                                 jbyteArray signed_message_data,
+                                                                 jbyteArray signed_message_signature) {
+    return run_catching_cxx_exception_or_throws<jint>(env, [=]() {
+        JavaLocalRef<jclass> clazz(env, env->GetObjectClass(thiz));
+        auto get_version_method = env->GetMethodID(clazz.get(), "getVersion", "()I");
+        auto get_gen_index_hash_method = env->GetMethodID(clazz.get(), "getGenIndexHash", "()[B");
+        auto get_rotating_pub_key_method = env->GetMethodID(clazz.get(), "getRotatingPubKey",
+                                                            "()[B");
+        auto get_expiry_method = env->GetMethodID(clazz.get(), "getExpiryMs", "()J");
+        auto get_signature_method = env->GetMethodID(clazz.get(), "getSignature", "()[B");
 
+        auto version = env->CallIntMethod(thiz, get_version_method);
+        JavaLocalRef<jbyteArray> gen_index_hash_bytes_obj(env,
+                                                          static_cast<jbyteArray>(env->CallObjectMethod(
+                                                                  thiz,
+                                                                  get_gen_index_hash_method)));
+        JavaLocalRef<jbyteArray> rotating_pub_key_bytes_obj(env,
+                                                            static_cast<jbyteArray>(env->CallObjectMethod(
+                                                                    thiz,
+                                                                    get_rotating_pub_key_method)));
+        auto expiry_ms = env->CallLongMethod(thiz, get_expiry_method);
+        JavaLocalRef<jbyteArray> signature_bytes_obj(env,
+                                                     static_cast<jbyteArray>(env->CallObjectMethod(
+                                                             thiz, get_signature_method)));
 
-extern "C"
-JNIEXPORT jlong JNICALL
-Java_network_loki_messenger_libsession_1util_pro_ProProof_00024Companion_nativeGetExpiry(
-        JNIEnv *env, jobject thiz, jlong native_value) {
-    return static_cast<jlong>(
-            reinterpret_cast<session::ProProof*>(native_value)->expiry_unix_ts.time_since_epoch().count());
-}
+        std::optional<session::ProSignedMessage> signed_msg;
+        JavaByteArrayRef signed_message_data_ref(env, signed_message_data);
+        JavaByteArrayRef signed_message_signature_ref(env, signed_message_signature);
 
-extern "C"
-JNIEXPORT jbyteArray JNICALL
-Java_network_loki_messenger_libsession_1util_pro_ProProof_00024Companion_nativeGetRotatingPubKey(
-        JNIEnv *env, jobject thiz, jlong native_value) {
-    const auto& rotating_pubkey =
-            reinterpret_cast<session::ProProof*>(native_value)->rotating_pubkey;
+        if (signed_message_data && signed_message_signature) {
+            signed_msg.emplace(session::ProSignedMessage {
+                .sig = signed_message_signature_ref.get(),
+                .msg = signed_message_data_ref.get(),
+            });
+        }
 
-    return util::bytes_from_span(env, rotating_pubkey);
-}
+        session::ProProof pro_proof {
+                .version = static_cast<std::uint8_t>(version),
+                .gen_index_hash = *java_to_cpp_array<32>(env, gen_index_hash_bytes_obj.get()),
+                .rotating_pubkey = *java_to_cpp_array<32>(env, rotating_pub_key_bytes_obj.get()),
+                .expiry_unix_ts = std::chrono::sys_time<std::chrono::milliseconds>(
+                        std::chrono::milliseconds(expiry_ms)),
+                .sig = *java_to_cpp_array<64>(env, signature_bytes_obj.get()),
+        };
 
-extern "C"
-JNIEXPORT jstring JNICALL
-Java_network_loki_messenger_libsession_1util_pro_ProProof_00024Companion_nativeSerialize(
-        JNIEnv *env, jobject thiz, jlong native_value) {
-    const auto& proof =
-            *reinterpret_cast<session::ProProof*>(native_value);
-    nlohmann::json j;
-    j["version"] = proof.version;
-    j["gen_index_hash"] = oxenc::to_base64(proof.gen_index_hash);
-    j["rotating_pubkey"] = oxenc::to_base64(proof.rotating_pubkey);
-    j["expiry_unix_ts_ms"] = proof.expiry_unix_ts.time_since_epoch().count();
-    j["sig"] = oxenc::to_base64(proof.sig);
-
-    return util::jstringFromOptional(env, j.dump());
-}
-
-template<size_t N>
-void from_json(const nlohmann::json& j, std::array<uint8_t, N>& arr) {
-    auto b64_str = j.get<std::string_view>();
-    auto bytes = oxenc::from_base64(b64_str);
-    if (bytes.size() != N) {
-        throw std::invalid_argument{"Invalid array size in from_json"};
-    }
-    std::copy(bytes.begin(), bytes.end(), arr.begin());
-}
-
-extern "C"
-JNIEXPORT jlong JNICALL
-Java_network_loki_messenger_libsession_1util_pro_ProProof_00024Companion_nativeDeserialize(
-        JNIEnv *env, jobject thiz, jstring data) {
-    return jni_utils::run_catching_cxx_exception_or_throws<jlong>(env, [=]() {
-        auto j = nlohmann::json::parse(jni_utils::JavaStringRef(env, data).view());
-
-        return reinterpret_cast<jlong>(new session::ProProof {
-            .version = j.at("version").get<uint8_t>(),
-            .gen_index_hash = j.at("gen_index_hash").get<session::array_uc32>(),
-            .rotating_pubkey = j.at("rotating_pubkey").get<session::array_uc32>(),
-            .expiry_unix_ts = std::chrono::sys_time<std::chrono::milliseconds>{
-                std::chrono::milliseconds{static_cast<int64_t>(j.at("expiry_unix_ts_ms").get<uint64_t>())}},
-            .sig = j.at("sig").get<session::array_uc64>(),
-        });
+        return static_cast<jint>(pro_proof.status(
+                JavaByteArrayRef(env, verify_pub_key).get(),
+                std::chrono::sys_time<std::chrono::milliseconds>{std::chrono::milliseconds(now_unix_ts)},
+                signed_msg
+        ));
     });
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_network_loki_messenger_libsession_1util_pro_ProProof_00024Companion_nativeDestroy(JNIEnv *env,
-                                                                                       jobject thiz,
-                                                                                       jlong native_value) {
-    delete reinterpret_cast<session::ProProof*>(native_value);
 }
