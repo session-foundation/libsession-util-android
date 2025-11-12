@@ -27,7 +27,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildAddProPaym
 
 extern "C"
 JNIEXPORT jstring JNICALL
-Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGetProProofRequestJson(
+Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGenerateProProofRequestJson(
         JNIEnv *env, jobject thiz, jint version, jbyteArray master_private_key,
         jbyteArray rotating_private_key, jlong now_ms) {
     return run_catching_cxx_exception_or_throws<jstring>(env, [=]() {
@@ -46,7 +46,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGetProProo
 
 extern "C"
 JNIEXPORT jstring JNICALL
-Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGetProStatusRequestJson(
+Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGetProDetailsRequestJson(
         JNIEnv *env, jobject thiz, jint version, jbyteArray pro_master_private_key, jlong now_ms,
         jint count) {
     return run_catching_cxx_exception_or_throws<jstring>(env, [=]() {

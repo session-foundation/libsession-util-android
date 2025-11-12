@@ -17,14 +17,14 @@ object BackendRequests : LibSessionUtilCApi() {
         orderId: String,
     ): String
 
-    external fun buildGetProProofRequestJson(
+    external fun buildGenerateProProofRequestJson(
         version: Int,
         masterPrivateKey: ByteArray,
         rotatingPrivateKey: ByteArray,
         nowMs: Long,
     ): String
 
-    external fun buildGetProStatusRequestJson(
+    external fun buildGetProDetailsRequestJson(
         version: Int,
         proMasterPrivateKey: ByteArray,
         nowMs: Long,
