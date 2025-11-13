@@ -53,7 +53,7 @@ static jobject serializeDecodedEnvelope(JNIEnv *env, const session::DecodedEnvel
     jmethodID init = env->GetMethodID(
             envelopClass.get(),
             "<init>",
-            "(Lnetwork/loki/messenger/libsession_util/protocol/Envelope;Lnetwork/loki/messenger/libsession_util/pro/ProProof$Status;Lnetwork/loki/messenger/libsession_util/pro/ProProof;[B[B[BJ)V"
+            "(Lnetwork/loki/messenger/libsession_util/protocol/Envelope;ILnetwork/loki/messenger/libsession_util/pro/ProProof;J[B[B[BJ)V"
     );
 
     return env->NewObject(envelopClass.get(), init,
@@ -61,6 +61,7 @@ static jobject serializeDecodedEnvelope(JNIEnv *env, const session::DecodedEnvel
                           envelop.pro ? static_cast<jint>(envelop.pro->status)
                                        : static_cast<jint>(-1),
                           envelop.pro ? serializeProProof(env, envelop.pro->proof).get() : nullptr,
+                          static_cast<jlong>(envelop.pro ? envelop.pro->features : 0),
                           content.get(),
                           sender_ed25519.get(),
                           sender_x25519.get(),
@@ -165,7 +166,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForC
         jmethodID init = env->GetMethodID(
                 envelopClass.get(),
                 "<init>",
-                "(Lnetwork/loki/messenger/libsession_util/protocol/pro/ProProof$Status;Lnetwork/loki/messenger/libsession_util/protocol/pro/ProProof;[B)V"
+                "(Lnetwork/loki/messenger/libsession_util/protocol/pro/ProProof$Status;Lnetwork/loki/messenger/libsession_util/protocol/pro/ProProof;J[B)V"
         );
 
         return env->NewObject(
@@ -174,6 +175,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForC
                 decoded.pro ? static_cast<jint>(decoded.pro->status)
                              : static_cast<jint>(-1),
                 decoded.pro ? serializeProProof(env, decoded.pro->proof).get() : nullptr,
+                static_cast<jlong>(decoded.pro ? decoded.pro->features : 0),
                 util::bytes_from_vector(env, decoded.content_plaintext)
         );
     });
