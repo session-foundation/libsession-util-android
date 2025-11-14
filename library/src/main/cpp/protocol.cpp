@@ -166,7 +166,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForC
         jmethodID init = env->GetMethodID(
                 envelopClass.get(),
                 "<init>",
-                "(Lnetwork/loki/messenger/libsession_util/protocol/pro/ProProof$Status;Lnetwork/loki/messenger/libsession_util/protocol/pro/ProProof;J[B)V"
+                "(ILnetwork/loki/messenger/libsession_util/pro/ProProof;J[B)V"
         );
 
         return env->NewObject(
