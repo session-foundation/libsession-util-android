@@ -47,7 +47,7 @@ Java_network_loki_messenger_libsession_1util_ED25519_generate(JNIEnv *env, jobje
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_network_loki_messenger_libsession_1util_ED25519_generateProKeyPair(JNIEnv *env, jobject thiz,
+Java_network_loki_messenger_libsession_1util_ED25519_generateProMasterKey(JNIEnv *env, jobject thiz,
                                                                         jbyteArray ed25519_seed) {
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
         return util::bytes_from_span(

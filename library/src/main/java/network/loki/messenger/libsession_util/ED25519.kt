@@ -37,5 +37,5 @@ object ED25519 : LibSessionUtilCApi() {
      * @param ed25519Seed The seed the user uses to generate their session id
      * @return The libsodium-style Master Session Pro Ed25519 secret key, 64 bytes.
      */
-    external fun generateProPrivateKey(ed25519Seed: ByteArray): ByteArray
+    external fun generateProMasterKey(ed25519Seed: ByteArray): ByteArray
 }
