@@ -194,6 +194,10 @@ namespace jni_utils {
             std::span<char> get() const {
                 return data;
             }
+
+            std::span<uint8_t> get_raw() const {
+                return std::span<uint8_t>(reinterpret_cast<uint8_t *>(data.data()), data.size());
+            }
     };
 
     /**
@@ -206,8 +210,13 @@ namespace jni_utils {
 
         public:
             JavaByteArrayRef(JNIEnv *env, jbyteArray byte_array) : env(env), byte_array(byte_array) {
-                jsize length = env->GetArrayLength(byte_array);
-                data = std::span<unsigned char>(reinterpret_cast<unsigned char *>(env->GetByteArrayElements(byte_array, nullptr)), length);
+                if (byte_array) {
+                    jsize length = env->GetArrayLength(byte_array);
+                    data = std::span<unsigned char>(
+                            reinterpret_cast<unsigned char *>(env->GetByteArrayElements(byte_array,
+                                                                                        nullptr)),
+                            length);
+                }
             }
 
             JavaByteArrayRef(const JavaByteArrayRef &) = delete;
