@@ -31,7 +31,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGeneratePr
         JNIEnv *env, jobject thiz, jint version, jbyteArray master_private_key,
         jbyteArray rotating_private_key, jlong now_ms) {
     return run_catching_cxx_exception_or_throws<jstring>(env, [=]() {
-        auto json = session::pro_backend::GetProProofRequest::build_to_json(
+        auto json = session::pro_backend::GenerateProProofRequest::build_to_json(
                 version,
                 JavaByteArrayRef(env, master_private_key).get(),
                 JavaByteArrayRef(env, rotating_private_key).get(),
@@ -50,7 +50,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGetProDeta
         JNIEnv *env, jobject thiz, jint version, jbyteArray pro_master_private_key, jlong now_ms,
         jint count) {
     return run_catching_cxx_exception_or_throws<jstring>(env, [=]() {
-        auto json = session::pro_backend::GetProStatusRequest::build_to_json(
+        auto json = session::pro_backend::GetProDetailsRequest::build_to_json(
                 version,
                 JavaByteArrayRef(env, pro_master_private_key).get(),
                 std::chrono::sys_time<std::chrono::milliseconds> {
