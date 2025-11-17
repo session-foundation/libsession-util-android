@@ -74,10 +74,17 @@ data class ProProof(
         val signature: ByteArray,
     )
 
+    /**
+     * Checks the status of the Pro proof.
+     *
+     * @param senderED25519PubKey The sender (proof generator)'s ED25519 public key.
+     * @param signedMessage An optional signed message to verify against the proof.
+     * @param now The current time to use for expiry checks. Defaults to
+     */
     fun status(
-        verifyPubKey: ByteArray,
-        signedMessage: ProSignedMessage?,
-        now: Instant = Instant.now(),
+        senderED25519PubKey: ByteArray,
+        now: Instant,
+        signedMessage: ProSignedMessage? = null,
     ): Status {
         val signedMessageData = signedMessage?.data
         val signedMessageSignature = signedMessage?.signature
@@ -88,7 +95,7 @@ data class ProProof(
             expiryMs = expiryMs,
             signature = signatureHex.hexToByteArray(),
             nowUnixTs = now.toEpochMilli(),
-            verifyPubKey = verifyPubKey,
+            verifyPubKey = senderED25519PubKey,
             signedMessageData = signedMessageData,
             signedMessageSignature = signedMessageSignature
         )
