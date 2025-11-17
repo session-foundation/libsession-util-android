@@ -200,6 +200,37 @@ namespace jni_utils {
             }
     };
 
+    class JavaCharsRef {
+        JNIEnv *env;
+        jstring s;
+        std::span<jchar> data;
+
+    public:
+        JavaCharsRef(JNIEnv *env, jstring s) : env(env), s(s) {
+            const jchar *c_str = env->GetStringChars(s, nullptr);
+            data = std::span<jchar>(const_cast<jchar *>(c_str), env->GetStringLength(s));
+        }
+
+        JavaCharsRef(const JavaCharsRef &) = delete;
+
+        ~JavaCharsRef() {
+            env->ReleaseStringChars(s, data.data());
+        }
+
+        const jchar* chars() const {
+            return data.data();
+        }
+
+        size_t size() const {
+            return data.size();
+        }
+
+        // Get the data as a span. Only valid during the lifetime of this object.
+        std::span<jchar> get() const {
+            return data;
+        }
+    };
+
     /**
      * A RAII wrapper for a Java byte array. This will automatically release the byte array when it goes out of scope.
      */

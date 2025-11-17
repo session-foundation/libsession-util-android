@@ -263,3 +263,28 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForG
         ));
     });
 }
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_proFeaturesForMessage(
+        JNIEnv *env, jobject thiz, jstring message_body, jlong proposed_features) {
+    return run_catching_cxx_exception_or_throws<jobject>(env, [=] {
+        JavaCharsRef message_ref(env, message_body);
+
+        auto features = session::pro_features_for_utf16(
+                reinterpret_cast<const char16_t *>(message_ref.chars()),
+                message_ref.size(),
+                static_cast<SESSION_PROTOCOL_PRO_FEATURES>(proposed_features)
+        );
+
+        auto clazz = env->FindClass("network/loki/messenger/libsession_util/protocol/ProFeaturesForMsg");
+        return env->NewObject(
+                clazz,
+                env->GetMethodID(clazz, "<init>", "(ILjava/lang/String;JI)V"),
+                static_cast<jint>(features.status),
+                features.error.empty() ? nullptr : env->NewStringUTF(std::string(features.error).c_str()),
+                static_cast<jlong>(features.features),
+                static_cast<jint>(features.codepoint_count)
+        );
+    });
+}

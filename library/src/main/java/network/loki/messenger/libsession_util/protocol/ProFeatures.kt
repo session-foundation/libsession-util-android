@@ -14,6 +14,10 @@ enum class ProFeature(internal val bitIndex: Int) {
 value class ProFeatures(val rawValue: Long) {
     companion object {
         val NONE = ProFeatures(0L)
+
+        fun from(features: Collection<ProFeature>): ProFeatures {
+            return ProFeatures(features.toLong())
+        }
     }
 
     fun contains(feature: ProFeature): Boolean {
