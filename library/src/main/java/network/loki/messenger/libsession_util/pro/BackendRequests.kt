@@ -1,6 +1,7 @@
 package network.loki.messenger.libsession_util.pro
 
 import network.loki.messenger.libsession_util.LibSessionUtilCApi
+import network.loki.messenger.libsession_util.protocol.PaymentProviderMetadata
 
 typealias PaymentProvider = Int
 
@@ -30,4 +31,6 @@ object BackendRequests : LibSessionUtilCApi() {
         nowMs: Long,
         count: Int,
     ): String
+
+    external fun getPaymentProviderMetadata(paymentProvider: PaymentProvider): PaymentProviderMetadata?
 }

@@ -1,6 +1,7 @@
 package network.loki.messenger.libsession_util.protocol
 
 import network.loki.messenger.libsession_util.LibSessionUtilCApi
+import network.loki.messenger.libsession_util.pro.PaymentProvider
 
 object SessionProtocol : LibSessionUtilCApi() {
     external fun encodeFor1o1(
