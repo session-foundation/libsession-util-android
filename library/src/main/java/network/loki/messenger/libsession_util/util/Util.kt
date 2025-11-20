@@ -7,4 +7,6 @@ object Util : LibSessionUtilCApi() {
 
     fun truncateCodepoints(str: String, maxCodepoints: Int): String =
         str.take(lengthForCodepoints(str, maxCodepoints))
+
+    external fun countCodepoints(str: String): Int
 }

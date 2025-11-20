@@ -8,6 +8,8 @@
 
 #include <android/log.h>
 
+#include <simdutf.h>
+
 #define  LOG_TAG    "libsession_util"
 
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
@@ -337,4 +339,12 @@ Java_network_loki_messenger_libsession_1util_util_Util_lengthForCodepoints(JNIEn
                 max_codepoints
         );
     });
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_network_loki_messenger_libsession_1util_util_Util_countCodepoints(JNIEnv *env, jobject thiz,
+                                                                       jstring str) {
+    jni_utils::JavaCharsRef str_ref(env, str);
+    return simdutf::count_utf16(reinterpret_cast<const char16_t*>(str_ref.chars()), str_ref.size());
 }
