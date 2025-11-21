@@ -3,24 +3,11 @@
 #include <session/sodium_array.hpp>
 
 #include "jni_utils.h"
+#include "pro_proof_util.h"
 
 using namespace jni_utils;
 
 
-static JavaLocalRef<jobject> serializeProProof(JNIEnv *env, const session::ProProof &proof) {
-    JavaLocalRef<jclass> pro_proof_clazz(env, env->FindClass(
-            "network/loki/messenger/libsession_util/pro/ProProof"));
-    jmethodID init = env->GetMethodID(pro_proof_clazz.get(), "<init>", "(I[B[BJ[B)V");
-    return {env, env->NewObject(
-            pro_proof_clazz.get(),
-            init,
-            static_cast<jint>(proof.version),
-            util::bytes_from_span(env, proof.gen_index_hash),
-            util::bytes_from_span(env, proof.rotating_pubkey),
-            static_cast<jlong>(proof.expiry_unix_ts.time_since_epoch().count()),
-            util::bytes_from_span(env, proof.sig)
-    )};
-}
 
 static JavaLocalRef<jobject> serializeEnvelop(JNIEnv *env, const session::Envelope &envelope) {
     JavaLocalRef envelopClass(env, env->FindClass(
@@ -60,7 +47,7 @@ static jobject serializeDecodedEnvelope(JNIEnv *env, const session::DecodedEnvel
                           serializeEnvelop(env, envelop.envelope).get(),
                           envelop.pro ? static_cast<jint>(envelop.pro->status)
                                        : static_cast<jint>(-1),
-                          envelop.pro ? serializeProProof(env, envelop.pro->proof).get() : nullptr,
+                          envelop.pro ? JavaLocalRef(env, cpp_to_java_proof(env, envelop.pro->proof)).get() : nullptr,
                           static_cast<jlong>(envelop.pro ? envelop.pro->features : 0),
                           content.get(),
                           sender_ed25519.get(),
@@ -174,7 +161,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForC
                 init,
                 decoded.pro ? static_cast<jint>(decoded.pro->status)
                              : static_cast<jint>(-1),
-                decoded.pro ? serializeProProof(env, decoded.pro->proof).get() : nullptr,
+                decoded.pro ? JavaLocalRef(env, cpp_to_java_proof(env, decoded.pro->proof)).get() : nullptr,
                 static_cast<jlong>(decoded.pro ? decoded.pro->features : 0),
                 util::bytes_from_vector(env, decoded.content_plaintext)
         );

@@ -96,7 +96,7 @@ set(SOURCES
         webp_utils.cpp
         gif_utils.cpp
         pro_backend.cpp
-        pro_proof.cpp
+        pro_proof_util.cpp
 
         ${cgif_SOURCE_DIR}/src/cgif.c
         ${cgif_SOURCE_DIR}/src/cgif_rgb.c

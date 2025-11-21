@@ -1,5 +1,7 @@
 package network.loki.messenger.libsession_util
 
+import network.loki.messenger.libsession_util.pro.ProConfig
+import network.loki.messenger.libsession_util.protocol.ProFeatures
 import network.loki.messenger.libsession_util.util.BaseCommunityInfo
 import network.loki.messenger.libsession_util.util.BlindedContact
 import network.loki.messenger.libsession_util.util.ConfigPush
@@ -9,9 +11,8 @@ import network.loki.messenger.libsession_util.util.ExpiryMode
 import network.loki.messenger.libsession_util.util.GroupInfo
 import network.loki.messenger.libsession_util.util.GroupMember
 import network.loki.messenger.libsession_util.util.UserPic
-import java.io.Closeable
 
-sealed class Config(initialPointer: Long): Closeable, LibSessionUtilCApi() {
+sealed class Config(initialPointer: Long): LibSessionUtilCApi() {
     var pointer = initialPointer
         private set
 
@@ -23,11 +24,8 @@ sealed class Config(initialPointer: Long): Closeable, LibSessionUtilCApi() {
 
     private external fun free()
 
-    final override fun close() {
-        if (pointer != 0L) {
-            free()
-            pointer = 0L
-        }
+    protected fun finalize() {
+        free()
     }
 }
 
@@ -78,6 +76,10 @@ interface ReadableUserProfile: ReadableConfig {
     fun getNtsExpiry(): ExpiryMode
     fun getCommunityMessageRequests(): Boolean
     fun isBlockCommunityMessageRequestsSet(): Boolean
+
+    fun getProFeatures(): ProFeatures
+    fun getProConfig(): ProConfig?
+    fun getProAccessExpiryMs(): Long?
 }
 
 interface MutableUserProfile : ReadableUserProfile, MutableConfig {
@@ -95,6 +97,13 @@ interface MutableUserProfile : ReadableUserProfile, MutableConfig {
     fun setNtsPriority(priority: Long)
     fun setNtsExpiry(expiryMode: ExpiryMode)
     fun setCommunityMessageRequests(blocks: Boolean)
+
+    fun removeProConfig()
+    fun setProConfig(proConfig: ProConfig)
+    fun setProBadge(proBadge: Boolean)
+    fun setAnimatedAvatar(animatedAvatar: Boolean)
+    fun setProAccessExpiryMs(epochMills: Long)
+    fun removeProAccessExpiry()
 }
 
 interface ReadableConversationVolatileConfig: ReadableConfig {

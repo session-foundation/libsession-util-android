@@ -7,9 +7,9 @@ data class PaymentProviderMetadata @Keep constructor(
     val store: String,
     val platform: String,
     val platformAccount: String,
-    val refundUrl: String,
-    val refundAfterPlatformDeadlineUrl: String,
+    val refundPlatformUrl: String,
     val refundSupportUrl: String,
+    val refundStatusUrl: String,
     val updateSubscriptionUrl: String,
     val cancelSubscriptionUrl: String,
 )

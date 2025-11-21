@@ -76,14 +76,14 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_getPaymentProvi
         auto clazz = env->FindClass("network/loki/messenger/libsession_util/protocol/PaymentProviderMetadata");
         return env->NewObject(
                 clazz,
-                env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"),
+                env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"),
                 util::jstringFromOptional(env, std::string_view(metadata.device.data, metadata.device.size)),
                 util::jstringFromOptional(env, std::string_view(metadata.store.data, metadata.store.size)),
                 util::jstringFromOptional(env, std::string_view(metadata.platform.data, metadata.platform.size)),
                 util::jstringFromOptional(env, std::string_view(metadata.platform_account.data, metadata.platform_account.size)),
-                util::jstringFromOptional(env, std::string_view(metadata.refund_url.data, metadata.refund_url.size)),
-                util::jstringFromOptional(env, std::string_view(metadata.refund_after_platform_deadline_url.data, metadata.refund_after_platform_deadline_url.size)),
+                util::jstringFromOptional(env, std::string_view(metadata.refund_platform_url.data, metadata.refund_platform_url.size)),
                 util::jstringFromOptional(env, std::string_view(metadata.refund_support_url.data, metadata.refund_support_url.size)),
+                util::jstringFromOptional(env, std::string_view(metadata.refund_status_url.data, metadata.refund_status_url.size)),
                 util::jstringFromOptional(env, std::string_view(metadata.update_subscription_url.data, metadata.update_subscription_url.size)),
                 util::jstringFromOptional(env, std::string_view(metadata.cancel_subscription_url.data, metadata.cancel_subscription_url.size))
             );

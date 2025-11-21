@@ -89,11 +89,6 @@ data class ProProof(
         val signedMessageData = signedMessage?.data
         val signedMessageSignature = signedMessage?.signature
         val statusValue = nativeStatus(
-            version = version,
-            genIndexHash = genIndexHashHex.hexToByteArray(),
-            rotatingPubKey = rotatingPubKeyHex.hexToByteArray(),
-            expiryMs = expiryMs,
-            signature = signatureHex.hexToByteArray(),
             nowUnixTs = now.toEpochMilli(),
             verifyPubKey = senderED25519PubKey,
             signedMessageData = signedMessageData,
@@ -103,17 +98,10 @@ data class ProProof(
         return Status.fromNativeValue(statusValue)
     }
 
-    companion object {
-        private external fun nativeStatus(
-            version: Int,
-            genIndexHash: ByteArray,
-            rotatingPubKey: ByteArray,
-            expiryMs: Long,
-            signature: ByteArray,
-            nowUnixTs: Long,
-            verifyPubKey: ByteArray,
-            signedMessageData: ByteArray?,
-            signedMessageSignature: ByteArray?
-        ): Int
-    }
+    private external fun nativeStatus(
+        nowUnixTs: Long,
+        verifyPubKey: ByteArray,
+        signedMessageData: ByteArray?,
+        signedMessageSignature: ByteArray?
+    ): Int
 }
