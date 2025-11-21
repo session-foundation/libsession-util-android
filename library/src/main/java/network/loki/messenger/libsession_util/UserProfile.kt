@@ -1,5 +1,8 @@
 package network.loki.messenger.libsession_util
 
+import network.loki.messenger.libsession_util.pro.ProConfig
+import network.loki.messenger.libsession_util.pro.ProProof
+import network.loki.messenger.libsession_util.protocol.ProFeatures
 import network.loki.messenger.libsession_util.util.ExpiryMode
 import network.loki.messenger.libsession_util.util.UserPic
 
@@ -27,4 +30,27 @@ class UserProfile private constructor(pointer: Long) : ConfigBase(pointer), Muta
     external override fun getCommunityMessageRequests(): Boolean
     external override fun setCommunityMessageRequests(blocks: Boolean)
     external override fun isBlockCommunityMessageRequestsSet(): Boolean
+
+    external override fun removeProConfig()
+
+    private external fun setProConfig(
+        proof: ProProof,
+        rotatingPrivateKey: ByteArray
+    )
+
+    override fun setProConfig(proConfig: ProConfig) = setProConfig(
+        proConfig.proProof,
+        proConfig.rotatingPrivateKey.data
+    )
+
+    external override fun setProBadge(proBadge: Boolean)
+    external override fun setAnimatedAvatar(animatedAvatar: Boolean)
+    external override fun setProAccessExpiryMs(epochMills: Long)
+    external override fun removeProAccessExpiry()
+    private external fun getProFeaturesRaw(): Long
+    override fun getProFeatures(): ProFeatures = ProFeatures(getProFeaturesRaw())
+    external override fun getProConfig(): ProConfig?
+
+    private external fun getProAccessExpiryMsOrZero(): Long
+    override fun getProAccessExpiryMs(): Long? = getProAccessExpiryMsOrZero().takeIf { it != 0L }
 }

@@ -1,5 +1,7 @@
 package network.loki.messenger.libsession_util
 
+import network.loki.messenger.libsession_util.pro.ProConfig
+import network.loki.messenger.libsession_util.protocol.ProFeatures
 import network.loki.messenger.libsession_util.util.BaseCommunityInfo
 import network.loki.messenger.libsession_util.util.BlindedContact
 import network.loki.messenger.libsession_util.util.ConfigPush
@@ -9,9 +11,14 @@ import network.loki.messenger.libsession_util.util.ExpiryMode
 import network.loki.messenger.libsession_util.util.GroupInfo
 import network.loki.messenger.libsession_util.util.GroupMember
 import network.loki.messenger.libsession_util.util.UserPic
-import java.io.Closeable
 
-sealed class Config(initialPointer: Long): Closeable, LibSessionUtilCApi() {
+typealias ConversationPriority = Long
+
+const val PRIORITY_HIDDEN: ConversationPriority = -1L
+const val PRIORITY_VISIBLE: ConversationPriority = 0L
+const val PRIORITY_PINNED: ConversationPriority = 1L
+
+sealed class Config(initialPointer: Long): LibSessionUtilCApi() {
     var pointer = initialPointer
         private set
 
@@ -23,11 +30,8 @@ sealed class Config(initialPointer: Long): Closeable, LibSessionUtilCApi() {
 
     private external fun free()
 
-    final override fun close() {
-        if (pointer != 0L) {
-            free()
-            pointer = 0L
-        }
+    protected fun finalize() {
+        free()
     }
 }
 
@@ -74,10 +78,14 @@ interface ReadableUserProfile: ReadableConfig {
     fun getName(): String?
     fun getPic(): UserPic
     fun getProfileUpdatedSeconds(): Long
-    fun getNtsPriority(): Long
+    fun getNtsPriority(): ConversationPriority
     fun getNtsExpiry(): ExpiryMode
     fun getCommunityMessageRequests(): Boolean
     fun isBlockCommunityMessageRequestsSet(): Boolean
+
+    fun getProFeatures(): ProFeatures
+    fun getProConfig(): ProConfig?
+    fun getProAccessExpiryMs(): Long?
 }
 
 interface MutableUserProfile : ReadableUserProfile, MutableConfig {
@@ -92,9 +100,16 @@ interface MutableUserProfile : ReadableUserProfile, MutableConfig {
      * Called when setting a re-uploaded pic
      */
     fun setReuploadedPic(userPic: UserPic)
-    fun setNtsPriority(priority: Long)
+    fun setNtsPriority(priority: ConversationPriority)
     fun setNtsExpiry(expiryMode: ExpiryMode)
     fun setCommunityMessageRequests(blocks: Boolean)
+
+    fun removeProConfig()
+    fun setProConfig(proConfig: ProConfig)
+    fun setProBadge(proBadge: Boolean)
+    fun setAnimatedAvatar(animatedAvatar: Boolean)
+    fun setProAccessExpiryMs(epochMills: Long)
+    fun removeProAccessExpiry()
 }
 
 interface ReadableConversationVolatileConfig: ReadableConfig {

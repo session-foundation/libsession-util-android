@@ -194,6 +194,41 @@ namespace jni_utils {
             std::span<char> get() const {
                 return data;
             }
+
+            std::span<uint8_t> get_raw() const {
+                return std::span<uint8_t>(reinterpret_cast<uint8_t *>(data.data()), data.size());
+            }
+    };
+
+    class JavaCharsRef {
+        JNIEnv *env;
+        jstring s;
+        std::span<jchar> data;
+
+    public:
+        JavaCharsRef(JNIEnv *env, jstring s) : env(env), s(s) {
+            const jchar *c_str = env->GetStringChars(s, nullptr);
+            data = std::span<jchar>(const_cast<jchar *>(c_str), env->GetStringLength(s));
+        }
+
+        JavaCharsRef(const JavaCharsRef &) = delete;
+
+        ~JavaCharsRef() {
+            env->ReleaseStringChars(s, data.data());
+        }
+
+        const jchar* chars() const {
+            return data.data();
+        }
+
+        size_t size() const {
+            return data.size();
+        }
+
+        // Get the data as a span. Only valid during the lifetime of this object.
+        std::span<jchar> get() const {
+            return data;
+        }
     };
 
     /**
@@ -206,8 +241,13 @@ namespace jni_utils {
 
         public:
             JavaByteArrayRef(JNIEnv *env, jbyteArray byte_array) : env(env), byte_array(byte_array) {
-                jsize length = env->GetArrayLength(byte_array);
-                data = std::span<unsigned char>(reinterpret_cast<unsigned char *>(env->GetByteArrayElements(byte_array, nullptr)), length);
+                if (byte_array) {
+                    jsize length = env->GetArrayLength(byte_array);
+                    data = std::span<unsigned char>(
+                            reinterpret_cast<unsigned char *>(env->GetByteArrayElements(byte_array,
+                                                                                        nullptr)),
+                            length);
+                }
             }
 
             JavaByteArrayRef(const JavaByteArrayRef &) = delete;

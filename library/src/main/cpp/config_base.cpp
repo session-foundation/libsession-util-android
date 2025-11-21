@@ -96,34 +96,6 @@ Java_network_loki_messenger_libsession_1util_ConfigBase_merge___3Lkotlin_Pair_2(
 
 #pragma clang diagnostic pop
 }
-extern "C"
-JNIEXPORT jint JNICALL
-Java_network_loki_messenger_libsession_1util_ConfigBase_configNamespace(JNIEnv *env, jobject thiz) {
-    auto conf = ptrToConfigBase(env, thiz);
-    return (std::int16_t) conf->storage_namespace();
-}
-extern "C"
-JNIEXPORT jclass JNICALL
-Java_network_loki_messenger_libsession_1util_ConfigBase_00024Companion_kindFor(JNIEnv *env,
-                                                                               jobject thiz,
-                                                                               jint config_namespace) {
-    auto user_class = env->FindClass("network/loki/messenger/libsession_util/UserProfile");
-    auto contact_class = env->FindClass("network/loki/messenger/libsession_util/Contacts");
-    auto convo_volatile_class = env->FindClass("network/loki/messenger/libsession_util/ConversationVolatileConfig");
-    auto group_list_class = env->FindClass("network/loki/messenger/libsession_util/UserGroupsConfig");
-    switch (config_namespace) {
-        case (int)session::config::Namespace::UserProfile:
-            return user_class;
-        case (int)session::config::Namespace::Contacts:
-            return contact_class;
-        case (int)session::config::Namespace::ConvoInfoVolatile:
-            return convo_volatile_class;
-        case (int)session::config::Namespace::UserGroups:
-            return group_list_class;
-        default:
-            return nullptr;
-    }
-}
 
 extern "C"
 JNIEXPORT jobject JNICALL

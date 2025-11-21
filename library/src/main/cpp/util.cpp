@@ -8,6 +8,8 @@
 
 #include <android/log.h>
 
+#include <simdutf.h>
+
 #define  LOG_TAG    "libsession_util"
 
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
@@ -322,4 +324,27 @@ Java_network_loki_messenger_libsession_1util_Config_free(JNIEnv *env, jobject th
         auto config = (session::config::ConfigBase*) env->GetLongField(thiz, pointerField);
         delete config;
     }
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_network_loki_messenger_libsession_1util_util_Util_lengthForCodepoints(JNIEnv *env,
+                                                                           jobject thiz,
+                                                                           jstring str,
+                                                                           jint max_codepoints) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jint>(env, [=]() {
+        jni_utils::JavaCharsRef str_ref(env, str);
+        return session::utf16_count_truncated_to_codepoints(
+                {reinterpret_cast<const char16_t *>(str_ref.chars()), str_ref.size()},
+                max_codepoints
+        );
+    });
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_network_loki_messenger_libsession_1util_util_Util_countCodepoints(JNIEnv *env, jobject thiz,
+                                                                       jstring str) {
+    jni_utils::JavaCharsRef str_ref(env, str);
+    return session::utf16_count({reinterpret_cast<const char16_t*>(str_ref.chars()), str_ref.size()});
 }
