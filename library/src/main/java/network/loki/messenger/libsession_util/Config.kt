@@ -12,6 +12,12 @@ import network.loki.messenger.libsession_util.util.GroupInfo
 import network.loki.messenger.libsession_util.util.GroupMember
 import network.loki.messenger.libsession_util.util.UserPic
 
+typealias ConversationPriority = Long
+
+const val PRIORITY_HIDDEN: ConversationPriority = -1L
+const val PRIORITY_VISIBLE: ConversationPriority = 0L
+const val PRIORITY_PINNED: ConversationPriority = 1L
+
 sealed class Config(initialPointer: Long): LibSessionUtilCApi() {
     var pointer = initialPointer
         private set
@@ -72,7 +78,7 @@ interface ReadableUserProfile: ReadableConfig {
     fun getName(): String?
     fun getPic(): UserPic
     fun getProfileUpdatedSeconds(): Long
-    fun getNtsPriority(): Long
+    fun getNtsPriority(): ConversationPriority
     fun getNtsExpiry(): ExpiryMode
     fun getCommunityMessageRequests(): Boolean
     fun isBlockCommunityMessageRequestsSet(): Boolean
@@ -94,7 +100,7 @@ interface MutableUserProfile : ReadableUserProfile, MutableConfig {
      * Called when setting a re-uploaded pic
      */
     fun setReuploadedPic(userPic: UserPic)
-    fun setNtsPriority(priority: Long)
+    fun setNtsPriority(priority: ConversationPriority)
     fun setNtsExpiry(expiryMode: ExpiryMode)
     fun setCommunityMessageRequests(blocks: Boolean)
 
