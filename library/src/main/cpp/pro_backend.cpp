@@ -76,7 +76,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_getPaymentProvi
         auto clazz = env->FindClass("network/loki/messenger/libsession_util/protocol/PaymentProviderMetadata");
         return env->NewObject(
                 clazz,
-                env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"),
+                env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"),
                 util::jstringFromOptional(env, std::string_view(metadata.device.data, metadata.device.size)),
                 util::jstringFromOptional(env, std::string_view(metadata.store.data, metadata.store.size)),
                 util::jstringFromOptional(env, std::string_view(metadata.platform.data, metadata.platform.size)),
