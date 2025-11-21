@@ -189,7 +189,7 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_UserProfile_getProConfig(JNIEnv *env, jobject thiz) {
     auto profile = ptrToProfile(env, thiz)->get_pro_config();
-    if (profile) {
+    if (!profile) {
         return nullptr;
     }
 
