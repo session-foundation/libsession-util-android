@@ -1,7 +1,9 @@
 package network.loki.messenger.libsession_util.util
 
+import androidx.annotation.Keep
 import network.loki.messenger.libsession_util.ConversationPriority
 import network.loki.messenger.libsession_util.PRIORITY_VISIBLE
+import network.loki.messenger.libsession_util.protocol.ProFeatures
 
 data class Contact(
     val id: String,
@@ -15,7 +17,12 @@ data class Contact(
     var profileUpdatedEpochSeconds: Long = 0,
     var priority: ConversationPriority = PRIORITY_VISIBLE,
     var expiryMode: ExpiryMode = ExpiryMode.NONE,
+    var proFeatures: ProFeatures = ProFeatures.NONE,
 ) {
+
     val displayName: String
         get() = nickname.ifEmpty { name }
+
+    @get:Keep
+    private val proFeaturesRaw: Long get() = proFeatures.rawValue
 }

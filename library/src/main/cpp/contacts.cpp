@@ -12,10 +12,10 @@ static session::config::Contacts *ptrToContacts(JNIEnv *env, jobject obj) {
     return (session::config::Contacts *) env->GetLongField(obj, pointerField);
 }
 
-static JavaLocalRef<jobject> serialize_contact(JNIEnv *env, session::config::contact_info info) {
+static JavaLocalRef<jobject> serialize_contact(JNIEnv *env, const session::config::contact_info &info) {
     static BasicJavaClassInfo class_info(
             env, "network/loki/messenger/libsession_util/util/Contact",
-            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZZLnetwork/loki/messenger/libsession_util/util/UserPic;JJJLnetwork/loki/messenger/libsession_util/util/ExpiryMode;)V");
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZZLnetwork/loki/messenger/libsession_util/util/UserPic;JJJLnetwork/loki/messenger/libsession_util/util/ExpiryMode;J)V");
 
     jobject returnObj = env->NewObject(class_info.java_class,
                                        class_info.constructor,
@@ -29,13 +29,13 @@ static JavaLocalRef<jobject> serialize_contact(JNIEnv *env, session::config::con
                                        (jlong) info.created,
                                        (jlong) (info.profile_updated.time_since_epoch().count()),
                                        (jlong) info.priority,
-                                       util::serialize_expiry(env, info.exp_mode, info.exp_timer).get());
+                                       util::serialize_expiry(env, info.exp_mode, info.exp_timer).get(),
+                                       (jlong) info.pro_features);
     return {env, returnObj};
 }
 
 session::config::contact_info deserialize_contact(JNIEnv *env, jobject info, session::config::Contacts *conf) {
-    struct ClassInfo {
-        jclass java_class;
+    struct ClassInfo : JavaClassInfo {
         jmethodID get_id;
         jmethodID get_name;
         jmethodID get_nick;
@@ -46,19 +46,21 @@ session::config::contact_info deserialize_contact(JNIEnv *env, jobject info, ses
         jmethodID get_priority;
         jmethodID get_expiry;
         jmethodID get_profile_updated;
+        jmethodID get_pro_features;
 
-        ClassInfo(JNIEnv *env, jclass clazz):
-            java_class((jclass) env->NewGlobalRef(clazz)),
-            get_id(env->GetMethodID(clazz, "getId", "()Ljava/lang/String;")),
-            get_name(env->GetMethodID(clazz, "getName", "()Ljava/lang/String;")),
-            get_nick(env->GetMethodID(clazz, "getNickname", "()Ljava/lang/String;")),
-            get_approved(env->GetMethodID(clazz, "getApproved", "()Z")),
-            get_approved_me(env->GetMethodID(clazz, "getApprovedMe", "()Z")),
-            get_blocked(env->GetMethodID(clazz, "getBlocked", "()Z")),
-            get_user_pic(env->GetMethodID(clazz, "getProfilePicture", "()Lnetwork/loki/messenger/libsession_util/util/UserPic;")),
-            get_priority(env->GetMethodID(clazz, "getPriority", "()J")),
-            get_expiry(env->GetMethodID(clazz, "getExpiryMode", "()Lnetwork/loki/messenger/libsession_util/util/ExpiryMode;")),
-            get_profile_updated(env->GetMethodID(clazz, "getProfileUpdatedEpochSeconds", "()J")) {}
+        ClassInfo(JNIEnv *env, jobject obj):
+            JavaClassInfo(env, obj),
+            get_id(env->GetMethodID(java_class, "getId", "()Ljava/lang/String;")),
+            get_name(env->GetMethodID(java_class, "getName", "()Ljava/lang/String;")),
+            get_nick(env->GetMethodID(java_class, "getNickname", "()Ljava/lang/String;")),
+            get_approved(env->GetMethodID(java_class, "getApproved", "()Z")),
+            get_approved_me(env->GetMethodID(java_class, "getApprovedMe", "()Z")),
+            get_blocked(env->GetMethodID(java_class, "getBlocked", "()Z")),
+            get_user_pic(env->GetMethodID(java_class, "getProfilePicture", "()Lnetwork/loki/messenger/libsession_util/util/UserPic;")),
+            get_priority(env->GetMethodID(java_class, "getPriority", "()J")),
+            get_expiry(env->GetMethodID(java_class, "getExpiryMode", "()Lnetwork/loki/messenger/libsession_util/util/ExpiryMode;")),
+            get_profile_updated(env->GetMethodID(java_class, "getProfileUpdatedEpochSeconds", "()J")),
+            get_pro_features(env->GetMethodID(java_class, "getProFeaturesRaw", "()J")) {}
     };
 
     static ClassInfo class_info(env, JavaLocalRef(env, env->GetObjectClass(info)).get());
@@ -90,6 +92,7 @@ session::config::contact_info deserialize_contact(JNIEnv *env, jobject info, ses
     contact_info.priority = env->CallLongMethod(info, class_info.get_priority);
     contact_info.exp_mode = expiry_pair.first;
     contact_info.exp_timer = std::chrono::seconds(expiry_pair.second);
+    contact_info.pro_features = env->CallLongMethod(info, class_info.get_pro_features);
 
     return contact_info;
 }
@@ -156,7 +159,7 @@ Java_network_loki_messenger_libsession_1util_Contacts_all(JNIEnv *env, jobject t
 JavaLocalRef<jobject> serialize_blinded_contact(JNIEnv *env, const session::config::blinded_contact_info &info) {
     static BasicJavaClassInfo class_info(
             env, "network/loki/messenger/libsession_util/util/BlindedContact",
-            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJLnetwork/loki/messenger/libsession_util/util/UserPic;J)V");
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJLnetwork/loki/messenger/libsession_util/util/UserPic;JJ)V");
 
     return {env, env->NewObject(
             class_info.java_class,
@@ -168,31 +171,55 @@ JavaLocalRef<jobject> serialize_blinded_contact(JNIEnv *env, const session::conf
             (jlong) (info.created.time_since_epoch().count()),
             (jlong) (info.profile_updated.time_since_epoch().count()),
             util::serialize_user_pic(env, info.profile_picture).get(),
-            (jlong) info.priority
+            (jlong) info.priority,
+            (jlong) info.pro_features
     )};
 }
 
 session::config::blinded_contact_info deserialize_blinded_contact(JNIEnv *env, jobject jInfo) {
-    JavaLocalRef<jclass> clazz(env, env->GetObjectClass(jInfo));
-    auto idField = env->GetFieldID(clazz.get(), "id", "Ljava/lang/String;");
-    auto communityServerField = env->GetFieldID(clazz.get(), "communityServer", "Ljava/lang/String;");
-    auto getCommunityServerPubKey = env->GetMethodID(clazz.get(), "getCommunityServerPubKey", "()[B");
-    auto nameField = env->GetFieldID(clazz.get(), "name", "Ljava/lang/String;");
-    auto createdEpochSecondsField = env->GetFieldID(clazz.get(), "createdEpochSeconds", "J");
-    auto profileUpdatedEpochSecondsField = env->GetFieldID(clazz.get(), "profileUpdatedEpochSeconds", "J");
-    auto profilePicField = env->GetFieldID(clazz.get(), "profilePic", "Lnetwork/loki/messenger/libsession_util/util/UserPic;");
-    auto priorityField = env->GetFieldID(clazz.get(), "priority", "J");
+    struct ClassInfo : public JavaClassInfo {
+        jmethodID id_getter;
+        jmethodID community_server_getter;
+        jmethodID community_server_pub_key_getter;
+        jmethodID name_getter;
+        jmethodID created_epoch_seconds_getter;
+        jmethodID profile_updated_epoch_seconds_getter;
+        jmethodID profile_pic_getter;
+        jmethodID priority_getter;
+        jmethodID pro_features_getter;
+
+        ClassInfo(JNIEnv *env, jobject obj)
+            : JavaClassInfo(env, obj)
+            , id_getter(env->GetMethodID(java_class, "getId", "()Ljava/lang/String;"))
+            , community_server_getter(env->GetMethodID(java_class, "getCommunityServer", "()Ljava/lang/String;"))
+            , community_server_pub_key_getter(env->GetMethodID(java_class, "getCommunityServerPubKey", "()[B"))
+            , name_getter(env->GetMethodID(java_class, "getName", "()Ljava/lang/String;"))
+            , created_epoch_seconds_getter(env->GetMethodID(java_class, "getCreatedEpochSeconds", "()J"))
+            , profile_updated_epoch_seconds_getter(env->GetMethodID(java_class, "getProfileUpdatedEpochSeconds", "()J"))
+            , profile_pic_getter(env->GetMethodID(java_class, "getProfilePicture", "()Lnetwork/loki/messenger/libsession_util/util/UserPic;"))
+            , priority_getter(env->GetMethodID(java_class, "getPriority", "()J"))
+            , pro_features_getter(env->GetMethodID(java_class, "getProFeaturesRaw", "()J")) {}
+    };
+
+    static ClassInfo class_info(env, jInfo);
+
+    JavaLocalRef
+        community_server(env, (jstring) env->CallObjectMethod(jInfo, class_info.community_server_getter)),
+        id(env, (jstring) env->CallObjectMethod(jInfo, class_info.id_getter));
+
+    JavaLocalRef community_server_pub_key(env, (jbyteArray) env->CallObjectMethod(jInfo, class_info.community_server_pub_key_getter));
 
     session::config::blinded_contact_info info(
-            JavaStringRef(env, (jstring) env->GetObjectField(jInfo, communityServerField)).view(),
-            JavaByteArrayRef(env, (jbyteArray) env->CallObjectMethod(jInfo, getCommunityServerPubKey)).get(),
-            JavaStringRef(env, (jstring) env->GetObjectField(jInfo, idField)).view()
+            JavaStringRef(env, community_server.get()).view(),
+            JavaByteArrayRef(env, community_server_pub_key.get()).get(),
+            JavaStringRef(env, id.get()).view()
     );
-    info.created = std::chrono::sys_seconds{std::chrono::seconds{env->GetLongField(jInfo, createdEpochSecondsField)}};
-    info.profile_picture = util::deserialize_user_pic(env, JavaLocalRef(env, env->GetObjectField(jInfo, profilePicField)).get());
-    info.name = JavaStringRef(env, JavaLocalRef(env, (jstring) env->GetObjectField(jInfo, nameField)).get()).view();
-    info.profile_updated = std::chrono::sys_seconds{std::chrono::seconds{env->GetLongField(jInfo, profileUpdatedEpochSecondsField)}};
-    info.priority = env->GetLongField(jInfo, priorityField);
+    info.created = std::chrono::sys_seconds{std::chrono::seconds{env->CallLongMethod(jInfo, class_info.created_epoch_seconds_getter)}};
+    info.profile_picture = util::deserialize_user_pic(env, JavaLocalRef(env, env->CallObjectMethod(jInfo, class_info.profile_pic_getter)).get());
+    info.name = JavaStringRef(env, JavaLocalRef(env, (jstring) env->CallObjectMethod(jInfo, class_info.name_getter)).get()).view();
+    info.profile_updated = std::chrono::sys_seconds{std::chrono::seconds{env->CallLongMethod(jInfo, class_info.profile_updated_epoch_seconds_getter)}};
+    info.priority = env->CallLongMethod(jInfo, class_info.priority_getter);
+    info.pro_features = env->CallLongMethod(jInfo, class_info.pro_features_getter);
 
     return info;
 }
