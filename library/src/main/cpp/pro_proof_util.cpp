@@ -51,12 +51,12 @@ session::ProProof java_to_cpp_proof(JNIEnv *env, jobject proof) {
     };
 }
 
-jobject cpp_to_java_proof(JNIEnv *env, const session::ProProof &proof) {
+JavaLocalRef<jobject> cpp_to_java_proof(JNIEnv *env, const session::ProProof &proof) {
     static BasicJavaClassInfo class_info(env,
             "network/loki/messenger/libsession_util/pro/ProProof",
             "(I[B[BJ[B)V");
 
-    return env->NewObject(
+    return {env, env->NewObject(
             class_info.java_class,
             class_info.constructor,
             static_cast<jint>(proof.version),
@@ -64,7 +64,7 @@ jobject cpp_to_java_proof(JNIEnv *env, const session::ProProof &proof) {
             util::bytes_from_span(env, proof.rotating_pubkey).get(),
             static_cast<jlong>(proof.expiry_unix_ts.time_since_epoch().count()),
             util::bytes_from_span(env, proof.sig).get()
-    );
+    )};
 }
 
 extern "C"

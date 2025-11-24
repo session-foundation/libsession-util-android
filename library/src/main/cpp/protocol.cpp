@@ -43,7 +43,7 @@ static JavaLocalRef<jobject> serializeDecodedEnvelope(JNIEnv *env, const session
                           serializeEnvelop(env, envelop.envelope).get(),
                           envelop.pro ? static_cast<jint>(envelop.pro->status)
                                        : static_cast<jint>(-1),
-                          envelop.pro ? JavaLocalRef(env, cpp_to_java_proof(env, envelop.pro->proof)).get() : nullptr,
+                          envelop.pro ? cpp_to_java_proof(env, envelop.pro->proof).get() : nullptr,
                           static_cast<jlong>(envelop.pro ? envelop.pro->features : 0),
                           content.get(),
                           sender_ed25519.get(),
@@ -157,7 +157,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForC
                 init,
                 decoded.pro ? static_cast<jint>(decoded.pro->status)
                              : static_cast<jint>(-1),
-                decoded.pro ? JavaLocalRef(env, cpp_to_java_proof(env, decoded.pro->proof)).get() : nullptr,
+                decoded.pro ? cpp_to_java_proof(env, decoded.pro->proof).get() : nullptr,
                 static_cast<jlong>(decoded.pro ? decoded.pro->features : 0),
                 util::bytes_from_vector(env, decoded.content_plaintext).get()
         );

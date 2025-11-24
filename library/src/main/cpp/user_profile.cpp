@@ -203,7 +203,7 @@ Java_network_loki_messenger_libsession_1util_UserProfile_getProConfig(JNIEnv *en
 
     return env->NewObject(class_info.java_class,
                           class_info.constructor,
-                          cpp_to_java_proof(env, profile->proof),
+                          cpp_to_java_proof(env, profile->proof).get(),
                           util::bytes_from_span(env, profile->rotating_privkey).get()
     );
 }
