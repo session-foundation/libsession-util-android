@@ -1,6 +1,5 @@
 #include <session/config/groups/keys.hpp>
 
-#include "group_members.h"
 #include "jni_utils.h"
 #include "util.h"
 #include "config_base.h"

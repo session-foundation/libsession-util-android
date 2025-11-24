@@ -1,4 +1,3 @@
-#include "group_members.h"
 #include "jni_utils.h"
 #include "util.h"
 #include "config_base.h"
@@ -12,6 +11,19 @@ inline session::config::groups::Members* ptrToMembers(JNIEnv* env, jobject obj) 
 inline session::config::groups::member *ptrToMember(JNIEnv *env, jobject thiz) {
     auto ptrField = env->GetFieldID(jni_utils::JavaLocalRef(env, env->GetObjectClass(thiz)).get(), "nativePtr", "J");
     return reinterpret_cast<session::config::groups::member*>(env->GetLongField(thiz, ptrField));
+}
+
+static JavaLocalRef<jobject> serialize_group_member(JNIEnv* env, const session::config::groups::member& member) {
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/util/GroupMember",
+            "(J)V");
+
+    return {env, env->NewObject(
+            class_info.java_class,
+            class_info.constructor,
+            reinterpret_cast<jlong>(new session::config::groups::member(member))
+    )};
 }
 
 extern "C"
@@ -221,17 +233,4 @@ Java_network_loki_messenger_libsession_1util_GroupMembersConfig_setPendingSend(J
                                                                                jstring pub_key_hex,
                                                                                jboolean pending) {
     ptrToMembers(env, thiz)->set_pending_send(JavaStringRef(env, pub_key_hex).copy(), pending);
-}
-
-JavaLocalRef<jobject> serialize_group_member(JNIEnv* env, const session::config::groups::member& member) {
-    static BasicJavaClassInfo class_info(
-            env,
-            "network/loki/messenger/libsession_util/util/GroupMember",
-            "(J)V");
-
-    return {env, env->NewObject(
-                          class_info.java_class,
-                          class_info.constructor,
-                          reinterpret_cast<jlong>(new session::config::groups::member(member))
-    )};
 }
