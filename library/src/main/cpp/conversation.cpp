@@ -1,10 +1,16 @@
 #include <jni.h>
-#include "conversation.h"
+#include <session/config/convo_info_volatile.hpp>
+
 #include "jni_utils.h"
+#include "util.h"
 #include "user_groups.h"
+#include "config_base.h"
 
 using namespace jni_utils;
 
+static auto ptrToConvoInfo(JNIEnv *env, jobject obj) {
+    return dynamic_cast<session::config::ConvoInfoVolatile *>(ptrToConfigBase(env, obj));
+}
 
 JavaLocalRef<jobject> serialize_pro_proof_info(JNIEnv *env,
                                  std::optional<std::span<const unsigned char>> gen_index_hash,

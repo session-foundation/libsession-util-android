@@ -18,24 +18,24 @@ static std::array<unsigned char, N> from_hex(std::span<char> input) {
 }
 
 session::ProProof java_to_cpp_proof(JNIEnv *env, jobject proof) {
-    struct ProProofMethods {
+    struct ProProofMethods : public JavaClassInfo {
         jmethodID get_version;
         jmethodID get_gen_index_hash;
         jmethodID get_rotating_pub_key;
         jmethodID get_expiry_ms;
         jmethodID get_signature;
 
-        ProProofMethods(JNIEnv *env, jclass clazz) {
-            get_version = env->GetMethodID(clazz, "getVersion", "()I");
-            get_gen_index_hash = env->GetMethodID(clazz, "getGenIndexHashHex", "()Ljava/lang/String;");
-            get_rotating_pub_key = env->GetMethodID(clazz, "getRotatingPubKeyHex", "()Ljava/lang/String;");
-            get_expiry_ms = env->GetMethodID(clazz, "getExpiryMs", "()J");
-            get_signature = env->GetMethodID(clazz, "getSignatureHex", "()Ljava/lang/String;");
-        }
+        ProProofMethods(JNIEnv *env, jobject obj)
+            : JavaClassInfo(env, obj)
+            , get_version(env->GetMethodID(java_class, "getVersion", "()I"))
+            , get_gen_index_hash(env->GetMethodID(java_class, "getGenIndexHashHex", "()Ljava/lang/String;"))
+            , get_rotating_pub_key(env->GetMethodID(java_class, "getRotatingPubKeyHex", "()Ljava/lang/String;"))
+            , get_expiry_ms(env->GetMethodID(java_class, "getExpiryMs", "()J"))
+            , get_signature(env->GetMethodID(java_class, "getSignatureHex", "()Ljava/lang/String;")) {}
     };
 
     // Cache method IDs
-    static ProProofMethods methods(env, jni_utils::JavaLocalRef(env, env->GetObjectClass(proof)).get());
+    static ProProofMethods methods(env, proof);
 
     jni_utils::JavaLocalRef<jstring> gen_index_hash(env, (jstring) env->CallObjectMethod(proof, methods.get_gen_index_hash));
     jni_utils::JavaLocalRef<jstring> rotating_pub_key(env, (jstring) env->CallObjectMethod(proof, methods.get_rotating_pub_key));
@@ -52,12 +52,13 @@ session::ProProof java_to_cpp_proof(JNIEnv *env, jobject proof) {
 }
 
 jobject cpp_to_java_proof(JNIEnv *env, const session::ProProof &proof) {
-    JavaLocalRef<jclass> pro_proof_clazz(env, env->FindClass(
-            "network/loki/messenger/libsession_util/pro/ProProof"));
-    jmethodID init = env->GetMethodID(pro_proof_clazz.get(), "<init>", "(I[B[BJ[B)V");
+    static BasicJavaClassInfo class_info(env,
+            "network/loki/messenger/libsession_util/pro/ProProof",
+            "(I[B[BJ[B)V");
+
     return env->NewObject(
-            pro_proof_clazz.get(),
-            init,
+            class_info.java_class,
+            class_info.constructor,
             static_cast<jint>(proof.version),
             util::bytes_from_span(env, proof.gen_index_hash).get(),
             util::bytes_from_span(env, proof.rotating_pubkey).get(),

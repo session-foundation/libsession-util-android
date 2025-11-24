@@ -14,8 +14,7 @@ static JavaLocalRef<jobject> serializeEnvelop(JNIEnv *env, const session::Envelo
     static BasicJavaClassInfo class_info(
             env,
             "network/loki/messenger/libsession_util/protocol/Envelope",
-            "(J[BJ[B)V"
-            );
+            "(J[BJ[B)V");
 
     return {env, env->NewObject(class_info.java_class,
                                 class_info.constructor,
@@ -261,10 +260,15 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_proFeature
                 static_cast<SESSION_PROTOCOL_PRO_FEATURES>(proposed_features)
         );
 
-        auto clazz = env->FindClass("network/loki/messenger/libsession_util/protocol/ProFeaturesForMsg");
+        static BasicJavaClassInfo class_info(
+                env,
+                "network/loki/messenger/libsession_util/protocol/ProFeaturesForMsg",
+                "(ILjava/lang/String;JI)V"
+        );
+
         return env->NewObject(
-                clazz,
-                env->GetMethodID(clazz, "<init>", "(ILjava/lang/String;JI)V"),
+                class_info.java_class,
+                class_info.constructor,
                 static_cast<jint>(features.status),
                 features.error.empty() ? nullptr : env->NewStringUTF(std::string(features.error).c_str()),
                 static_cast<jlong>(features.features),

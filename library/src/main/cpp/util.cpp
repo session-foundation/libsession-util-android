@@ -47,9 +47,12 @@ namespace util {
     }
 
     JavaLocalRef<jobject> serialize_user_pic(JNIEnv *env, session::config::profile_pic pic) {
-        jni_utils::JavaLocalRef returnObjectClass(env, env->FindClass("network/loki/messenger/libsession_util/util/UserPic"));
-        jmethodID constructor = env->GetMethodID(returnObjectClass.get(), "<init>", "(Ljava/lang/String;Lnetwork/loki/messenger/libsession_util/util/Bytes;)V");
-        return {env, env->NewObject(returnObjectClass.get(), constructor,
+        static jni_utils::BasicJavaClassInfo class_info(
+                env, "network/loki/messenger/libsession_util/util/UserPic",
+                "(Ljava/lang/String;Lnetwork/loki/messenger/libsession_util/util/Bytes;)V"
+                );
+
+        return {env, env->NewObject(class_info.java_class, class_info.constructor,
                               jni_utils::JavaLocalRef(env, env->NewStringUTF(pic.url.data())).get(),
                               jni_utils::session_bytes_from_range(env, pic.key).get()
                               )};
@@ -65,19 +68,23 @@ namespace util {
     }
 
     JavaLocalRef<jobject> serialize_expiry(JNIEnv *env, const session::config::expiration_mode& mode, const std::chrono::seconds& time_seconds) {
-        auto none = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode$NONE"));
-        jfieldID none_instance = env->GetStaticFieldID(none.get(), "INSTANCE", "Lnetwork/loki/messenger/libsession_util/util/ExpiryMode$NONE;");
-        auto after_send = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode$AfterSend"));
-        jmethodID send_init = env->GetMethodID(after_send.get(), "<init>", "(J)V");
-        auto after_read = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode$AfterRead"));
-        jmethodID read_init = env->GetMethodID(after_read.get(), "<init>", "(J)V");
-
         if (mode == session::config::expiration_mode::none) {
+            auto none = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode$NONE"));
+            jfieldID none_instance = env->GetStaticFieldID(none.get(), "INSTANCE", "Lnetwork/loki/messenger/libsession_util/util/ExpiryMode$NONE;");
+
             return {env, env->GetStaticObjectField(none.get(), none_instance)};
         } else if (mode == session::config::expiration_mode::after_send) {
-            return {env, env->NewObject(after_send.get(), send_init, time_seconds.count())};
+            static jni_utils::BasicJavaClassInfo class_info(
+                    env, "network/loki/messenger/libsession_util/util/ExpiryMode$AfterSend",
+                    "(J)V"
+            );
+            return {env, env->NewObject(class_info.java_class, class_info.constructor, time_seconds.count())};
         } else if (mode == session::config::expiration_mode::after_read) {
-            return {env, env->NewObject(after_read.get(), read_init, time_seconds.count())};
+            static jni_utils::BasicJavaClassInfo class_info(
+                    env, "network/loki/messenger/libsession_util/util/ExpiryMode$AfterRead",
+                    "(J)V"
+            );
+            return {env, env->NewObject(class_info.java_class, class_info.constructor, time_seconds.count())};
         }
         return {env, nullptr};
     }
@@ -104,9 +111,13 @@ namespace util {
         if (!optional) {
             return {env, nullptr};
         }
-        auto longClass = jni_utils::JavaLocalRef(env, env->FindClass("java/lang/Long"));
-        jmethodID constructor = env->GetMethodID(longClass.get(), "<init>", "(J)V");
-        return {env, env->NewObject(longClass.get(), constructor, (jlong)*optional)};
+
+        static jni_utils::BasicJavaClassInfo class_info(
+                env, "java/lang/Long",
+                "(J)V"
+        );
+
+        return {env, env->NewObject(class_info.java_class, class_info.constructor, (jlong)*optional)};
     }
 }
 

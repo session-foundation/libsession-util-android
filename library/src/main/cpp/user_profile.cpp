@@ -1,6 +1,12 @@
-#include "user_profile.h"
+#include <session/config/user_profile.hpp>
+
 #include "util.h"
 #include "pro_proof_util.h"
+#include "config_base.h"
+
+inline auto ptrToProfile(JNIEnv* env, jobject obj) {
+    return dynamic_cast<session::config::UserProfile *>(ptrToConfigBase(env, obj));
+}
 
 extern "C" {
 JNIEXPORT void JNICALL
@@ -189,11 +195,14 @@ Java_network_loki_messenger_libsession_1util_UserProfile_getProConfig(JNIEnv *en
         return nullptr;
     }
 
-    auto clazz = env->FindClass("network/loki/messenger/libsession_util/pro/ProConfig");
-    auto constructor = env->GetMethodID(clazz, "<init>", "(Lnetwork/loki/messenger/libsession_util/pro/ProProof;[B)V");
+    static jni_utils::BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/pro/ProConfig",
+            "(Lnetwork/loki/messenger/libsession_util/pro/ProProof;[B)V"
+    );
 
-    return env->NewObject(clazz,
-                          constructor,
+    return env->NewObject(class_info.java_class,
+                          class_info.constructor,
                           cpp_to_java_proof(env, profile->proof),
                           util::bytes_from_span(env, profile->rotating_privkey).get()
     );

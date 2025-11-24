@@ -1,8 +1,18 @@
 #include "group_members.h"
-
 #include "jni_utils.h"
+#include "util.h"
+#include "config_base.h"
 
 using namespace jni_utils;
+
+inline session::config::groups::Members* ptrToMembers(JNIEnv* env, jobject obj) {
+    return dynamic_cast<session::config::groups::Members *>(ptrToConfigBase(env, obj));
+}
+
+inline session::config::groups::member *ptrToMember(JNIEnv *env, jobject thiz) {
+    auto ptrField = env->GetFieldID(jni_utils::JavaLocalRef(env, env->GetObjectClass(thiz)).get(), "nativePtr", "J");
+    return reinterpret_cast<session::config::groups::member*>(env->GetLongField(thiz, ptrField));
+}
 
 extern "C"
 JNIEXPORT jlong JNICALL

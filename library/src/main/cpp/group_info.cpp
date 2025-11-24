@@ -1,6 +1,14 @@
+#include <session/config/groups/info.hpp>
 #include <jni.h>
-#include "group_info.h"
-#include "session/config/groups/info.hpp"
+
+#include "util.h"
+#include "jni_utils.h"
+#include "config_base.h"
+
+inline auto ptrToInfo(JNIEnv* env, jobject obj) {
+    return dynamic_cast<session::config::groups::Info*>(ptrToConfigBase(env, obj));
+}
+
 
 extern "C"
 JNIEXPORT jlong JNICALL

@@ -16,6 +16,29 @@ std::pair<std::string, std::vector<unsigned char>> extractHashAndData(JNIEnv *en
     );
 }
 
+struct JavaConfigClassInfo : public jni_utils::JavaClassInfo {
+    jfieldID pointer_field;
+
+    JavaConfigClassInfo(JNIEnv *env, jobject obj)
+            :JavaClassInfo(env, obj),
+             pointer_field(env->GetFieldID(java_class, "pointer", "J")) {}
+
+    static const JavaConfigClassInfo& get(JNIEnv *env, jobject obj) {
+        static JavaConfigClassInfo class_info(env, obj);
+        return class_info;
+    }
+};
+
+session::config::ConfigBase* ptrToConfigBase(JNIEnv *env, jobject obj) {
+    return reinterpret_cast<session::config::ConfigBase*>(
+            env->GetLongField(obj, JavaConfigClassInfo::get(env, obj).pointer_field));
+}
+
+session::config::ConfigSig* ptrToConfigSig(JNIEnv* env, jobject obj) {
+    return reinterpret_cast<session::config::ConfigSig*>(
+            env->GetLongField(obj, JavaConfigClassInfo::get(env, obj).pointer_field));
+}
+
 extern "C" {
 JNIEXPORT jboolean JNICALL
 Java_network_loki_messenger_libsession_1util_ConfigBase_dirty(JNIEnv *env, jobject thiz) {
@@ -47,9 +70,14 @@ Java_network_loki_messenger_libsession_1util_ConfigBase_push(JNIEnv *env, jobjec
 
         jobject obsoleteHashes = jni_utils::jstring_list_from_collection(env, to_delete);
 
-        jclass returnObjectClass = env->FindClass("network/loki/messenger/libsession_util/util/ConfigPush");
-        jmethodID methodId = env->GetMethodID(returnObjectClass, "<init>", "(Ljava/util/List;JLjava/util/List;)V");
-        return env->NewObject(returnObjectClass, methodId, messages, static_cast<jlong>(seq_no), obsoleteHashes);
+        static jni_utils::BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/util/ConfigPush",
+            "(Ljava/util/List;JLjava/util/List;)V"
+        );
+
+        return env->NewObject(class_info.java_class, class_info.constructor,
+                              messages, static_cast<jlong>(seq_no), obsoleteHashes);
     });
 }
 

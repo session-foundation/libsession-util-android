@@ -1,8 +1,13 @@
-#include "group_keys.h"
-#include "group_info.h"
-#include "group_members.h"
+#include <session/config/groups/keys.hpp>
 
+#include "group_members.h"
 #include "jni_utils.h"
+#include "util.h"
+#include "config_base.h"
+
+inline auto ptrToKeys(JNIEnv* env, jobject obj) {
+    return dynamic_cast<session::config::groups::Keys*>(ptrToConfigSig(env, obj));
+}
 
 extern "C"
 JNIEXPORT jint JNICALL

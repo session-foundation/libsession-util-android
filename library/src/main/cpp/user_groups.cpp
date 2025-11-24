@@ -1,6 +1,6 @@
 #include "user_groups.h"
 #include "oxenc/hex.h"
-
+#include "util.h"
 #include "session/ed25519.hpp"
 
 using namespace jni_utils;
@@ -74,12 +74,20 @@ static session::config::legacy_group_info deserialize_legacy_group_info(JNIEnv *
 }
 
 static session::config::community_info deserialize_community_info(JNIEnv *env, jobject info, session::config::UserGroups* conf) {
-    auto clazz = JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$CommunityGroupInfo"));
-    auto base_info = env->GetFieldID(clazz.get(), "community", "Lnetwork/loki/messenger/libsession_util/util/BaseCommunityInfo;");
-    auto priority = env->GetFieldID(clazz.get(), "priority", "J");
-    auto base_community_info = JavaLocalRef(env, env->GetObjectField(info, base_info));
+    struct ClassInfo : JavaClassInfo {
+        jmethodID base_info_getter;
+        jmethodID priority_getter;
+
+        ClassInfo(JNIEnv *env): JavaClassInfo(env, "network/loki/messenger/libsession_util/util/GroupInfo$CommunityGroupInfo"),
+            base_info_getter(env->GetMethodID(java_class, "getCommunity", "()Lnetwork/loki/messenger/libsession_util/util/BaseCommunityInfo;")),
+            priority_getter(env->GetMethodID(java_class, "getPriority", "()J")) {}
+    };
+
+    static ClassInfo class_info(env);
+
+    auto base_community_info = JavaLocalRef(env, env->CallObjectMethod(info, class_info.base_info_getter));
     auto deserialized_base_info = deserialize_base_community(env, base_community_info.get());
-    int deserialized_priority = env->GetLongField(info, priority);
+    int deserialized_priority = env->CallLongMethod(info, class_info.priority_getter);
     auto community_info = conf->get_or_construct_community(deserialized_base_info.base_url(), deserialized_base_info.room(), deserialized_base_info.pubkey_hex());
     community_info.priority = deserialized_priority;
     return community_info;
@@ -141,22 +149,37 @@ static JavaLocalRef<jobject> serialize_closed_group_info(JNIEnv* env, session::c
 }
 
 static session::config::group_info deserialize_closed_group_info(JNIEnv* env, jobject info_serialized) {
-    auto closed_group_class = JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/GroupInfo$ClosedGroupInfo"));
-    jfieldID id_field = env->GetFieldID(closed_group_class.get(), "groupAccountId", "Ljava/lang/String;");
-    auto secret_method = env->GetMethodID(closed_group_class.get(), "getAdminKeyAsByteArray", "()[B");
-    auto auth_method = env->GetMethodID(closed_group_class.get(), "getAuthDataAsByteArray", "()[B");
-    jfieldID priority_field = env->GetFieldID(closed_group_class.get(), "priority", "J");
-    jfieldID invited_field = env->GetFieldID(closed_group_class.get(), "invited", "Z");
-    jfieldID name_field = env->GetFieldID(closed_group_class.get(), "name", "Ljava/lang/String;");
-    jfieldID destroy_field = env->GetFieldID(closed_group_class.get(), "destroyed", "Z");
-    jfieldID kicked_field = env->GetFieldID(closed_group_class.get(), "kicked", "Z");
-    jfieldID joined_at_field = env->GetFieldID(closed_group_class.get(), "joinedAtSecs", "J");
+    struct ClassInfo : public JavaClassInfo {
+        jmethodID id_getter;
+        jmethodID secret_method;
+        jmethodID auth_method;
+        jmethodID name_getter;
+        jmethodID priority_getter;
+        jmethodID invited_getter;
+        jmethodID destroyed_getter;
+        jmethodID kicked_getter;
+        jmethodID joined_at_getter;
 
+        ClassInfo(JNIEnv *env, jobject obj)
+            : JavaClassInfo(env, obj)
+            , id_getter(env->GetMethodID(java_class, "getGroupAccountId", "()Ljava/lang/String;"))
+            , secret_method(env->GetMethodID(java_class, "getAdminKeyAsByteArray", "()[B"))
+            , auth_method(env->GetMethodID(java_class, "getAuthDataAsByteArray", "()[B"))
+            , name_getter(env->GetMethodID(java_class, "getName", "()Ljava/lang/String;"))
+            , priority_getter(env->GetMethodID(java_class, "getPriority", "()J"))
+            , invited_getter(env->GetMethodID(java_class, "getInvited", "()Z"))
+            , destroyed_getter(env->GetMethodID(java_class, "getDestroyed", "()Z"))
+            , kicked_getter(env->GetMethodID(java_class, "getKicked", "()Z"))
+            , joined_at_getter(env->GetMethodID(java_class, "getJoinedAtSecs", "()J"))
+            {}
+    };
 
-    auto id_jobject = JavaLocalRef(env, static_cast<jstring>(env->GetObjectField(info_serialized, id_field)));
-    auto secret_jBytes = JavaLocalRef(env, (jbyteArray)env->CallObjectMethod(info_serialized, secret_method));
-    auto auth_jBytes = JavaLocalRef(env, (jbyteArray)env->CallObjectMethod(info_serialized, auth_method));
-    auto name_jstring = JavaLocalRef(env, (jstring)env->GetObjectField(info_serialized, name_field));
+    static ClassInfo class_info(env, info_serialized);
+
+    auto id_jobject = JavaLocalRef(env, static_cast<jstring>(env->CallObjectMethod(info_serialized, class_info.id_getter)));
+    auto secret_jBytes = JavaLocalRef(env, (jbyteArray)env->CallObjectMethod(info_serialized, class_info.secret_method));
+    auto auth_jBytes = JavaLocalRef(env, (jbyteArray)env->CallObjectMethod(info_serialized, class_info.auth_method));
+    auto name_jstring = JavaLocalRef(env, (jstring)env->CallObjectMethod(info_serialized, class_info.name_getter));
 
     auto secret_bytes = util::vector_from_bytes(env, secret_jBytes.get());
     auto auth_bytes = util::vector_from_bytes(env, auth_jBytes.get());
@@ -164,23 +187,23 @@ static session::config::group_info deserialize_closed_group_info(JNIEnv* env, jo
     session::config::group_info group_info(JavaStringRef(env, id_jobject.get()).copy());
     group_info.auth_data = auth_bytes;
     group_info.secretkey = secret_bytes;
-    group_info.priority = env->GetLongField(info_serialized, priority_field);
-    group_info.invited = env->GetBooleanField(info_serialized, invited_field);
+    group_info.priority = env->CallLongMethod(info_serialized, class_info.priority_getter);
+    group_info.invited = env->CallBooleanMethod(info_serialized, class_info.invited_getter);
     group_info.name = JavaStringRef(env, name_jstring.get()).view();
-    group_info.joined_at = env->GetLongField(info_serialized, joined_at_field);
+    group_info.joined_at = env->CallLongMethod(info_serialized, class_info.joined_at_getter);
 
-    if (env->GetBooleanField(info_serialized, kicked_field)) {
+    if (env->CallBooleanMethod(info_serialized, class_info.kicked_getter)) {
         group_info.mark_kicked();
     }
 
-    if (env->GetBooleanField(info_serialized, destroy_field)) {
+    if (env->CallBooleanMethod(info_serialized, class_info.destroyed_getter)) {
         group_info.mark_destroyed();
     }
 
     return group_info;
 }
 
-static JavaLocalRef<jobject> serialize_community_info(JNIEnv *env, session::config::community_info info) {
+static JavaLocalRef<jobject> serialize_community_info(JNIEnv *env, const session::config::community_info &info) {
     auto priority = (long long)info.priority;
     auto serialized_info = serialize_base_community(env, info);
 
@@ -194,22 +217,36 @@ static JavaLocalRef<jobject> serialize_community_info(JNIEnv *env, session::conf
 }
 
 JavaLocalRef<jobject> serialize_base_community(JNIEnv *env, const session::config::community& community) {
-    auto base_community_clazz = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/BaseCommunityInfo"));
-    jmethodID base_community_constructor = env->GetMethodID(base_community_clazz.get(), "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+    static BasicJavaClassInfo class_info(env, "network/loki/messenger/libsession_util/util/BaseCommunityInfo",
+                                        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+
     auto base_url = jni_utils::JavaLocalRef(env, env->NewStringUTF(community.base_url().data()));
     auto room = jni_utils::JavaLocalRef(env, env->NewStringUTF(community.room().data()));
     auto pubkey_jstring = jni_utils::JavaLocalRef(env, env->NewStringUTF(community.pubkey_hex().data()));
-    return {env, env->NewObject(base_community_clazz.get(), base_community_constructor, base_url.get(), room.get(), pubkey_jstring.get())};
+    return {env, env->NewObject(class_info.java_class,
+                                class_info.constructor,
+                                base_url.get(), room.get(), pubkey_jstring.get())};
 }
 
 session::config::community deserialize_base_community(JNIEnv *env, jobject base_community) {
-    jclass base_community_clazz = env->FindClass("network/loki/messenger/libsession_util/util/BaseCommunityInfo");
-    jfieldID base_url_field = env->GetFieldID(base_community_clazz, "baseUrl", "Ljava/lang/String;");
-    jfieldID room_field = env->GetFieldID(base_community_clazz, "room", "Ljava/lang/String;");
-    jfieldID pubkey_hex_field = env->GetFieldID(base_community_clazz, "pubKeyHex", "Ljava/lang/String;");
-    jni_utils::JavaLocalRef base_url(env, (jstring)env->GetObjectField(base_community,base_url_field));
-    jni_utils::JavaLocalRef room(env, (jstring)env->GetObjectField(base_community, room_field));
-    jni_utils::JavaLocalRef pub_key_hex(env, (jstring)env->GetObjectField(base_community, pubkey_hex_field));
+    struct ClassInfo : public JavaClassInfo {
+        jmethodID base_url_getter;
+        jmethodID room_getter;
+        jmethodID pubkey_getter;
+
+        ClassInfo(JNIEnv *env, jobject obj)
+            : JavaClassInfo(env, obj)
+            , base_url_getter(env->GetMethodID(java_class, "getBaseUrl", "()Ljava/lang/String;"))
+            , room_getter(env->GetMethodID(java_class, "getRoom", "()Ljava/lang/String;"))
+            , pubkey_getter(env->GetMethodID(java_class, "getPubKeyHex", "()Ljava/lang/String;"))
+            {}
+    };
+
+    static ClassInfo class_info(env, base_community);
+
+    jni_utils::JavaLocalRef base_url(env, (jstring)env->CallObjectMethod(base_community, class_info.base_url_getter));
+    jni_utils::JavaLocalRef room(env, (jstring)env->CallObjectMethod(base_community, class_info.room_getter));
+    jni_utils::JavaLocalRef pub_key_hex(env, (jstring)env->CallObjectMethod(base_community, class_info.pubkey_getter));
 
     return session::config::community(
             jni_utils::JavaStringRef(env, base_url.get()).view(),
@@ -343,7 +380,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_sizeLegacyGroupInf
 extern "C"
 JNIEXPORT jlong JNICALL
 Java_network_loki_messenger_libsession_1util_UserGroupsConfig_size(JNIEnv *env, jobject thiz) {
-    auto conf = ptrToConvoInfo(env, thiz);
+    auto conf = ptrToUserGroups(env, thiz);
     return conf->size();
 }
 
