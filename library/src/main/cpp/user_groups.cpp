@@ -133,8 +133,8 @@ static JavaLocalRef<jobject> serialize_legacy_group_info(JNIEnv *env, session::c
 
 static JavaLocalRef<jobject> serialize_closed_group_info(JNIEnv* env, session::config::group_info info) {
     auto session_id = jstring_from_optional(env, info.id);
-    auto admin_bytes = JavaLocalRef(env, info.secretkey.empty() ? nullptr : session_bytes_from_range(env, info.secretkey).leak());
-    auto auth_bytes = JavaLocalRef(env, info.auth_data.empty() ? nullptr : session_bytes_from_range(env, info.auth_data).leak());
+    auto admin_bytes = JavaLocalRef(env, info.secretkey.empty() ? nullptr : session_bytes_from_range(env, info.secretkey).release());
+    auto auth_bytes = JavaLocalRef(env, info.auth_data.empty() ? nullptr : session_bytes_from_range(env, info.auth_data).release());
     auto name = jstring_from_optional(env, info.name);
 
     static BasicJavaClassInfo class_info(
@@ -274,7 +274,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_getCommunityInfo(J
     auto community = conf->get_community(JavaStringRef(env, base_url).view(), JavaStringRef(env, room).view());
 
     if (community) {
-        return serialize_community_info(env, *community).leak();
+        return serialize_community_info(env, *community).release();
     }
 
     return nullptr;
@@ -289,7 +289,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_getLegacyGroupInfo
     auto legacy_group = conf->get_legacy_group(JavaStringRef(env, account_id).view());
     jobject return_group = nullptr;
     if (legacy_group) {
-        return_group = serialize_legacy_group_info(env, *legacy_group).leak();
+        return_group = serialize_legacy_group_info(env, *legacy_group).release();
     }
     return return_group;
 }
@@ -305,7 +305,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_getOrConstructComm
             JavaStringRef(env, room).view(),
             JavaStringRef(env, pub_key_hex).view());
 
-    return serialize_community_info(env, group).leak();
+    return serialize_community_info(env, group).release();
 }
 
 extern "C"
@@ -314,7 +314,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_getOrConstructLega
         JNIEnv *env, jobject thiz, jstring account_id) {
     auto conf = ptrToUserGroups(env, thiz);
     auto group = conf->get_or_construct_legacy_group(JavaStringRef(env, account_id).view());
-    return serialize_legacy_group_info(env, group).leak();
+    return serialize_legacy_group_info(env, group).release();
 }
 
 extern "C"
@@ -466,7 +466,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_getClosedGroup(JNI
     auto group = config->get_group(JavaStringRef(env, session_id).view());
 
     if (group) {
-        return serialize_closed_group_info(env, *group).leak();
+        return serialize_closed_group_info(env, *group).release();
     }
     return nullptr;
 }
@@ -478,7 +478,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_getOrConstructClos
                                                                                         jstring session_id) {
     auto config = ptrToUserGroups(env, thiz);
     auto group = config->get_or_construct_group(JavaStringRef(env, session_id).view());
-    return serialize_closed_group_info(env, group).leak();
+    return serialize_closed_group_info(env, group).release();
 }
 
 extern "C"
@@ -496,7 +496,7 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_createGroup(JNIEnv
     auto config = ptrToUserGroups(env, thiz);
 
     auto group = config->create_group();
-    return serialize_closed_group_info(env, group).leak();
+    return serialize_closed_group_info(env, group).release();
 }
 
 extern "C"
@@ -530,5 +530,5 @@ Java_network_loki_messenger_libsession_1util_util_GroupInfo_00024ClosedGroupInfo
     auto admin_key = session::ed25519::ed25519_key_pair(
             JavaByteArrayRef(env, seed).get()).second;
 
-    return util::bytes_from_span(env, std::span<const unsigned char>(admin_key.data(), admin_key.size())).leak();
+    return util::bytes_from_span(env, std::span<const unsigned char>(admin_key.data(), admin_key.size())).release();
 }

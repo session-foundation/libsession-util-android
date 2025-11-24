@@ -109,7 +109,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_pendingKey(JNIEnv *
     if (!pending) {
         return nullptr;
     }
-    return util::bytes_from_span(env, *pending).leak();
+    return util::bytes_from_span(env, *pending).release();
 }
 
 extern "C"
@@ -121,7 +121,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_pendingConfig(JNIEn
     if (!pending) {
         return nullptr;
     }
-    return util::bytes_from_span(env, *pending).leak();
+    return util::bytes_from_span(env, *pending).release();
 }
 
 extern "C"
@@ -132,7 +132,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_rekey(JNIEnv *env, 
     auto info = reinterpret_cast<session::config::groups::Info*>(info_ptr);
     auto members = reinterpret_cast<session::config::groups::Members*>(members_ptr);
     auto rekey = keys->rekey(*info, *members);
-    return util::bytes_from_span(env, rekey).leak();
+    return util::bytes_from_span(env, rekey).release();
 }
 
 extern "C"
@@ -140,7 +140,7 @@ JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_dump(JNIEnv *env, jobject thiz) {
     auto keys = ptrToKeys(env, thiz);
     auto dump = keys->dump();
-    return util::bytes_from_vector(env, dump).leak();
+    return util::bytes_from_vector(env, dump).release();
 }
 
 extern "C"
@@ -158,7 +158,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_encrypt(JNIEnv *env
         auto ptr = ptrToKeys(env, thiz);
         auto plaintext_vector = util::vector_from_bytes(env, plaintext);
         auto enc = ptr->encrypt_message(plaintext_vector);
-        return util::bytes_from_vector(env, enc).leak();
+        return util::bytes_from_vector(env, enc).release();
     });
 }
 
@@ -190,7 +190,7 @@ extern "C"
 JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_groupEncKey(JNIEnv *env, jobject thiz) {
     auto ptr = ptrToKeys(env, thiz);
-    return util::bytes_from_span(env, ptr->group_enc_key()).leak();
+    return util::bytes_from_span(env, ptr->group_enc_key()).release();
 }
 
 extern "C"
@@ -209,7 +209,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_makeSubAccount(JNIE
                                                                             jboolean can_delete) {
     auto ptr = ptrToKeys(env, thiz);
     auto new_subaccount_key = ptr->swarm_make_subaccount(jni_utils::JavaStringRef(env, session_id).view(), can_write, can_delete);
-    return util::bytes_from_vector(env, new_subaccount_key).leak();
+    return util::bytes_from_vector(env, new_subaccount_key).release();
 }
 
 extern "C"
@@ -221,7 +221,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_getSubAccountToken(
                                                                                 jboolean can_delete) {
     auto ptr = ptrToKeys(env, thiz);
     auto token = ptr->swarm_subaccount_token(jni_utils::JavaStringRef(env, session_id).view(), can_write, can_delete);
-    return util::bytes_from_vector(env, token).leak();
+    return util::bytes_from_vector(env, token).release();
 }
 
 static jni_utils::JavaLocalRef<jobject> deserialize_swarm_auth(JNIEnv *env, session::config::groups::Keys::swarm_auth auth) {
@@ -245,7 +245,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_subAccountSign(JNIE
     auto message_vector = util::vector_from_bytes(env, message);
     auto signing_value_vector = util::vector_from_bytes(env, signing_value);
     auto swarm_auth = ptr->swarm_subaccount_sign(message_vector, signing_value_vector, false);
-    return deserialize_swarm_auth(env, swarm_auth).leak();
+    return deserialize_swarm_auth(env, swarm_auth).release();
 }
 
 extern "C"
@@ -259,7 +259,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_supplementFor(JNIEn
         user_session_ids.push_back(jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, (jstring)(env->GetObjectArrayElement(j_user_session_ids, i))).get()).copy());
     }
     auto supplement = ptr->key_supplement(user_session_ids);
-    return util::bytes_from_vector(env, supplement).leak();
+    return util::bytes_from_vector(env, supplement).release();
 }
 extern "C"
 JNIEXPORT jint JNICALL

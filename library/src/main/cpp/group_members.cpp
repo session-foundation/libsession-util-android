@@ -60,7 +60,7 @@ Java_network_loki_messenger_libsession_1util_GroupMembersConfig_get(JNIEnv *env,
         if (!member) {
             return nullptr;
         }
-        return serialize_group_member(env, *member).leak();
+        return serialize_group_member(env, *member).release();
     });
 }
 
@@ -71,7 +71,7 @@ Java_network_loki_messenger_libsession_1util_GroupMembersConfig_getOrConstruct(J
                                                                                jstring pub_key_hex) {
     auto config = ptrToMembers(env, thiz);
     auto member = config->get_or_construct(JavaStringRef(env, pub_key_hex).view());
-    return serialize_group_member(env, member).leak();
+    return serialize_group_member(env, member).release();
 }
 
 extern "C"
@@ -155,7 +155,7 @@ extern "C"
 JNIEXPORT jstring JNICALL
 Java_network_loki_messenger_libsession_1util_util_GroupMember_nameString(JNIEnv *env,
                                                                          jobject thiz) {
-    return jni_utils::jstring_from_optional(env, ptrToMember(env, thiz)->name).leak();
+    return jni_utils::jstring_from_optional(env, ptrToMember(env, thiz)->name).release();
 }
 
 extern "C"
@@ -175,7 +175,7 @@ extern "C"
 JNIEXPORT jstring JNICALL
 Java_network_loki_messenger_libsession_1util_util_GroupMember_accountId(JNIEnv *env,
                                                                               jobject thiz) {
-    return jni_utils::jstring_from_optional(env, ptrToMember(env, thiz)->session_id).leak();
+    return jni_utils::jstring_from_optional(env, ptrToMember(env, thiz)->session_id).release();
 }
 
 extern "C"
@@ -188,7 +188,7 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_util_GroupMember_profilePic(JNIEnv *env,
                                                                          jobject thiz) {
-    return util::serialize_user_pic(env, ptrToMember(env, thiz)->profile_picture).leak();
+    return util::serialize_user_pic(env, ptrToMember(env, thiz)->profile_picture).release();
 }
 
 extern "C"

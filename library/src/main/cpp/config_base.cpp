@@ -91,7 +91,7 @@ JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_ConfigBase_dump(JNIEnv *env, jobject thiz) {
     auto config = ptrToConfigBase(env, thiz);
     auto dumped = config->dump();
-    return util::bytes_from_vector(env, dumped).leak();
+    return util::bytes_from_vector(env, dumped).release();
 }
 
 JNIEXPORT jstring JNICALL

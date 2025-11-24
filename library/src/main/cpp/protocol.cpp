@@ -72,7 +72,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeFor1
                         rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get())
                                      : std::nullopt
                 )
-        ).leak();
+        ).release();
     });
 }
 
@@ -94,7 +94,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForC
                         rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get())
                                      : std::nullopt
                 )
-        ).leak();
+        ).release();
     });
 }
 
@@ -125,7 +125,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForG
                         rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get())
                                      : std::nullopt
                 )
-        ).leak();
+        ).release();
     });
 }
 
@@ -179,7 +179,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForC
                         rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get())
                                      : std::nullopt
                 )
-        ).leak();
+        ).release();
     });
 }
 
@@ -206,7 +206,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeFor1
                 std::chrono::sys_time<std::chrono::milliseconds>{
                         std::chrono::milliseconds{now_epoch_ms}},
                 *java_to_cpp_array<32>(env, pro_backend_pub_key)
-        )).leak();
+        )).release();
     });
 }
 
@@ -243,7 +243,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForG
                 std::chrono::sys_time<std::chrono::milliseconds>{
                         std::chrono::milliseconds{now_epoch_ms}},
                 *java_to_cpp_array<32>(env, pro_backend_pub_key)
-        )).leak();
+        )).release();
     });
 }
 

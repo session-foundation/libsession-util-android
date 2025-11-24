@@ -90,7 +90,8 @@ namespace jni_utils {
             return ref_;
         }
 
-        JNIType leak() {
+        // Release the jobject without deleting the local reference
+        JNIType release() {
             auto r = ref_;
             ref_ = nullptr;
             return r;
@@ -115,12 +116,7 @@ namespace jni_utils {
 
         BasicJavaClassInfo(JNIEnv *env, const char *class_name, const char *constructor_signature)
                 :JavaClassInfo(env, class_name),
-                 constructor(env->GetMethodID(java_class, "<init>", constructor_signature)) {
-            if (env->ExceptionCheck()) {
-                env->ExceptionDescribe();
-                throw std::runtime_error("Failed to find constructor for class " + std::string(class_name));
-            }
-        }
+                 constructor(env->GetMethodID(java_class, "<init>", constructor_signature)) {}
     };
 
 

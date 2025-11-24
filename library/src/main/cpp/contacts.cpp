@@ -1,4 +1,6 @@
-#include "contacts.h"
+#include <jni.h>
+#include <session/config/contacts.hpp>
+
 #include "util.h"
 #include "jni_utils.h"
 
@@ -103,7 +105,7 @@ Java_network_loki_messenger_libsession_1util_Contacts_get(JNIEnv *env, jobject t
                 auto contacts = ptrToContacts(env, thiz);
                 auto contact = contacts->get(JavaStringRef(env, account_id).view());
                 if (!contact) return nullptr;
-                return serialize_contact(env, contact.value()).leak();
+                return serialize_contact(env, contact.value()).release();
             }
     );
 }
@@ -115,7 +117,7 @@ Java_network_loki_messenger_libsession_1util_Contacts_getOrConstruct(JNIEnv *env
     return run_catching_cxx_exception_or_throws<jobject>(env, [=] {
         auto contacts = ptrToContacts(env, thiz);
         auto contact = contacts->get_or_construct(JavaStringRef(env, account_id).view());
-        return serialize_contact(env, contact).leak();
+        return serialize_contact(env, contact).release();
     });
 }
 
@@ -206,7 +208,7 @@ Java_network_loki_messenger_libsession_1util_Contacts_getOrConstructBlinded(JNIE
             JavaStringRef(env, community_server_url).view(),
             JavaStringRef(env, community_server_pub_key_hex).view(),
             JavaStringRef(env, blinded_id).view()
-    )).leak();
+    )).release();
 }
 
 extern "C"
@@ -247,7 +249,7 @@ Java_network_loki_messenger_libsession_1util_Contacts_getBlinded(JNIEnv *env,
     auto result = ptrToContacts(env, thiz)->get_blinded(JavaStringRef(env, blinded_id).view());
 
     if (result) {
-        return serialize_blinded_contact(env, *result).leak();
+        return serialize_blinded_contact(env, *result).release();
     } else {
         return nullptr;
     }

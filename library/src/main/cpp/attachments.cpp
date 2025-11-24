@@ -50,7 +50,7 @@ Java_network_loki_messenger_libsession_1util_encrypt_Attachments_encryptBytes(JN
         );
 
 
-        return util::bytes_from_span(env, std::span(reinterpret_cast<unsigned char *>(key.data()), key.size())).leak();
+        return util::bytes_from_span(env, std::span(reinterpret_cast<unsigned char *>(key.data()), key.size())).release();
     });
 }
 

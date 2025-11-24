@@ -32,7 +32,7 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blindVersionSign(J
                 session::Platform::android,
                 timestamp
         );
-        return util::bytes_from_vector(env, bytes).leak();
+        return util::bytes_from_vector(env, bytes).release();
     });
 }
 
@@ -53,7 +53,7 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blindVersionSignRe
                 jni_utils::JavaStringRef(env, path).view(),
                 body ? std::make_optional(jni_utils::JavaByteArrayRef(env, body).get()) : std::nullopt
         );
-        return util::bytes_from_vector(env, bytes).leak();
+        return util::bytes_from_vector(env, bytes).release();
     });
 }
 
@@ -84,7 +84,7 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blind15Sign(JNIEnv
                 jni_utils::JavaStringRef(env, server_pub_key).view(),
                 jni_utils::JavaByteArrayRef(env, message).get()
                 );
-        return util::bytes_from_vector(env, data).leak();
+        return util::bytes_from_vector(env, data).release();
     });
 }
 
@@ -131,6 +131,6 @@ Java_network_loki_messenger_libsession_1util_util_BlindKeyAPI_blind25Id(JNIEnv *
         return jni_utils::jstring_from_optional(env, session::blind25_id(
                 jni_utils::JavaStringRef(env, session_id).view(),
                 jni_utils::JavaStringRef(env, server_pub_key).view()
-        )).leak();
+        )).release();
     });
 }

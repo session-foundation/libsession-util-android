@@ -161,7 +161,7 @@ Java_network_loki_messenger_libsession_1util_util_MultiEncrypt_encryptForMultipl
             std::span<const unsigned char> {random_nonce.data(), 24}
     );
 
-    return util::bytes_from_vector(env, result).leak();
+    return util::bytes_from_vector(env, result).release();
 }
 
 extern "C"
@@ -180,7 +180,7 @@ Java_network_loki_messenger_libsession_1util_util_MultiEncrypt_decryptForMultipl
             );
 
     if (result) {
-        return util::bytes_from_vector(env, *result).leak();
+        return util::bytes_from_vector(env, *result).release();
     } else {
         LOGD("no result from decrypt");
     }

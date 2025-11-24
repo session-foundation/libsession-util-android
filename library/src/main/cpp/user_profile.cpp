@@ -30,7 +30,7 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_UserProfile_getPic(JNIEnv *env, jobject thiz) {
     auto profile = ptrToProfile(env, thiz);
     auto pic = profile->get_profile_pic();
-    return util::serialize_user_pic(env, pic).leak();
+    return util::serialize_user_pic(env, pic).release();
 }
 
 JNIEXPORT void JNICALL
@@ -71,11 +71,11 @@ Java_network_loki_messenger_libsession_1util_UserProfile_getNtsExpiry(JNIEnv *en
     if (nts_expiry == std::nullopt) {
         auto expiry = util::serialize_expiry(env, session::config::expiration_mode::none,
                                              std::chrono::seconds(0));
-        return expiry.leak();
+        return expiry.release();
     }
     auto expiry = util::serialize_expiry(env, session::config::expiration_mode::after_send,
                                          std::chrono::seconds(*nts_expiry));
-    return expiry.leak();
+    return expiry.release();
 }
 
 extern "C"

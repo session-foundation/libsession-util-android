@@ -50,7 +50,7 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_encryptForRecipient(
                 JavaByteArrayRef(env, message).get()
         );
 
-        return jni_utils::session_bytes_from_range(env, data).leak();
+        return jni_utils::session_bytes_from_range(env, data).release();
     });
 }
 
@@ -92,7 +92,7 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_encryptForBlindedRec
                 JavaByteArrayRef(env, message).get()
         );
 
-        return jni_utils::session_bytes_from_range(env, data).leak();
+        return jni_utils::session_bytes_from_range(env, data).release();
     });
 }
 
@@ -108,7 +108,7 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_decryptPushNotificat
                 jni_utils::JavaByteArrayRef(env, secret_key).get()
         );
 
-        return jni_utils::session_bytes_from_range(env, data).leak();
+        return jni_utils::session_bytes_from_range(env, data).release();
     });
 }
 
@@ -126,7 +126,7 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_decryptOnsResponse(J
                 nonce ? std::make_optional(jni_utils::JavaByteArrayRef(env, nonce).get()) : std::nullopt
         );
 
-        return jni_utils::jstring_from_optional(env, data).leak();
+        return jni_utils::jstring_from_optional(env, data).release();
     });
 }
 
@@ -154,7 +154,7 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_calculateECHDAgreeme
                                       "secret; is the key valid?"};
         }
 
-        return util::bytes_from_span(env, shared_secret).leak();
+        return util::bytes_from_span(env, shared_secret).release();
     });
 
 }

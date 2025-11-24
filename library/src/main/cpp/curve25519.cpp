@@ -23,7 +23,7 @@ Java_network_loki_messenger_libsession_1util_Curve25519_pubKeyFromED25519(JNIEnv
                                                                           jbyteArray ed25519_public_key) {
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
         auto pk = session::curve25519::to_curve25519_pubkey(jni_utils::JavaByteArrayRef(env, ed25519_public_key).get());
-        return util::bytes_from_span(env, pk).leak();
+        return util::bytes_from_span(env, pk).release();
     });
 }
 

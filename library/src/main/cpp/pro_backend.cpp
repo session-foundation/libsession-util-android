@@ -21,7 +21,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildAddProPaym
                 JavaStringRef(env, payment_id).get_raw(),
                 JavaStringRef(env, order_id).get_raw());
 
-        return jni_utils::jstring_from_optional(env, json).leak();
+        return jni_utils::jstring_from_optional(env, json).release();
     });
 }
 
@@ -40,7 +40,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGeneratePr
                 }
         );
 
-        return jni_utils::jstring_from_optional(env, json).leak();
+        return jni_utils::jstring_from_optional(env, json).release();
     });
 }
 
@@ -59,7 +59,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGetProDeta
                 static_cast<uint32_t>(count)
         );
 
-        return jni_utils::jstring_from_optional(env, json).leak();
+        return jni_utils::jstring_from_optional(env, json).release();
     });
 }
 
