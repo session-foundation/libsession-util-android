@@ -35,7 +35,7 @@ namespace util {
             return {};
         }
 
-        return jni_utils::JavaByteArrayRef(env, byteArray).copy();
+        return JavaByteArrayRef(env, byteArray).copy();
     }
 
     JavaLocalRef<jbyteArray> bytes_from_span(JNIEnv* env, std::span<const unsigned char> from_str) {
@@ -47,40 +47,52 @@ namespace util {
     }
 
     JavaLocalRef<jobject> serialize_user_pic(JNIEnv *env, session::config::profile_pic pic) {
-        static jni_utils::BasicJavaClassInfo class_info(
+        static BasicJavaClassInfo class_info(
                 env, "network/loki/messenger/libsession_util/util/UserPic",
                 "(Ljava/lang/String;Lnetwork/loki/messenger/libsession_util/util/Bytes;)V"
                 );
 
         return {env, env->NewObject(class_info.java_class, class_info.constructor,
-                              jni_utils::JavaLocalRef(env, env->NewStringUTF(pic.url.data())).get(),
-                              jni_utils::session_bytes_from_range(env, pic.key).get()
+                              JavaLocalRef(env, env->NewStringUTF(pic.url.data())).get(),
+                              session_bytes_from_range(env, pic.key).get()
                               )};
     }
 
 
     session::config::profile_pic deserialize_user_pic(JNIEnv *env, jobject user_pic) {
-        jni_utils::JavaLocalRef clazz(env, env->GetObjectClass(user_pic));
+        struct ClassInfo : public JavaClassInfo {
+            jmethodID url_getter;
+            jmethodID key_getter;
+
+            ClassInfo(JNIEnv *env, jobject obj)
+                : JavaClassInfo(env, obj)
+                , url_getter(env->GetMethodID(java_class, "getUrl", "()Ljava/lang/String;"))
+                , key_getter(env->GetMethodID(java_class, "getKeyAsByteArray", "()[B"))
+            {}
+        };
+
+        static ClassInfo class_info(env, user_pic);
+
         return {
-            jni_utils::JavaStringRef(env, (jstring) (env->CallObjectMethod(user_pic, env->GetMethodID(clazz.get(), "getUrl", "()Ljava/lang/String;")))).view(),
-            util::vector_from_bytes(env, static_cast<jbyteArray>(env->CallObjectMethod(user_pic, env->GetMethodID(clazz.get(), "getKeyAsByteArray", "()[B"))))
+            JavaStringRef(env, (jstring) (env->CallObjectMethod(user_pic, class_info.url_getter))).view(),
+            util::vector_from_bytes(env, static_cast<jbyteArray>(env->CallObjectMethod(user_pic, class_info.key_getter)))
         };
     }
 
     JavaLocalRef<jobject> serialize_expiry(JNIEnv *env, const session::config::expiration_mode& mode, const std::chrono::seconds& time_seconds) {
         if (mode == session::config::expiration_mode::none) {
-            auto none = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode$NONE"));
+            auto none = JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode$NONE"));
             jfieldID none_instance = env->GetStaticFieldID(none.get(), "INSTANCE", "Lnetwork/loki/messenger/libsession_util/util/ExpiryMode$NONE;");
 
             return {env, env->GetStaticObjectField(none.get(), none_instance)};
         } else if (mode == session::config::expiration_mode::after_send) {
-            static jni_utils::BasicJavaClassInfo class_info(
+            static BasicJavaClassInfo class_info(
                     env, "network/loki/messenger/libsession_util/util/ExpiryMode$AfterSend",
                     "(J)V"
             );
             return {env, env->NewObject(class_info.java_class, class_info.constructor, time_seconds.count())};
         } else if (mode == session::config::expiration_mode::after_read) {
-            static jni_utils::BasicJavaClassInfo class_info(
+            static BasicJavaClassInfo class_info(
                     env, "network/loki/messenger/libsession_util/util/ExpiryMode$AfterRead",
                     "(J)V"
             );
@@ -90,12 +102,12 @@ namespace util {
     }
 
     std::pair<session::config::expiration_mode, long> deserialize_expiry(JNIEnv *env, jobject expiry_mode) {
-        auto parent = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode"));
-        auto after_read = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode$AfterRead"));
-        auto after_send = jni_utils::JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode$AfterSend"));
+        auto parent = JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode"));
+        auto after_read = JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode$AfterRead"));
+        auto after_send = JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/ExpiryMode$AfterSend"));
         jfieldID duration_seconds = env->GetFieldID(parent.get(), "expirySeconds", "J");
 
-        auto object_class = jni_utils::JavaLocalRef(env, env->GetObjectClass(expiry_mode));
+        auto object_class = JavaLocalRef(env, env->GetObjectClass(expiry_mode));
 
         if (env->IsSameObject(object_class.get(), after_read.get())) {
             return std::pair(session::config::expiration_mode::after_read, env->GetLongField(expiry_mode, duration_seconds));
@@ -112,7 +124,7 @@ namespace util {
             return {env, nullptr};
         }
 
-        static jni_utils::BasicJavaClassInfo class_info(
+        static BasicJavaClassInfo class_info(
                 env, "java/lang/Long",
                 "(J)V"
         );
@@ -136,11 +148,11 @@ Java_network_loki_messenger_libsession_1util_util_MultiEncrypt_encryptForMultipl
     std::vector<std::vector<unsigned char>> message_vec{};
     std::vector<std::vector<unsigned char>> recipient_vec{};
     for (int i = 0; i < size; i++) {
-        jni_utils::JavaLocalRef message_j(env, static_cast<jbyteArray>(env->GetObjectArrayElement(messages, i)));
-        jni_utils::JavaLocalRef recipient_j(env, static_cast<jbyteArray>(env->GetObjectArrayElement(recipients, i)));
+        JavaLocalRef message_j(env, static_cast<jbyteArray>(env->GetObjectArrayElement(messages, i)));
+        JavaLocalRef recipient_j(env, static_cast<jbyteArray>(env->GetObjectArrayElement(recipients, i)));
 
-        message_vec.emplace_back(jni_utils::JavaByteArrayRef(env, message_j.get()).copy());
-        recipient_vec.emplace_back(jni_utils::JavaByteArrayRef(env, recipient_j.get()).copy());
+        message_vec.emplace_back(JavaByteArrayRef(env, message_j.get()).copy());
+        recipient_vec.emplace_back(JavaByteArrayRef(env, recipient_j.get()).copy());
     }
 
     std::vector<std::span<const unsigned char>> message_sv_vec{};
@@ -156,8 +168,8 @@ Java_network_loki_messenger_libsession_1util_util_MultiEncrypt_encryptForMultipl
     auto result = session::encrypt_for_multiple_simple(
             message_sv_vec,
             recipient_sv_vec,
-            jni_utils::JavaByteArrayRef(env, ed25519_secret_key).get(),
-            jni_utils::JavaStringRef(env, domain).view(),
+            JavaByteArrayRef(env, ed25519_secret_key).get(),
+            JavaStringRef(env, domain).view(),
             std::span<const unsigned char> {random_nonce.data(), 24}
     );
 
@@ -173,10 +185,10 @@ Java_network_loki_messenger_libsession_1util_util_MultiEncrypt_decryptForMultipl
                                                                                         jbyteArray sender_pub_key,
                                                                                         jstring domain) {
     auto result = session::decrypt_for_multiple_simple(
-            jni_utils::JavaByteArrayRef(env, encoded).get(),
-            jni_utils::JavaByteArrayRef(env, secret_key).get(),
-            jni_utils::JavaByteArrayRef(env, sender_pub_key).get(),
-            jni_utils::JavaStringRef(env, domain).view()
+            JavaByteArrayRef(env, encoded).get(),
+            JavaByteArrayRef(env, secret_key).get(),
+            JavaByteArrayRef(env, sender_pub_key).get(),
+            JavaStringRef(env, domain).view()
             );
 
     if (result) {
@@ -191,7 +203,7 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_util_BaseCommunityInfo_00024Companion_parseFullUrl(
         JNIEnv *env, jobject thiz, jstring full_url) {
-    auto [base, room, pk] = session::config::community::parse_full_url(jni_utils::JavaStringRef(env, full_url).view());
+    auto [base, room, pk] = session::config::community::parse_full_url(JavaStringRef(env, full_url).view());
 
     jclass clazz = env->FindClass("kotlin/Triple");
     jmethodID constructor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V");
@@ -296,8 +308,8 @@ Java_network_loki_messenger_libsession_1util_util_Util_lengthForCodepoints(JNIEn
                                                                            jobject thiz,
                                                                            jstring str,
                                                                            jint max_codepoints) {
-    return jni_utils::run_catching_cxx_exception_or_throws<jint>(env, [=]() {
-        jni_utils::JavaCharsRef str_ref(env, str);
+    return run_catching_cxx_exception_or_throws<jint>(env, [=]() {
+        JavaCharsRef str_ref(env, str);
         return session::utf16_count_truncated_to_codepoints(
                 {reinterpret_cast<const char16_t *>(str_ref.chars()), str_ref.size()},
                 max_codepoints
@@ -309,6 +321,6 @@ extern "C"
 JNIEXPORT jint JNICALL
 Java_network_loki_messenger_libsession_1util_util_Util_countCodepoints(JNIEnv *env, jobject thiz,
                                                                        jstring str) {
-    jni_utils::JavaCharsRef str_ref(env, str);
+    JavaCharsRef str_ref(env, str);
     return session::utf16_count({reinterpret_cast<const char16_t*>(str_ref.chars()), str_ref.size()});
 }

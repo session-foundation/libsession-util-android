@@ -63,7 +63,7 @@ session::config::contact_info deserialize_contact(JNIEnv *env, jobject info, ses
             get_pro_features(env->GetMethodID(java_class, "getProFeaturesRaw", "()J")) {}
     };
 
-    static ClassInfo class_info(env, JavaLocalRef(env, env->GetObjectClass(info)).get());
+    static ClassInfo class_info(env, info);
 
     JavaLocalRef account_id(env, static_cast<jstring>(env->CallObjectMethod(info, class_info.get_id)));
     JavaLocalRef name(env, static_cast<jstring>(env->CallObjectMethod(info, class_info.get_name)));
