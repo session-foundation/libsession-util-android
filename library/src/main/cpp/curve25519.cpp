@@ -1,4 +1,5 @@
 #include "jni_utils.h"
+#include "util.h"
 
 #include <session/curve25519.hpp>
 
@@ -11,7 +12,7 @@ Java_network_loki_messenger_libsession_1util_Curve25519_fromED25519(JNIEnv *env,
         auto pk = session::curve25519::to_curve25519_pubkey(jni_utils::JavaByteArrayRef(env, ed25519_public_key).get());
         auto sk = session::curve25519::to_curve25519_seckey(jni_utils::JavaByteArrayRef(env, ed25519_private_key).get());
 
-        return jni_utils::new_key_pair(env, util::bytes_from_span(env, pk), util::bytes_from_span(env, sk));
+        return jni_utils::new_key_pair(env, util::bytes_from_span(env, pk).get(), util::bytes_from_span(env, sk).get());
     });
 }
 
@@ -22,7 +23,7 @@ Java_network_loki_messenger_libsession_1util_Curve25519_pubKeyFromED25519(JNIEnv
                                                                           jbyteArray ed25519_public_key) {
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
         auto pk = session::curve25519::to_curve25519_pubkey(jni_utils::JavaByteArrayRef(env, ed25519_public_key).get());
-        return util::bytes_from_span(env, pk);
+        return util::bytes_from_span(env, pk).leak();
     });
 }
 
@@ -32,7 +33,7 @@ Java_network_loki_messenger_libsession_1util_Curve25519_generateKeyPair(JNIEnv *
     return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=] {
         auto [sk, pk] = session::curve25519::curve25519_key_pair();
         return jni_utils::new_key_pair(env,
-                                       util::bytes_from_span(env, sk),
-                                        util::bytes_from_span(env, pk));
+                                       util::bytes_from_span(env, sk).get(),
+                                        util::bytes_from_span(env, pk).get());
     });
 }

@@ -38,21 +38,21 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_getCreated(JNIEnv *env, jobject thiz) {
     auto group_info = ptrToInfo(env, thiz);
-    return util::jlongFromOptional(env, group_info->get_created());
+    return util::jlongFromOptional(env, group_info->get_created()).leak();
 }
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_getDeleteAttachmentsBefore(JNIEnv *env,
                                                                                         jobject thiz) {
     auto group_info = ptrToInfo(env, thiz);
-    return util::jlongFromOptional(env, group_info->get_delete_attach_before());
+    return util::jlongFromOptional(env, group_info->get_delete_attach_before()).leak();
 }
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_getDeleteBefore(JNIEnv *env,
                                                                              jobject thiz) {
     auto group_info = ptrToInfo(env, thiz);
-    return util::jlongFromOptional(env, group_info->get_delete_before());
+    return util::jlongFromOptional(env, group_info->get_delete_before()).leak();
 }
 
 extern "C"
@@ -72,7 +72,7 @@ extern "C"
 JNIEXPORT jstring JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_getName(JNIEnv *env, jobject thiz) {
     auto group_info = ptrToInfo(env, thiz);
-    return util::jstringFromOptional(env, group_info->get_name());
+    return jni_utils::jstring_from_optional(env, group_info->get_name()).leak();
 }
 
 extern "C"
@@ -80,7 +80,7 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_getProfilePic(JNIEnv *env,
                                                                            jobject thiz) {
     auto group_info = ptrToInfo(env, thiz);
-    return util::serialize_user_pic(env, group_info->get_profile_pic());
+    return util::serialize_user_pic(env, group_info->get_profile_pic()).leak();
 }
 
 extern "C"
@@ -155,7 +155,7 @@ extern "C"
 JNIEXPORT jstring JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_id(JNIEnv *env, jobject thiz) {
     auto group_info = ptrToInfo(env, thiz);
-    return util::jstringFromOptional(env, group_info->id);
+    return jni_utils::jstring_from_optional(env, group_info->id).leak();
 }
 
 extern "C"
@@ -167,8 +167,7 @@ Java_network_loki_messenger_libsession_1util_GroupInfoConfig_getDescription(JNIE
     if (!description) {
         return nullptr;
     }
-    auto jstring = env->NewStringUTF(description->data());
-    return jstring;
+    return env->NewStringUTF(description->data());
 }
 
 extern "C"

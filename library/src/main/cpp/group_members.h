@@ -14,5 +14,6 @@ inline session::config::groups::member *ptrToMember(JNIEnv *env, jobject thiz) {
     return reinterpret_cast<session::config::groups::member*>(env->GetLongField(thiz, ptrField));
 }
 
+jni_utils::JavaLocalRef<jobject> serialize_group_member(JNIEnv* env, const session::config::groups::member& member);
 
 #endif //SESSION_ANDROID_GROUP_MEMBERS_H

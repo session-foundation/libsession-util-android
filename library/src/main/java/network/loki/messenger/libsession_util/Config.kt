@@ -1,6 +1,7 @@
 package network.loki.messenger.libsession_util
 
 import network.loki.messenger.libsession_util.pro.ProConfig
+import network.loki.messenger.libsession_util.pro.ProProof
 import network.loki.messenger.libsession_util.protocol.ProFeatures
 import network.loki.messenger.libsession_util.util.BaseCommunityInfo
 import network.loki.messenger.libsession_util.util.BlindedContact
@@ -11,6 +12,7 @@ import network.loki.messenger.libsession_util.util.ExpiryMode
 import network.loki.messenger.libsession_util.util.GroupInfo
 import network.loki.messenger.libsession_util.util.GroupMember
 import network.loki.messenger.libsession_util.util.UserPic
+import java.time.Instant
 
 typealias ConversationPriority = Long
 
@@ -114,6 +116,9 @@ interface MutableUserProfile : ReadableUserProfile, MutableConfig {
 
 interface ReadableConversationVolatileConfig: ReadableConfig {
     fun getOneToOne(pubKeyHex: String): Conversation.OneToOne?
+
+    fun getBlindedOneToOne(pubKeyHex: String): Conversation.BlindedOneToOne?
+
     fun getCommunity(baseUrl: String, room: String): Conversation.Community?
     fun getLegacyClosedGroup(groupId: String): Conversation.LegacyGroup?
     fun getClosedGroup(sessionId: String): Conversation.ClosedGroup?
@@ -125,6 +130,7 @@ interface ReadableConversationVolatileConfig: ReadableConfig {
     fun empty(): Boolean
 
     fun allOneToOnes(): List<Conversation.OneToOne>
+    fun allBlindedOneToOnes(): List<Conversation.BlindedOneToOne>
     fun allCommunities(): List<Conversation.Community>
     fun allLegacyClosedGroups(): List<Conversation.LegacyGroup>
     fun allClosedGroups(): List<Conversation.ClosedGroup>

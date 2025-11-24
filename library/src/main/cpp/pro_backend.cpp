@@ -21,7 +21,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildAddProPaym
                 JavaStringRef(env, payment_id).get_raw(),
                 JavaStringRef(env, order_id).get_raw());
 
-        return util::jstringFromOptional(env, json);
+        return jni_utils::jstring_from_optional(env, json).leak();
     });
 }
 
@@ -40,7 +40,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGeneratePr
                 }
         );
 
-        return util::jstringFromOptional(env, json);
+        return jni_utils::jstring_from_optional(env, json).leak();
     });
 }
 
@@ -59,7 +59,7 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGetProDeta
                 static_cast<uint32_t>(count)
         );
 
-        return util::jstringFromOptional(env, json);
+        return jni_utils::jstring_from_optional(env, json).leak();
     });
 }
 
@@ -77,15 +77,15 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_getPaymentProvi
         return env->NewObject(
                 clazz,
                 env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"),
-                util::jstringFromOptional(env, std::string_view(metadata.device.data, metadata.device.size)),
-                util::jstringFromOptional(env, std::string_view(metadata.store.data, metadata.store.size)),
-                util::jstringFromOptional(env, std::string_view(metadata.platform.data, metadata.platform.size)),
-                util::jstringFromOptional(env, std::string_view(metadata.platform_account.data, metadata.platform_account.size)),
-                util::jstringFromOptional(env, std::string_view(metadata.refund_platform_url.data, metadata.refund_platform_url.size)),
-                util::jstringFromOptional(env, std::string_view(metadata.refund_support_url.data, metadata.refund_support_url.size)),
-                util::jstringFromOptional(env, std::string_view(metadata.refund_status_url.data, metadata.refund_status_url.size)),
-                util::jstringFromOptional(env, std::string_view(metadata.update_subscription_url.data, metadata.update_subscription_url.size)),
-                util::jstringFromOptional(env, std::string_view(metadata.cancel_subscription_url.data, metadata.cancel_subscription_url.size))
+                jni_utils::jstring_from_optional(env, std::string_view(metadata.device.data, metadata.device.size)).get(),
+                jni_utils::jstring_from_optional(env, std::string_view(metadata.store.data, metadata.store.size)).get(),
+                jni_utils::jstring_from_optional(env, std::string_view(metadata.platform.data, metadata.platform.size)).get(),
+                jni_utils::jstring_from_optional(env, std::string_view(metadata.platform_account.data, metadata.platform_account.size)).get(),
+                jni_utils::jstring_from_optional(env, std::string_view(metadata.refund_platform_url.data, metadata.refund_platform_url.size)).get(),
+                jni_utils::jstring_from_optional(env, std::string_view(metadata.refund_support_url.data, metadata.refund_support_url.size)).get(),
+                jni_utils::jstring_from_optional(env, std::string_view(metadata.refund_status_url.data, metadata.refund_status_url.size)).get(),
+                jni_utils::jstring_from_optional(env, std::string_view(metadata.update_subscription_url.data, metadata.update_subscription_url.size)).get(),
+                jni_utils::jstring_from_optional(env, std::string_view(metadata.cancel_subscription_url.data, metadata.cancel_subscription_url.size)).get()
             );
     });
 }

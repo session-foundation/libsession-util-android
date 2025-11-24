@@ -2,6 +2,20 @@
 #include "util.h"
 #include "jni_utils.h"
 
+
+std::pair<std::string, std::vector<unsigned char>> extractHashAndData(JNIEnv *env, jobject kotlin_pair) {
+    jni_utils::JavaLocalRef<jclass> pair(env, env->GetObjectClass(kotlin_pair));
+    jfieldID first = env->GetFieldID(pair.get(), "first", "Ljava/lang/Object;");
+    jfieldID second = env->GetFieldID(pair.get(), "second", "Ljava/lang/Object;");
+    auto hash_as_jstring = jni_utils::JavaLocalRef(env, reinterpret_cast<jstring>(env->GetObjectField(kotlin_pair, first)));
+    auto data_as_jbytes = jni_utils::JavaLocalRef(env, reinterpret_cast<jbyteArray>(env->GetObjectField(kotlin_pair, second)));
+
+    return std::make_pair(
+            std::string(jni_utils::JavaStringRef(env, hash_as_jstring.get()).view()),
+            jni_utils::JavaByteArrayRef(env, data_as_jbytes.get()).copy()
+    );
+}
+
 extern "C" {
 JNIEXPORT jboolean JNICALL
 Java_network_loki_messenger_libsession_1util_ConfigBase_dirty(JNIEnv *env, jobject thiz) {
@@ -49,8 +63,7 @@ JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_ConfigBase_dump(JNIEnv *env, jobject thiz) {
     auto config = ptrToConfigBase(env, thiz);
     auto dumped = config->dump();
-    jbyteArray bytes = util::bytes_from_vector(env, dumped);
-    return bytes;
+    return util::bytes_from_vector(env, dumped).leak();
 }
 
 JNIEXPORT jstring JNICALL

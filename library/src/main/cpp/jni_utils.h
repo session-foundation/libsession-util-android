@@ -6,8 +6,6 @@
 #include <ranges>
 #include <type_traits>
 
-#include "util.h"
-
 namespace jni_utils {
     /**
      * Run a C++ function and catch any exceptions, throwing a Java exception if one is caught,
@@ -62,6 +60,10 @@ namespace jni_utils {
     class JavaLocalRef {
         JNIEnv *env_;
         JNIType ref_;
+
+        template<typename>
+        friend class JavaLocalRef;
+
     public:
         JavaLocalRef(JNIEnv *env, JNIType ref) : env_(env), ref_(ref) {}
         ~JavaLocalRef() {
@@ -69,7 +71,9 @@ namespace jni_utils {
                 env_->DeleteLocalRef(ref_);
             }
         }
-        JavaLocalRef(JavaLocalRef&& other) : env_(other.env_), ref_(other.ref_) {
+
+        template<typename OtherJNIType>
+        JavaLocalRef(JavaLocalRef<OtherJNIType> && other)  noexcept : env_(other.env_), ref_(other.ref_) {
             other.ref_ = nullptr;
         }
 
@@ -85,8 +89,52 @@ namespace jni_utils {
         inline JNIType get() const {
             return ref_;
         }
+
+        JNIType leak() {
+            auto r = ref_;
+            ref_ = nullptr;
+            return r;
+        }
     };
 
+    struct JavaClassInfo {
+        jclass const java_class;
+
+        JavaClassInfo(JNIEnv *env, const char *class_name)
+                :java_class((jclass) env->NewGlobalRef(JavaLocalRef(env, env->FindClass(class_name)).get())) {}
+
+        JavaClassInfo(JNIEnv *env, jobject classInstance)
+                :java_class((jclass) env->NewGlobalRef(JavaLocalRef(env, env->GetObjectClass(classInstance)).get())) {}
+    };
+
+    /**
+     * Convenient way to store information to create a generic Java object
+     */
+    struct BasicJavaClassInfo : public JavaClassInfo {
+        jmethodID constructor;
+
+        BasicJavaClassInfo(JNIEnv *env, const char *class_name, const char *constructor_signature)
+                :JavaClassInfo(env, class_name),
+                 constructor(env->GetMethodID(java_class, "<init>", constructor_signature)) {
+            if (env->ExceptionCheck()) {
+                env->ExceptionDescribe();
+                throw std::runtime_error("Failed to find constructor for class " + std::string(class_name));
+            }
+        }
+    };
+
+
+    /**
+     * Convenient way to store information to create a Java ArrayList object
+     */
+    struct ArrayListClassInfo: public BasicJavaClassInfo {
+        jmethodID add_method;
+
+        static const ArrayListClassInfo & get(JNIEnv *env);
+
+    private:
+        explicit ArrayListClassInfo(JNIEnv *env);
+    };
 
     /**
      * Create a Java List from an iterator.
@@ -102,20 +150,22 @@ namespace jni_utils {
      */
     template <typename IterBegin, typename IterEnd, typename ConvertItemFunc>
     jobject jlist_from_iterator(JNIEnv *env, IterBegin begin, IterEnd end, const ConvertItemFunc &func) {
-        auto list_clazz = JavaLocalRef(env, env->FindClass("java/util/ArrayList"));
-        jmethodID init = env->GetMethodID(list_clazz.get(), "<init>", "()V");
-        jobject our_list = env->NewObject(list_clazz.get(), init);
-        jmethodID push = env->GetMethodID(list_clazz.get(), "add", "(Ljava/lang/Object;)Z");
+        auto info = ArrayListClassInfo::get(env);
+
+        auto our_list = env->NewObject(info.java_class, info.constructor);
 
         for (auto iter = begin; iter != end; ++iter) {
-            std::optional<jobject> item_java = func(env, *iter);
+            std::optional<JavaLocalRef<jobject>> item_java= func(env, *iter);
             if (item_java.has_value()) {
-                env->CallBooleanMethod(our_list, push, *item_java);
-                env->DeleteLocalRef(*item_java);
+                env->CallBooleanMethod(our_list, info.add_method, item_java->get());
             }
         }
 
         return our_list;
+    }
+
+    inline JavaLocalRef<jstring> jstring_from_optional(JNIEnv* env, std::optional<std::string_view> optional) {
+        return {env, optional ? env->NewStringUTF(optional->data()) : nullptr};
     }
 
     /**
@@ -136,22 +186,22 @@ namespace jni_utils {
      */
     template <typename Collection>
     jobject jstring_list_from_collection(JNIEnv *env, const Collection& obj) {
-        return jlist_from_collection(env, obj, util::jstringFromOptional);
+        return jlist_from_collection(env, obj, jstring_from_optional);
     }
 
     /**
      * Create a Java Bytes class from the collection. The collection must be continous range of byte data
      */
     template <typename Collection>
-    jobject session_bytes_from_range(JNIEnv *env, const Collection &obj) {
-        auto bytes_clazz = JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/Bytes"));
-        jmethodID init = env->GetMethodID(bytes_clazz.get(), "<init>", "([B)V");
+    JavaLocalRef<jobject> session_bytes_from_range(JNIEnv *env, const Collection &obj) {
+        static BasicJavaClassInfo bytes_class(
+                env, "network/loki/messenger/libsession_util/util/Bytes", "([B)V");
 
         static_assert(sizeof(*obj.data()) == sizeof(jbyte));
 
         auto bytes_array = JavaLocalRef(env, env->NewByteArray(static_cast<jsize>(obj.size())));
         env->SetByteArrayRegion(bytes_array.get(), 0, static_cast<jsize>(obj.size()), reinterpret_cast<const jbyte *>(obj.data()));
-        return env->NewObject(bytes_clazz.get(), init, bytes_array.get());
+        return {env, env->NewObject(bytes_class.java_class, bytes_class.constructor, bytes_array.get())};
     }
 
     /**

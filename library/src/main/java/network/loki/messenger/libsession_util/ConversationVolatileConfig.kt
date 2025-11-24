@@ -39,6 +39,9 @@ class ConversationVolatileConfig private constructor(pointer: Long): ConfigBase(
     external override fun getOrConstructedBlindedOneToOne(blindedId: String): Conversation.BlindedOneToOne
     external override fun eraseBlindedOneToOne(blindedId: String): Boolean
 
+    external override fun getBlindedOneToOne(pubKeyHex: String): Conversation.BlindedOneToOne?
+    external override fun allBlindedOneToOnes(): List<Conversation.BlindedOneToOne>
+
     override fun set(conv: Conversation) {
         when (conv) {
             is Conversation.BlindedOneToOne -> setBlindedOneToOne(conv)

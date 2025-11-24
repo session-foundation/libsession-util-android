@@ -14,7 +14,7 @@ Java_network_loki_messenger_libsession_1util_ED25519_sign(JNIEnv *env, jobject t
                 jni_utils::JavaByteArrayRef(env, ed25519_private_key).get(),
                 jni_utils::JavaByteArrayRef(env, message).get());
 
-        return util::bytes_from_vector(env, sigs);
+        return util::bytes_from_vector(env, sigs).leak();
     });
 }
 
@@ -42,7 +42,7 @@ Java_network_loki_messenger_libsession_1util_ED25519_generate(JNIEnv *env, jobje
                 ? session::ed25519::ed25519_key_pair(jni_utils::JavaByteArrayRef(env, seed).get())
                 : session::ed25519::ed25519_key_pair();
 
-        return jni_utils::new_key_pair(env, util::bytes_from_span(env, pk), util::bytes_from_span(env, sk));
+        return jni_utils::new_key_pair(env, util::bytes_from_span(env, pk).get(), util::bytes_from_span(env, sk).get());
     });
 }
 
@@ -56,8 +56,7 @@ Java_network_loki_messenger_libsession_1util_ED25519_generateProMasterKey(JNIEnv
                 session::ed25519::ed25519_pro_privkey_for_ed25519_seed(
                         jni_utils::JavaByteArrayRef(env, ed25519_seed).get()
                 )
-        );
-
+        ).leak();
     });
 }
 
@@ -70,6 +69,6 @@ Java_network_loki_messenger_libsession_1util_ED25519_positiveEd25519PubKeyFromCu
                 env,
                 session::xed25519::pubkey(
                         jni_utils::JavaByteArrayRef(env, curve25519_pub_key).get())
-        );
+        ).leak();
     });
 }

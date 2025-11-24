@@ -59,10 +59,10 @@ jobject cpp_to_java_proof(JNIEnv *env, const session::ProProof &proof) {
             pro_proof_clazz.get(),
             init,
             static_cast<jint>(proof.version),
-            util::bytes_from_span(env, proof.gen_index_hash),
-            util::bytes_from_span(env, proof.rotating_pubkey),
+            util::bytes_from_span(env, proof.gen_index_hash).get(),
+            util::bytes_from_span(env, proof.rotating_pubkey).get(),
             static_cast<jlong>(proof.expiry_unix_ts.time_since_epoch().count()),
-            util::bytes_from_span(env, proof.sig)
+            util::bytes_from_span(env, proof.sig).get()
     );
 }
 

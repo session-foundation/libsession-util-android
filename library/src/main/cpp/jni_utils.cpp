@@ -2,14 +2,26 @@
 
 namespace jni_utils {
     jobject new_kotlin_pair(JNIEnv *env, jobject first, jobject second) {
-        auto pair_class = JavaLocalRef(env, env->FindClass("kotlin/Pair"));
-        jmethodID constructor = env->GetMethodID(pair_class.get(), "<init>", "(Ljava/lang/Object;Ljava/lang/Object;)V");
-        return env->NewObject(pair_class.get(), constructor, first, second);
+        static BasicJavaClassInfo info(env, "kotlin/Pair", "(Ljava/lang/Object;Ljava/lang/Object;)V");
+        return env->NewObject(info.java_class, info.constructor, first, second);
     }
 
     jobject new_key_pair(JNIEnv *env, jbyteArray pubKey, jbyteArray secKey) {
-        auto kp_class = JavaLocalRef(env, env->FindClass("network/loki/messenger/libsession_util/util/KeyPair"));
-        jmethodID kp_constructor = env->GetMethodID(kp_class.get(), "<init>", "([B[B)V");
-        return env->NewObject(kp_class.get(), kp_constructor, pubKey, secKey);
+        static BasicJavaClassInfo class_info(
+                env,
+                "network/loki/messenger/libsession_util/util/KeyPair",
+                "([B[B)V"
+        );
+
+        return env->NewObject(class_info.java_class, class_info.constructor, pubKey, secKey);
     }
+
+    const ArrayListClassInfo & ArrayListClassInfo::get(JNIEnv *env) {
+        static ArrayListClassInfo instance(env);
+        return instance;
+    }
+
+    ArrayListClassInfo::ArrayListClassInfo(JNIEnv *env)
+            :BasicJavaClassInfo(env, "java/util/ArrayList", "()V"),
+             add_method(env->GetMethodID(java_class, "add", "(Ljava/lang/Object;)Z")) {}
 }

@@ -17,18 +17,14 @@ Java_network_loki_messenger_libsession_1util_UserProfile_getName(JNIEnv *env, jo
     auto profile = ptrToProfile(env, thiz);
     auto name = profile->get_name();
     if (name == std::nullopt) return nullptr;
-    jstring returnString = env->NewStringUTF(name->data());
-    return returnString;
+    return env->NewStringUTF(name->data());
 }
 
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_UserProfile_getPic(JNIEnv *env, jobject thiz) {
     auto profile = ptrToProfile(env, thiz);
     auto pic = profile->get_profile_pic();
-
-    jobject returnObject = util::serialize_user_pic(env, pic);
-
-    return returnObject;
+    return util::serialize_user_pic(env, pic).leak();
 }
 
 JNIEXPORT void JNICALL
@@ -69,11 +65,11 @@ Java_network_loki_messenger_libsession_1util_UserProfile_getNtsExpiry(JNIEnv *en
     if (nts_expiry == std::nullopt) {
         auto expiry = util::serialize_expiry(env, session::config::expiration_mode::none,
                                              std::chrono::seconds(0));
-        return expiry;
+        return expiry.leak();
     }
     auto expiry = util::serialize_expiry(env, session::config::expiration_mode::after_send,
                                          std::chrono::seconds(*nts_expiry));
-    return expiry;
+    return expiry.leak();
 }
 
 extern "C"
@@ -199,7 +195,7 @@ Java_network_loki_messenger_libsession_1util_UserProfile_getProConfig(JNIEnv *en
     return env->NewObject(clazz,
                           constructor,
                           cpp_to_java_proof(env, profile->proof),
-                          util::bytes_from_span(env, profile->rotating_privkey)
+                          util::bytes_from_span(env, profile->rotating_privkey).get()
     );
 }
 
