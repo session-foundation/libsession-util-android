@@ -29,4 +29,22 @@ object ED25519 : LibSessionUtilCApi() {
     ): Boolean
 
     external fun generate(seed: ByteArray?): KeyPair
+
+    /**
+     * Generate the deterministic Master Session Pro key for signing requests to interact with the
+     * Session Pro features of the protocol.
+     *
+     * @param ed25519Seed The seed the user uses to generate their session id
+     * @return The libsodium-style Master Session Pro Ed25519 secret key, 64 bytes.
+     */
+    external fun generateProMasterKey(ed25519Seed: ByteArray): ByteArray
+
+    private external fun positiveEd25519PubKeyFromCurve25519(curve25519PubKey: ByteArray): ByteArray
+
+    fun ed25519PubKeysFromCurve25519(curve25519PubKey: ByteArray): List<ByteArray> {
+        val positive = positiveEd25519PubKeyFromCurve25519(curve25519PubKey)
+        val negative = positive.clone()
+        negative[31] = (negative[31].toInt() xor 0x80).toByte()
+        return listOf(positive, negative)
+    }
 }

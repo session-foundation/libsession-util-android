@@ -1,8 +1,12 @@
-#include "group_keys.h"
-#include "group_info.h"
-#include "group_members.h"
+#include <session/config/groups/keys.hpp>
 
 #include "jni_utils.h"
+#include "util.h"
+#include "config_base.h"
+
+inline auto ptrToKeys(JNIEnv* env, jobject obj) {
+    return dynamic_cast<session::config::groups::Keys*>(ptrToConfigSig(env, obj));
+}
 
 extern "C"
 JNIEXPORT jint JNICALL
@@ -104,8 +108,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_pendingKey(JNIEnv *
     if (!pending) {
         return nullptr;
     }
-    auto pending_bytes = util::bytes_from_span(env, *pending);
-    return pending_bytes;
+    return util::bytes_from_span(env, *pending).release();
 }
 
 extern "C"
@@ -117,8 +120,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_pendingConfig(JNIEn
     if (!pending) {
         return nullptr;
     }
-    auto pending_bytes = util::bytes_from_span(env, *pending);
-    return pending_bytes;
+    return util::bytes_from_span(env, *pending).release();
 }
 
 extern "C"
@@ -129,8 +131,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_rekey(JNIEnv *env, 
     auto info = reinterpret_cast<session::config::groups::Info*>(info_ptr);
     auto members = reinterpret_cast<session::config::groups::Members*>(members_ptr);
     auto rekey = keys->rekey(*info, *members);
-    auto rekey_bytes = util::bytes_from_span(env, rekey);
-    return rekey_bytes;
+    return util::bytes_from_span(env, rekey).release();
 }
 
 extern "C"
@@ -138,8 +139,7 @@ JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_dump(JNIEnv *env, jobject thiz) {
     auto keys = ptrToKeys(env, thiz);
     auto dump = keys->dump();
-    auto byte_array = util::bytes_from_vector(env, dump);
-    return byte_array;
+    return util::bytes_from_vector(env, dump).release();
 }
 
 extern "C"
@@ -157,7 +157,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_encrypt(JNIEnv *env
         auto ptr = ptrToKeys(env, thiz);
         auto plaintext_vector = util::vector_from_bytes(env, plaintext);
         auto enc = ptr->encrypt_message(plaintext_vector);
-        return util::bytes_from_vector(env, enc);
+        return util::bytes_from_vector(env, enc).release();
     });
 }
 
@@ -172,11 +172,9 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_decrypt(JNIEnv *env
         auto sender = decrypted.first;
         auto plaintext = decrypted.second;
         auto plaintext_bytes = util::bytes_from_vector(env, plaintext);
-        auto sender_session_id = util::jstringFromOptional(env, sender.data());
-        auto pair_class = env->FindClass("kotlin/Pair");
-        auto pair_constructor = env->GetMethodID(pair_class, "<init>", "(Ljava/lang/Object;Ljava/lang/Object;)V");
-        auto pair_obj = env->NewObject(pair_class, pair_constructor, plaintext_bytes, sender_session_id);
-        return pair_obj;
+        auto sender_session_id = jni_utils::jstring_from_optional(env, sender.data());
+
+        return jni_utils::new_kotlin_pair(env, plaintext_bytes.get(), sender_session_id.get());
     });
 }
 
@@ -188,10 +186,10 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_keys(JNIEnv *env, j
 }
 
 extern "C"
-JNIEXPORT jobject JNICALL
+JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_groupEncKey(JNIEnv *env, jobject thiz) {
     auto ptr = ptrToKeys(env, thiz);
-    return util::bytes_from_span(env, ptr->group_enc_key());
+    return util::bytes_from_span(env, ptr->group_enc_key()).release();
 }
 
 extern "C"
@@ -210,8 +208,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_makeSubAccount(JNIE
                                                                             jboolean can_delete) {
     auto ptr = ptrToKeys(env, thiz);
     auto new_subaccount_key = ptr->swarm_make_subaccount(jni_utils::JavaStringRef(env, session_id).view(), can_write, can_delete);
-    auto jbytes = util::bytes_from_vector(env, new_subaccount_key);
-    return jbytes;
+    return util::bytes_from_vector(env, new_subaccount_key).release();
 }
 
 extern "C"
@@ -223,8 +220,18 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_getSubAccountToken(
                                                                                 jboolean can_delete) {
     auto ptr = ptrToKeys(env, thiz);
     auto token = ptr->swarm_subaccount_token(jni_utils::JavaStringRef(env, session_id).view(), can_write, can_delete);
-    auto jbytes = util::bytes_from_vector(env, token);
-    return jbytes;
+    return util::bytes_from_vector(env, token).release();
+}
+
+static jni_utils::JavaLocalRef<jobject> deserialize_swarm_auth(JNIEnv *env, session::config::groups::Keys::swarm_auth auth) {
+    static jni_utils::BasicJavaClassInfo class_info(
+            env, "network/loki/messenger/libsession_util/GroupKeysConfig$SwarmAuth", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+
+    auto sub_account = jni_utils::JavaLocalRef(env, env->NewStringUTF(auth.subaccount.data()));
+    auto sub_account_sig = jni_utils::JavaLocalRef(env, env->NewStringUTF(auth.subaccount_sig.data()));
+    auto signature = jni_utils::JavaLocalRef(env, env->NewStringUTF(auth.signature.data()));
+
+    return {env, env->NewObject(class_info.java_class, class_info.constructor, sub_account.get(), sub_account_sig.get(), signature.get())};
 }
 
 extern "C"
@@ -237,7 +244,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_subAccountSign(JNIE
     auto message_vector = util::vector_from_bytes(env, message);
     auto signing_value_vector = util::vector_from_bytes(env, signing_value);
     auto swarm_auth = ptr->swarm_subaccount_sign(message_vector, signing_value_vector, false);
-    return util::deserialize_swarm_auth(env, swarm_auth);
+    return deserialize_swarm_auth(env, swarm_auth).release();
 }
 
 extern "C"
@@ -251,7 +258,7 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_supplementFor(JNIEn
         user_session_ids.push_back(jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, (jstring)(env->GetObjectArrayElement(j_user_session_ids, i))).get()).copy());
     }
     auto supplement = ptr->key_supplement(user_session_ids);
-    return util::bytes_from_vector(env, supplement);
+    return util::bytes_from_vector(env, supplement).release();
 }
 extern "C"
 JNIEXPORT jint JNICALL

@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <session/attachments.hpp>
 #include "jni_utils.h"
+#include "util.h"
 
 using namespace session::attachment;
 using namespace jni_utils;
@@ -49,7 +50,7 @@ Java_network_loki_messenger_libsession_1util_encrypt_Attachments_encryptBytes(JN
         );
 
 
-        return util::bytes_from_span(env, std::span(reinterpret_cast<unsigned char *>(key.data()), key.size()));
+        return util::bytes_from_span(env, std::span(reinterpret_cast<unsigned char *>(key.data()), key.size())).release();
     });
 }
 

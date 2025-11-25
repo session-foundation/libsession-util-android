@@ -3,6 +3,7 @@
 #include <session/session_encrypt.hpp>
 
 #include "jni_utils.h"
+#include "util.h"
 
 #include <sodium.h>
 
@@ -29,8 +30,8 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_decryptForBlindedRec
 
         return jni_utils::new_kotlin_pair(
                 env,
-                util::jstringFromOptional(env, session_id),
-                jni_utils::session_bytes_from_range(env, plain_text)
+                jni_utils::jstring_from_optional(env, session_id).get(),
+                jni_utils::session_bytes_from_range(env, plain_text).get()
         );
     });
 }
@@ -49,7 +50,7 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_encryptForRecipient(
                 JavaByteArrayRef(env, message).get()
         );
 
-        return jni_utils::session_bytes_from_range(env, data);
+        return jni_utils::session_bytes_from_range(env, data).release();
     });
 }
 
@@ -69,8 +70,8 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_decryptIncoming(JNIE
 
         return jni_utils::new_kotlin_pair(
                 env,
-                util::jstringFromOptional(env, session_id),
-                jni_utils::session_bytes_from_range(env, plain_text)
+                jni_utils::jstring_from_optional(env, session_id).get(),
+                jni_utils::session_bytes_from_range(env, plain_text).get()
         );
     });
 }
@@ -91,7 +92,7 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_encryptForBlindedRec
                 JavaByteArrayRef(env, message).get()
         );
 
-        return jni_utils::session_bytes_from_range(env, data);
+        return jni_utils::session_bytes_from_range(env, data).release();
     });
 }
 
@@ -107,7 +108,7 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_decryptPushNotificat
                 jni_utils::JavaByteArrayRef(env, secret_key).get()
         );
 
-        return jni_utils::session_bytes_from_range(env, data);
+        return jni_utils::session_bytes_from_range(env, data).release();
     });
 }
 
@@ -125,7 +126,7 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_decryptOnsResponse(J
                 nonce ? std::make_optional(jni_utils::JavaByteArrayRef(env, nonce).get()) : std::nullopt
         );
 
-        return util::jstringFromOptional(env, data);
+        return jni_utils::jstring_from_optional(env, data).release();
     });
 }
 
@@ -153,7 +154,7 @@ Java_network_loki_messenger_libsession_1util_SessionEncrypt_calculateECHDAgreeme
                                       "secret; is the key valid?"};
         }
 
-        return util::bytes_from_span(env, shared_secret);
+        return util::bytes_from_span(env, shared_secret).release();
     });
 
 }
