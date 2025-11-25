@@ -1,6 +1,7 @@
 package network.loki.messenger.libsession_util.protocol
 
 import network.loki.messenger.libsession_util.LibSessionUtilCApi
+import network.loki.messenger.libsession_util.pro.PaymentProvider
 
 object SessionProtocol : LibSessionUtilCApi() {
     external fun encodeFor1o1(
@@ -55,4 +56,17 @@ object SessionProtocol : LibSessionUtilCApi() {
         groupEd25519PrivateKeys: Array<ByteArray>, // all available group private keys
         proBackendPubKey: ByteArray, // 32 bytes backend key
     ): DecodedEnvelope
+
+    private external fun proFeaturesForMessage(
+        messageBody: String,
+        proposedFeatures: Long
+    ): ProFeaturesForMsg
+
+    /**
+     * Determines which Pro features shall be applied to a message based on its content and the proposed features.
+     */
+    fun proFeaturesForMessage(
+        messageBody: String,
+        proposedFeatures: ProFeatures
+    ): ProFeaturesForMsg = proFeaturesForMessage(messageBody, proposedFeatures.rawValue)
 }

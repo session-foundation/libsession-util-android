@@ -95,6 +95,8 @@ set(SOURCES
         attachments.cpp
         webp_utils.cpp
         gif_utils.cpp
+        pro_backend.cpp
+        pro_proof_util.cpp
 
         ${cgif_SOURCE_DIR}/src/cgif.c
         ${cgif_SOURCE_DIR}/src/cgif_rgb.c
@@ -158,4 +160,6 @@ target_link_libraries( # Specifies the target library.
         webpdemux
         webpdecoder
         yuv
+        nlohmann_json
+        oxenc
 )

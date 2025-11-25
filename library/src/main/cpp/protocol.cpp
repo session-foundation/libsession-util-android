@@ -3,74 +3,52 @@
 #include <session/sodium_array.hpp>
 
 #include "jni_utils.h"
+#include "pro_proof_util.h"
+#include "util.h"
 
 using namespace jni_utils;
 
 
 
-static JavaLocalRef<jobject> serializeProStatus(JNIEnv *env, const std::optional<session::DecodedPro> & pro) {
-    if (!pro.has_value()) {
-        JavaLocalRef noneClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/ProStatus$None"));
-        auto fieldId = env->GetStaticFieldID(
-                noneClass.get(),
-                "INSTANCE", "Lnetwork/loki/messenger/libsession_util/protocol/ProStatus$None;");
-        return {env, env->GetStaticObjectField(noneClass.get(), fieldId)};
-    }
-
-    if (pro->status == session::ProStatus::Valid) {
-        JavaLocalRef validClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/ProStatus$Valid"));
-        auto init = env->GetMethodID(validClass.get(), "<init>", "(JJ)V");
-        return {env, env->NewObject(validClass.get(), init,
-                       static_cast<jlong>(pro->proof.expiry_unix_ts.time_since_epoch().count()),
-                       static_cast<jlong>(pro->features))};
-    }
-
-    JavaLocalRef invalidClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/ProStatus$Invalid"));
-    auto fieldId = env->GetStaticFieldID(
-            invalidClass.get(),
-            "INSTANCE", "Lnetwork/loki/messenger/libsession_util/protocol/ProStatus$Invalid;");
-    return {env, env->GetStaticObjectField(invalidClass.get(), fieldId)};
-}
-
 static JavaLocalRef<jobject> serializeEnvelop(JNIEnv *env, const session::Envelope &envelope) {
-    JavaLocalRef envelopClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/Envelope"));
-    jmethodID init = env->GetMethodID(
-            envelopClass.get(),
-            "<init>",
-            "(J[BJ[B)V"
-    );
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/protocol/Envelope",
+            "(J[BJ[B)V");
 
-    return {env, env->NewObject(envelopClass.get(),
-                                init,
+    return {env, env->NewObject(class_info.java_class,
+                                class_info.constructor,
                                 static_cast<jlong>(envelope.timestamp.count()),
                                 (envelope.flags & SESSION_PROTOCOL_ENVELOPE_FLAGS_SOURCE)
-                                    ? util::bytes_from_span(env, envelope.source)
-                                    : nullptr,
+                                ? util::bytes_from_span(env, envelope.source).get()
+                                : nullptr,
                                 (envelope.flags & SESSION_PROTOCOL_ENVELOPE_FLAGS_SERVER_TIMESTAMP)
-                                    ? static_cast<jlong>(envelope.server_timestamp)
-                                    : 0,
-                                util::bytes_from_span(env, envelope.pro_sig))};
+                                ? static_cast<jlong>(envelope.server_timestamp)
+                                : 0,
+                                util::bytes_from_span(env, envelope.pro_sig).get())};
 }
 
-static jobject serializeDecodedEnvelope(JNIEnv *env, const session::DecodedEnvelope &envelop) {
-    JavaLocalRef sender_ed25519(env, util::bytes_from_span(env, envelop.sender_ed25519_pubkey));
-    JavaLocalRef sender_x25519(env, util::bytes_from_span(env, envelop.sender_x25519_pubkey));
-    JavaLocalRef content(env, util::bytes_from_vector(env, envelop.content_plaintext));
-
-    JavaLocalRef envelopClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/DecodedEnvelope"));
-    jmethodID init = env->GetMethodID(
-            envelopClass.get(),
-            "<init>",
-            "(Lnetwork/loki/messenger/libsession_util/protocol/Envelope;Lnetwork/loki/messenger/libsession_util/protocol/ProStatus;[B[B[BJ)V"
+static JavaLocalRef<jobject> serializeDecodedEnvelope(JNIEnv *env, const session::DecodedEnvelope &envelop) {
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/protocol/DecodedEnvelope",
+            "(Lnetwork/loki/messenger/libsession_util/protocol/Envelope;ILnetwork/loki/messenger/libsession_util/pro/ProProof;J[B[B[BJ)V"
     );
 
-    return env->NewObject(envelopClass.get(), init,
+    JavaLocalRef sender_ed25519 = util::bytes_from_span(env, envelop.sender_ed25519_pubkey);
+    JavaLocalRef sender_x25519 = util::bytes_from_span(env, envelop.sender_x25519_pubkey);
+    JavaLocalRef content = util::bytes_from_vector(env, envelop.content_plaintext);
+
+    return {env, env->NewObject(class_info.java_class, class_info.constructor,
                           serializeEnvelop(env, envelop.envelope).get(),
-                          serializeProStatus(env, envelop.pro).get(),
+                          envelop.pro ? static_cast<jint>(envelop.pro->status)
+                                       : static_cast<jint>(-1),
+                          envelop.pro ? cpp_to_java_proof(env, envelop.pro->proof).get() : nullptr,
+                          static_cast<jlong>(envelop.pro ? envelop.pro->features : 0),
                           content.get(),
                           sender_ed25519.get(),
                           sender_x25519.get(),
-                          static_cast<jlong>(envelop.envelope.timestamp.count()));
+                          static_cast<jlong>(envelop.envelope.timestamp.count()))};
 
 }
 
@@ -89,11 +67,12 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeFor1
                 session::encode_for_1o1(
                         JavaByteArrayRef(env, plaintext).get(),
                         JavaByteArrayRef(env, my_ed25519_priv_key).get(),
-                        std::chrono::milliseconds { timestamp_ms },
+                        std::chrono::milliseconds{timestamp_ms},
                         *java_to_cpp_array<33>(env, recipient_pub_key),
-                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get()) : std::nullopt
+                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get())
+                                     : std::nullopt
                 )
-        );
+        ).release();
     });
 }
 
@@ -109,12 +88,13 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForC
                 session::encode_for_community_inbox(
                         JavaByteArrayRef(env, plaintext).get(),
                         JavaByteArrayRef(env, my_ed25519_priv_key).get(),
-                        std::chrono::milliseconds { timestamp_ms },
+                        std::chrono::milliseconds{timestamp_ms},
                         *java_to_cpp_array<33>(env, recipient_pub_key),
                         *java_to_cpp_array<32>(env, community_server_pub_key),
-                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get()) : std::nullopt
+                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get())
+                                     : std::nullopt
                 )
-        );
+        ).release();
     });
 }
 
@@ -139,12 +119,13 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForG
                 session::encode_for_group(
                         JavaByteArrayRef(env, plaintext).get(),
                         JavaByteArrayRef(env, my_ed25519_priv_key).get(),
-                        std::chrono::milliseconds { timestamp_ms },
+                        std::chrono::milliseconds{timestamp_ms},
                         *java_to_cpp_array<33>(env, group_ed25519_public_key),
                         group_private_key,
-                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get()) : std::nullopt
+                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get())
+                                     : std::nullopt
                 )
-        );
+        ).release();
     });
 }
 
@@ -158,22 +139,27 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForC
 
         auto decoded = session::decode_for_community(
                 payload_ref.get(),
-                std::chrono::sys_time<std::chrono::milliseconds> { std::chrono::milliseconds { now_epoch_ms } },
+                std::chrono::sys_time<std::chrono::milliseconds>{
+                        std::chrono::milliseconds{now_epoch_ms}},
                 *java_to_cpp_array<32>(env, pro_backend_pub_key)
         );
 
-        JavaLocalRef envelopClass(env, env->FindClass("network/loki/messenger/libsession_util/protocol/DecodedCommunityMessage"));
+        JavaLocalRef envelopClass(env, env->FindClass(
+                "network/loki/messenger/libsession_util/protocol/DecodedCommunityMessage"));
         jmethodID init = env->GetMethodID(
                 envelopClass.get(),
                 "<init>",
-                "(Lnetwork/loki/messenger/libsession_util/protocol/ProStatus;[B)V"
+                "(ILnetwork/loki/messenger/libsession_util/pro/ProProof;J[B)V"
         );
 
         return env->NewObject(
                 envelopClass.get(),
                 init,
-                serializeProStatus(env, decoded.pro).get(),
-                util::bytes_from_vector(env, decoded.content_plaintext)
+                decoded.pro ? static_cast<jint>(decoded.pro->status)
+                             : static_cast<jint>(-1),
+                decoded.pro ? cpp_to_java_proof(env, decoded.pro->proof).get() : nullptr,
+                static_cast<jlong>(decoded.pro ? decoded.pro->features : 0),
+                util::bytes_from_vector(env, decoded.content_plaintext).get()
         );
     });
 }
@@ -190,9 +176,10 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForC
                 env,
                 session::encode_for_community(
                         JavaByteArrayRef(env, plaintext).get(),
-                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get()) : std::nullopt
+                        rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get())
+                                     : std::nullopt
                 )
-        );
+        ).release();
     });
 }
 
@@ -207,18 +194,19 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeFor1
     return run_catching_cxx_exception_or_throws<jobject>(env, [=] {
         JavaByteArrayRef key_ref(env, key);
 
-        std::array<std::span<const uint8_t>, 1> keys = { key_ref.get() };
+        std::array<std::span<const uint8_t>, 1> keys = {key_ref.get()};
 
-        session::DecodeEnvelopeKey decode_key {
-            .decrypt_keys = std::span(keys.data(), keys.size()),
+        session::DecodeEnvelopeKey decode_key{
+                .decrypt_keys = std::span(keys.data(), keys.size()),
         };
 
         return serializeDecodedEnvelope(env, session::decode_envelope(
                 decode_key,
                 JavaByteArrayRef(env, payload).get(),
-                std::chrono::sys_time<std::chrono::milliseconds> { std::chrono::milliseconds { now_epoch_ms } },
+                std::chrono::sys_time<std::chrono::milliseconds>{
+                        std::chrono::milliseconds{now_epoch_ms}},
                 *java_to_cpp_array<32>(env, pro_backend_pub_key)
-        ));
+        )).release();
     });
 }
 
@@ -237,13 +225,14 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForG
         std::vector<JavaByteArrayRef> private_keys_refs;
         std::vector<std::span<const uint8_t>> private_keys_spans;
         for (int i = 0, size = env->GetArrayLength(group_ed25519_private_keys); i < size; i++) {
-            auto bytes = reinterpret_cast<jbyteArray>(env->GetObjectArrayElement(group_ed25519_private_keys, i));
+            auto bytes = reinterpret_cast<jbyteArray>(env->GetObjectArrayElement(
+                    group_ed25519_private_keys, i));
             private_keys_spans.emplace_back(private_keys_refs.emplace_back(env, bytes).get());
         }
 
         JavaByteArrayRef group_pub_key_ref(env, group_ed25519_public_key);
 
-        session::DecodeEnvelopeKey decode_key {
+        session::DecodeEnvelopeKey decode_key{
                 .group_ed25519_pubkey = std::make_optional(group_pub_key_ref.get()),
                 .decrypt_keys = std::span(private_keys_spans.data(), private_keys_spans.size()),
         };
@@ -251,8 +240,39 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForG
         return serializeDecodedEnvelope(env, session::decode_envelope(
                 decode_key,
                 JavaByteArrayRef(env, payload).get(),
-                std::chrono::sys_time<std::chrono::milliseconds> { std::chrono::milliseconds { now_epoch_ms } },
+                std::chrono::sys_time<std::chrono::milliseconds>{
+                        std::chrono::milliseconds{now_epoch_ms}},
                 *java_to_cpp_array<32>(env, pro_backend_pub_key)
-        ));
+        )).release();
+    });
+}
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_proFeaturesForMessage(
+        JNIEnv *env, jobject thiz, jstring message_body, jlong proposed_features) {
+    return run_catching_cxx_exception_or_throws<jobject>(env, [=] {
+        JavaCharsRef message_ref(env, message_body);
+
+        auto features = session::pro_features_for_utf16(
+                reinterpret_cast<const char16_t *>(message_ref.chars()),
+                message_ref.size(),
+                static_cast<SESSION_PROTOCOL_PRO_FEATURES>(proposed_features)
+        );
+
+        static BasicJavaClassInfo class_info(
+                env,
+                "network/loki/messenger/libsession_util/protocol/ProFeaturesForMsg",
+                "(ILjava/lang/String;JI)V"
+        );
+
+        return env->NewObject(
+                class_info.java_class,
+                class_info.constructor,
+                static_cast<jint>(features.status),
+                features.error.empty() ? nullptr : env->NewStringUTF(std::string(features.error).c_str()),
+                static_cast<jlong>(features.features),
+                static_cast<jint>(features.codepoint_count)
+        );
     });
 }

@@ -1,6 +1,30 @@
-#include "group_members.h"
-
 #include "jni_utils.h"
+#include "util.h"
+#include "config_base.h"
+
+using namespace jni_utils;
+
+inline session::config::groups::Members* ptrToMembers(JNIEnv* env, jobject obj) {
+    return dynamic_cast<session::config::groups::Members *>(ptrToConfigBase(env, obj));
+}
+
+inline session::config::groups::member *ptrToMember(JNIEnv *env, jobject thiz) {
+    auto ptrField = env->GetFieldID(jni_utils::JavaLocalRef(env, env->GetObjectClass(thiz)).get(), "nativePtr", "J");
+    return reinterpret_cast<session::config::groups::member*>(env->GetLongField(thiz, ptrField));
+}
+
+static JavaLocalRef<jobject> serialize_group_member(JNIEnv* env, const session::config::groups::member& member) {
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/util/GroupMember",
+            "(J)V");
+
+    return {env, env->NewObject(
+            class_info.java_class,
+            class_info.constructor,
+            reinterpret_cast<jlong>(new session::config::groups::member(member))
+    )};
+}
 
 extern "C"
 JNIEXPORT jlong JNICALL
@@ -27,14 +51,14 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_GroupMembersConfig_all(JNIEnv *env, jobject thiz) {
     auto config = ptrToMembers(env, thiz);
-    return jni_utils::jlist_from_collection(env, *config, util::serialize_group_member);
+    return jlist_from_collection(env, *config, serialize_group_member);
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_network_loki_messenger_libsession_1util_GroupMembersConfig_erase(JNIEnv *env, jobject thiz, jstring pub_key_hex) {
     auto config = ptrToMembers(env, thiz);
-    auto erased = config->erase(jni_utils::JavaStringRef(env, pub_key_hex).view());
+    auto erased = config->erase(JavaStringRef(env, pub_key_hex).view());
     return erased;
 }
 
@@ -42,14 +66,13 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_GroupMembersConfig_get(JNIEnv *env, jobject thiz,
                                                                     jstring pub_key_hex) {
-    return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=]() -> jobject {
+    return run_catching_cxx_exception_or_throws<jobject>(env, [=]() -> jobject {
         auto config = ptrToMembers(env, thiz);
-        auto member = config->get(jni_utils::JavaStringRef(env, pub_key_hex).view());
+        auto member = config->get(JavaStringRef(env, pub_key_hex).view());
         if (!member) {
             return nullptr;
         }
-        auto serialized = util::serialize_group_member(env, *member);
-        return serialized;
+        return serialize_group_member(env, *member).release();
     });
 }
 
@@ -59,9 +82,8 @@ Java_network_loki_messenger_libsession_1util_GroupMembersConfig_getOrConstruct(J
                                                                                jobject thiz,
                                                                                jstring pub_key_hex) {
     auto config = ptrToMembers(env, thiz);
-    auto member = config->get_or_construct(jni_utils::JavaStringRef(env, pub_key_hex).view());
-    auto serialized = util::serialize_group_member(env, member);
-    return serialized;
+    auto member = config->get_or_construct(JavaStringRef(env, pub_key_hex).view());
+    return serialize_group_member(env, member).release();
 }
 
 extern "C"
@@ -138,14 +160,14 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_util_GroupMember_setName(JNIEnv *env, jobject thiz,
                                                                       jstring name) {
-    ptrToMember(env, thiz)->set_name(std::string(jni_utils::JavaStringRef(env, name).view()));
+    ptrToMember(env, thiz)->set_name(std::string(JavaStringRef(env, name).view()));
 }
 
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_network_loki_messenger_libsession_1util_util_GroupMember_nameString(JNIEnv *env,
                                                                          jobject thiz) {
-    return util::jstringFromOptional(env, ptrToMember(env, thiz)->name);
+    return jni_utils::jstring_from_optional(env, ptrToMember(env, thiz)->name).release();
 }
 
 extern "C"
@@ -165,7 +187,7 @@ extern "C"
 JNIEXPORT jstring JNICALL
 Java_network_loki_messenger_libsession_1util_util_GroupMember_accountId(JNIEnv *env,
                                                                               jobject thiz) {
-    return util::jstringFromOptional(env, ptrToMember(env, thiz)->session_id);
+    return jni_utils::jstring_from_optional(env, ptrToMember(env, thiz)->session_id).release();
 }
 
 extern "C"
@@ -178,7 +200,7 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_util_GroupMember_profilePic(JNIEnv *env,
                                                                          jobject thiz) {
-    return util::serialize_user_pic(env, ptrToMember(env, thiz)->profile_picture);
+    return util::serialize_user_pic(env, ptrToMember(env, thiz)->profile_picture).release();
 }
 
 extern "C"
@@ -210,5 +232,5 @@ Java_network_loki_messenger_libsession_1util_GroupMembersConfig_setPendingSend(J
                                                                                jobject thiz,
                                                                                jstring pub_key_hex,
                                                                                jboolean pending) {
-    ptrToMembers(env, thiz)->set_pending_send(jni_utils::JavaStringRef(env, pub_key_hex).copy(), pending);
+    ptrToMembers(env, thiz)->set_pending_send(JavaStringRef(env, pub_key_hex).copy(), pending);
 }

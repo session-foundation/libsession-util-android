@@ -1,50 +1,113 @@
 #include <jni.h>
-#include "conversation.h"
+#include <session/config/convo_info_volatile.hpp>
+
 #include "jni_utils.h"
+#include "util.h"
+#include "user_groups.h"
+#include "config_base.h"
 
+using namespace jni_utils;
 
- jobject serialize_one_to_one(JNIEnv *env, const session::config::convo::one_to_one &one_to_one) {
-    jni_utils::JavaLocalRef clazz(env, env->FindClass("network/loki/messenger/libsession_util/util/Conversation$OneToOne"));
-    return env->NewObject(clazz.get(),
-                          env->GetMethodID(clazz.get(), "<init>", "(Ljava/lang/String;JZ)V"),
-                          jni_utils::JavaLocalRef(env, env->NewStringUTF(one_to_one.session_id.data())).get(),
+static auto ptrToConvoInfo(JNIEnv *env, jobject obj) {
+    return dynamic_cast<session::config::ConvoInfoVolatile *>(ptrToConfigBase(env, obj));
+}
+
+JavaLocalRef<jobject> serialize_pro_proof_info(JNIEnv *env,
+                                 std::optional<std::span<const unsigned char>> gen_index_hash,
+                                 const std::chrono::sys_time<std::chrono::milliseconds> & expiry) {
+    if (!gen_index_hash) {
+        return {env, nullptr};
+    }
+
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/util/Conversation$ProProofInfo",
+            "([BJ)V"
+    );
+
+    return {env, env->NewObject(
+            class_info.java_class,
+            class_info.constructor,
+            util::bytes_from_span(env, *gen_index_hash).get(),
+            static_cast<jlong>(expiry.time_since_epoch().count())
+    )};
+}
+
+JavaLocalRef<jobject> serialize_one_to_one(JNIEnv *env, const session::config::convo::one_to_one &one_to_one) {
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/util/Conversation$OneToOne",
+            "(Ljava/lang/String;JZLnetwork/loki/messenger/libsession_util/util/Conversation$ProProofInfo;)V"
+    );
+
+    return {env, env->NewObject(class_info.java_class,
+                          class_info.constructor,
+                          JavaLocalRef(env, env->NewStringUTF(one_to_one.session_id.data())).get(),
                           (jlong) one_to_one.last_read,
-                          (jboolean) one_to_one.unread);
+                          (jboolean) one_to_one.unread,
+                          serialize_pro_proof_info(env, one_to_one.pro_gen_index_hash,
+                                                   one_to_one.pro_expiry_unix_ts).get())};
 }
 
 session::config::convo::one_to_one deserialize_one_to_one(JNIEnv *env, jobject info) {
-    jni_utils::JavaLocalRef clazz(env, env->GetObjectClass(info));
+    struct ClassInfo : public JavaClassInfo {
+        jmethodID id_getter;
+        jmethodID lastRead_getter;
+        jmethodID unread_getter;
 
-    auto id_getter = env->GetFieldID(clazz.get(), "accountId", "Ljava/lang/String;");
-    auto last_read_getter = env->GetFieldID(clazz.get(), "lastRead", "J");
-    auto unread_getter = env->GetFieldID(clazz.get(), "unread", "Z");
+        ClassInfo(JNIEnv *env, jobject obj)
+            : JavaClassInfo(env, obj),
+             id_getter(env->GetMethodID(java_class, "getAccountId", "()Ljava/lang/String;")),
+             lastRead_getter(env->GetMethodID(java_class, "getLastRead", "()J")),
+             unread_getter(env->GetMethodID(java_class, "getUnread", "()Z")) {}
+    };
+
+    static ClassInfo class_info(env, info);
 
     session::config::convo::one_to_one r(
-            jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, static_cast<jstring>(env->GetObjectField(info, id_getter))).get()).view()
+            JavaStringRef(
+                    env,
+                    JavaLocalRef(env, (jstring)(env->CallObjectMethod(info, class_info.id_getter))).get()
+            ).view()
         );
 
-    r.last_read = env->GetLongField(info, last_read_getter);
-    r.unread = env->GetBooleanField(info, unread_getter);
+    r.last_read = env->CallLongMethod(info, class_info.lastRead_getter);
+    r.unread = env->CallBooleanMethod(info, class_info.unread_getter);
     return r;
 }
 
-jobject serialize_community(JNIEnv *env, const session::config::convo::community& community) {
-    jni_utils::JavaLocalRef clazz(env, env->FindClass("network/loki/messenger/libsession_util/util/Conversation$Community"));
-    return env->NewObject(clazz.get(),
-                          env->GetMethodID(clazz.get(), "<init>",
-                                           "(Lnetwork/loki/messenger/libsession_util/util/BaseCommunityInfo;JZ)V"),
-                          jni_utils::JavaLocalRef(env, util::serialize_base_community(env, community)).get(),
+JavaLocalRef<jobject> serialize_community(JNIEnv *env, const session::config::convo::community& community) {
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/util/Conversation$Community",
+            "(Lnetwork/loki/messenger/libsession_util/util/BaseCommunityInfo;JZ)V"
+    );
+
+    return {env, env->NewObject(class_info.java_class,
+                          class_info.constructor,
+                          serialize_base_community(env, community).get(),
                           (jlong) community.last_read,
-                          (jboolean) community.unread);
+                          (jboolean) community.unread)};
 }
 
 session::config::convo::community deserialize_community(JNIEnv *env, jobject info) {
-    jni_utils::JavaLocalRef clazz(env, env->GetObjectClass(info));
-    auto base_community_getter = env->GetFieldID(clazz.get(), "baseCommunityInfo", "Lnetwork/loki/messenger/libsession_util/util/BaseCommunityInfo;");
-    auto last_read_getter = env->GetFieldID(clazz.get(), "lastRead", "J");
-    auto unread_getter = env->GetFieldID(clazz.get(), "unread", "Z");
+    struct ClassInfo : public JavaClassInfo {
+        jmethodID base_community_getter;
+        jmethodID last_read_getter;
+        jmethodID unread_getter;
 
-    auto base_community = util::deserialize_base_community(env, jni_utils::JavaLocalRef(env, env->GetObjectField(info, base_community_getter)).get());
+        ClassInfo(JNIEnv *env, jobject obj)
+            : JavaClassInfo(env, obj),
+             base_community_getter(env->GetMethodID(java_class, "getBaseCommunityInfo", "()Lnetwork/loki/messenger/libsession_util/util/BaseCommunityInfo;")),
+             last_read_getter(env->GetMethodID(java_class, "getLastRead", "()J")),
+             unread_getter(env->GetMethodID(java_class, "getUnread", "()Z")) {}
+    };
+
+    static ClassInfo class_info(env, info);
+
+    auto base_community = deserialize_base_community(
+            env,
+            JavaLocalRef(env, env->CallObjectMethod(info, class_info.base_community_getter)).get());
 
     session::config::convo::community community(
             base_community.base_url(),
@@ -52,88 +115,129 @@ session::config::convo::community deserialize_community(JNIEnv *env, jobject inf
             base_community.pubkey()
             );
 
-    community.last_read = env->GetLongField(info, last_read_getter);
-    community.unread = env->GetBooleanField(info, unread_getter);
+    community.last_read = env->CallLongMethod(info, class_info.last_read_getter);
+    community.unread = env->CallBooleanMethod(info, class_info.unread_getter);
 
     return community;
 }
 
 
-jobject serialize_legacy_group(JNIEnv *env, const session::config::convo::legacy_group& group) {
-    jni_utils::JavaLocalRef clazz(env, env->FindClass("network/loki/messenger/libsession_util/util/Conversation$LegacyGroup"));
-    return env->NewObject(clazz.get(),
-                          env->GetMethodID(clazz.get(), "<init>","(Ljava/lang/String;JZ)V"),
-                          jni_utils::JavaLocalRef(env, env->NewStringUTF(group.id.data())).get(),
+JavaLocalRef<jobject> serialize_legacy_group(JNIEnv *env, const session::config::convo::legacy_group& group) {
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/util/Conversation$LegacyGroup",
+            "(Ljava/lang/String;JZ)V"
+    );
+
+    return {env, env->NewObject(class_info.java_class,
+                          class_info.constructor,
+                          JavaLocalRef(env, env->NewStringUTF(group.id.data())).get(),
                           (jlong) group.last_read,
-                          (jboolean) group.unread);
+                          (jboolean) group.unread)};
 }
 
 session::config::convo::legacy_group deserialize_legacy_closed_group(JNIEnv *env, jobject info) {
-    jni_utils::JavaLocalRef clazz(env, env->GetObjectClass(info));
-    auto group_id_getter = env->GetFieldID(clazz.get(), "groupId", "Ljava/lang/String;");
-    auto last_read_getter = env->GetFieldID(clazz.get(), "lastRead", "J");
-    auto unread_getter = env->GetFieldID(clazz.get(), "unread", "Z");
+    struct ClassInfo : public JavaClassInfo{
+        jmethodID groupId_getter;
+        jmethodID lastRead_getter;
+        jmethodID unread_getter;
+
+        ClassInfo(JNIEnv *env, jobject obj)
+            : JavaClassInfo(env, obj),
+             groupId_getter(env->GetMethodID(java_class, "getGroupId", "()Ljava/lang/String;")),
+             lastRead_getter(env->GetMethodID(java_class, "getLastRead", "()J")),
+             unread_getter(env->GetMethodID(java_class, "getUnread", "()Z")) {}
+    };
+
+    static ClassInfo class_info(env, info);
 
     session::config::convo::legacy_group lg(
-            jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, static_cast<jstring>(env->GetObjectField(info, group_id_getter))).get()).view()
+            JavaStringRef(env, JavaLocalRef(env, static_cast<jstring>(env->CallObjectMethod(info, class_info.groupId_getter))).get()).view()
     );
 
-    lg.last_read = env->GetLongField(info, last_read_getter);
-    lg.unread = env->GetBooleanField(info, unread_getter);
+    lg.last_read = env->CallLongMethod(info, class_info.lastRead_getter);
+    lg.unread = env->CallBooleanMethod(info, class_info.unread_getter);
     return lg;
 }
 
-jobject serialize_closed_group(JNIEnv* env, const session::config::convo::group &group) {
-    jni_utils::JavaLocalRef clazz(env, env->FindClass("network/loki/messenger/libsession_util/util/Conversation$ClosedGroup"));
-    return env->NewObject(clazz.get(),
-                          env->GetMethodID(clazz.get(), "<init>", "(Ljava/lang/String;JZ)V"),
-                          jni_utils::JavaLocalRef(env, env->NewStringUTF(group.id.data())).get(),
+JavaLocalRef<jobject> serialize_closed_group(JNIEnv* env, const session::config::convo::group &group) {
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/util/Conversation$ClosedGroup",
+            "(Ljava/lang/String;JZ)V");
+
+    return {env, env->NewObject(class_info.java_class,
+                          class_info.constructor,
+                          JavaLocalRef(env, env->NewStringUTF(group.id.data())).get(),
                           (jlong) group.last_read,
-                          (jboolean) group.unread);
+                          (jboolean) group.unread)};
 }
 
 session::config::convo::group deserialize_closed_group(JNIEnv* env, jobject info) {
-    jni_utils::JavaLocalRef clazz(env, env->GetObjectClass(info));
-    auto id_getter = env->GetFieldID(clazz.get(), "accountId", "Ljava/lang/String;");
-    auto last_read_getter = env->GetFieldID(clazz.get(), "lastRead", "J");
-    auto unread_getter = env->GetFieldID(clazz.get(), "unread", "Z");
+    struct ClassInfo : public JavaClassInfo {
+        jmethodID id_getter;
+        jmethodID last_read_getter;
+        jmethodID unread_getter;
+
+        ClassInfo(JNIEnv *env, jobject obj)
+        :JavaClassInfo(env, obj),
+         id_getter(env->GetMethodID(java_class, "getAccountId", "()Ljava/lang/String;")),
+         last_read_getter(env->GetMethodID(java_class, "getLastRead", "()J")),
+         unread_getter(env->GetMethodID(java_class, "getUnread", "()Z")) {}
+    };
+
+    static ClassInfo class_info(env, info);
 
     session::config::convo::group g(
-            jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, (jstring) env->GetObjectField(info, id_getter)).get()).view());
+            JavaStringRef(env, JavaLocalRef(env, (jstring) env->CallObjectMethod(info, class_info.id_getter)).get()).view());
 
-    g.last_read = env->GetLongField(info, last_read_getter);
-    g.unread = env->GetBooleanField(info, unread_getter);
+    g.last_read = env->CallLongMethod(info, class_info.last_read_getter);
+    g.unread = env->CallBooleanMethod(info, class_info.unread_getter);
 
     return g;
 }
 
-jobject serialize_blinded_one_to_one(JNIEnv *env, const session::config::convo::blinded_one_to_one &blinded_one_to_one) {
-    jni_utils::JavaLocalRef clazz(env, env->FindClass("network/loki/messenger/libsession_util/util/Conversation$BlindedOneToOne"));
-    return env->NewObject(
-            clazz.get(),
-            env->GetMethodID(clazz.get(), "<init>", "(Ljava/lang/String;JZ)V"),
-            jni_utils::JavaLocalRef(env, env->NewStringUTF(blinded_one_to_one.blinded_session_id.data())).get(),
+JavaLocalRef<jobject> serialize_blinded_one_to_one(JNIEnv *env, const session::config::convo::blinded_one_to_one &blinded_one_to_one) {
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/util/Conversation$BlindedOneToOne",
+            "(Ljava/lang/String;JZLnetwork/loki/messenger/libsession_util/util/Conversation$ProProofInfo;)V");
+
+    return {env, env->NewObject(
+            class_info.java_class,
+            class_info.constructor,
+            JavaLocalRef(env, env->NewStringUTF(blinded_one_to_one.blinded_session_id.data())).get(),
             (jlong) blinded_one_to_one.last_read,
-            (jboolean) blinded_one_to_one.unread
-    );
+            (jboolean) blinded_one_to_one.unread,
+            serialize_pro_proof_info(env, blinded_one_to_one.pro_gen_index_hash, blinded_one_to_one.pro_expiry_unix_ts).get()
+    )};
 }
 
 session::config::convo::blinded_one_to_one deserialize_blinded_one_to_one(JNIEnv *env, jobject info) {
-    jni_utils::JavaLocalRef clazz(env, env->GetObjectClass(info));
-    auto id_field_id = env->GetFieldID(clazz.get(), "blindedAccountId", "Ljava/lang/String;");
-    auto last_read_field_id = env->GetFieldID(clazz.get(), "lastRead", "J");
-    auto unread_field_id = env->GetFieldID(clazz.get(), "unread", "Z");
+    struct ClassInfo : public JavaClassInfo {
+        jmethodID id_getter;
+        jmethodID last_read_getter;
+        jmethodID unread_getter;
+
+        ClassInfo(JNIEnv *env, jobject obj)
+            : JavaClassInfo(env, obj),
+             id_getter(env->GetMethodID(java_class, "getBlindedAccountId", "()Ljava/lang/String;")),
+             last_read_getter(env->GetMethodID(java_class, "getLastRead", "()J")),
+             unread_getter(env->GetMethodID(java_class, "getUnread", "()Z")) {}
+    };
+
+    static ClassInfo class_info(env, info);
 
     session::config::convo::blinded_one_to_one r(
-            jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, (jstring) env->GetObjectField(info, id_field_id)).get()).view());
+            JavaStringRef(env, JavaLocalRef(env, (jstring) env->CallObjectMethod(info, class_info.id_getter)).get()).view());
 
-    r.last_read = env->GetLongField(info, last_read_field_id);
-    r.unread = env->GetBooleanField(info, unread_field_id);
+    r.last_read = env->CallLongMethod(info, class_info.last_read_getter);
+    r.unread = env->CallBooleanMethod(info, class_info.unread_getter);
 
     return r;
 }
 
-jobject serialize_any(JNIEnv *env, session::config::convo::any any) {
+JavaLocalRef<jobject> serialize_any(JNIEnv *env, session::config::convo::any any) {
     if (auto* dm = std::get_if<session::config::convo::one_to_one>(&any)) {
         return serialize_one_to_one(env, *dm);
     } else if (auto* og = std::get_if<session::config::convo::community>(&any)) {
@@ -145,7 +249,7 @@ jobject serialize_any(JNIEnv *env, session::config::convo::any any) {
     } else if (auto *bc = std::get_if<session::config::convo::blinded_one_to_one>(&any)) {
         return serialize_blinded_one_to_one(env, *bc);
     }
-    return nullptr;
+    return {env, nullptr};
 }
 
 
@@ -164,17 +268,17 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_eraseAll
                                                                                  jobject predicate) {
     auto conversations = ptrToConvoInfo(env, thiz);
 
-    jni_utils::JavaLocalRef<jclass> predicate_class(env, env->GetObjectClass(predicate));
+    JavaLocalRef<jclass> predicate_class(env, env->GetObjectClass(predicate));
     jmethodID predicate_call = env->GetMethodID(predicate_class.get(), "invoke", "(Ljava/lang/Object;)Ljava/lang/Object;");
 
-    jni_utils::JavaLocalRef<jclass> bool_class(env, env->FindClass("java/lang/Boolean"));
+    JavaLocalRef<jclass> bool_class(env, env->FindClass("java/lang/Boolean"));
     jmethodID bool_get = env->GetMethodID(bool_class.get(), "booleanValue", "()Z");
 
     int removed = 0;
     auto to_erase = std::vector<session::config::convo::any>();
 
     for (auto it = conversations->begin(); it != conversations->end(); ++it) {
-        jni_utils::JavaLocalRef result(env, env->CallObjectMethod(predicate, predicate_call, jni_utils::JavaLocalRef(env, serialize_any(env, *it)).get()));
+        JavaLocalRef result(env, env->CallObjectMethod(predicate, predicate_call, serialize_any(env, *it).get()));
         bool bool_result = env->CallBooleanMethod(result.get(), bool_get);
         if (bool_result) {
             to_erase.push_back(*it);
@@ -212,9 +316,9 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getOneTo
                                                                                     jobject thiz,
                                                                                     jstring pub_key_hex) {
     auto convos = ptrToConvoInfo(env, thiz);
-    auto internal = convos->get_1to1(jni_utils::JavaStringRef(env, pub_key_hex).view());
+    auto internal = convos->get_1to1(JavaStringRef(env, pub_key_hex).view());
     if (internal) {
-        return serialize_one_to_one(env, *internal);
+        return serialize_one_to_one(env, *internal).release();
     }
     return nullptr;
 }
@@ -223,7 +327,7 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getOrConstructOneToOne(
         JNIEnv *env, jobject thiz, jstring pub_key_hex) {
     auto convos = ptrToConvoInfo(env, thiz);
-    return serialize_one_to_one(env, convos->get_or_construct_1to1(jni_utils::JavaStringRef(env, pub_key_hex).view()));
+    return serialize_one_to_one(env, convos->get_or_construct_1to1(JavaStringRef(env, pub_key_hex).view())).release();
 }
 extern "C"
 JNIEXPORT jboolean JNICALL
@@ -231,7 +335,7 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_eraseOne
                                                                                       jobject thiz,
                                                                                       jstring pub_key_hex) {
     auto convos = ptrToConvoInfo(env, thiz);
-    return convos->erase_1to1(jni_utils::JavaStringRef(env, pub_key_hex).view());
+    return convos->erase_1to1(JavaStringRef(env, pub_key_hex).view());
 }
 
 extern "C"
@@ -239,9 +343,9 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getCommunity__Ljava_lang_String_2Ljava_lang_String_2(
         JNIEnv *env, jobject thiz, jstring base_url, jstring room) {
     auto convos = ptrToConvoInfo(env, thiz);
-    auto open = convos->get_community(jni_utils::JavaStringRef(env, base_url).view(), jni_utils::JavaStringRef(env, room).view());
+    auto open = convos->get_community(JavaStringRef(env, base_url).view(), JavaStringRef(env, room).view());
     if (open) {
-        return serialize_community(env, *open);
+        return serialize_community(env, *open).release();
     }
     return nullptr;
 }
@@ -251,10 +355,10 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getOrCon
         JNIEnv *env, jobject thiz, jstring base_url, jstring room, jbyteArray pub_key) {
     auto convos = ptrToConvoInfo(env, thiz);
     auto community = convos->get_or_construct_community(
-            jni_utils::JavaStringRef(env, base_url).view(),
-            jni_utils::JavaStringRef(env, room).view(),
-            jni_utils::JavaByteArrayRef(env, pub_key).get());
-    return serialize_community(env, community);
+            JavaStringRef(env, base_url).view(),
+            JavaStringRef(env, room).view(),
+            JavaByteArrayRef(env, pub_key).get());
+    return serialize_community(env, community).release();
 }
 extern "C"
 JNIEXPORT jobject JNICALL
@@ -262,10 +366,10 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getOrCon
         JNIEnv *env, jobject thiz, jstring base_url, jstring room, jstring pub_key_hex) {
     auto convos = ptrToConvoInfo(env, thiz);
     auto community = convos->get_or_construct_community(
-            jni_utils::JavaStringRef(env, base_url).view(),
-            jni_utils::JavaStringRef(env, room).view(),
-            jni_utils::JavaStringRef(env, pub_key_hex).view());
-    return serialize_community(env, community);
+            JavaStringRef(env, base_url).view(),
+            JavaStringRef(env, room).view(),
+            JavaStringRef(env, pub_key_hex).view());
+    return serialize_community(env, community).release();
 }
 extern "C"
 JNIEXPORT jboolean JNICALL
@@ -282,17 +386,17 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_eraseCom
         JNIEnv *env, jobject thiz, jstring base_url, jstring room) {
     auto convos = ptrToConvoInfo(env, thiz);
     return convos->erase_community(
-            jni_utils::JavaStringRef(env, base_url).view(),
-            jni_utils::JavaStringRef(env, room).view());
+            JavaStringRef(env, base_url).view(),
+            JavaStringRef(env, room).view());
 }
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getLegacyClosedGroup(
         JNIEnv *env, jobject thiz, jstring group_id) {
     auto convos = ptrToConvoInfo(env, thiz);
-    auto lgc = convos->get_legacy_group(jni_utils::JavaStringRef(env, group_id).view());
+    auto lgc = convos->get_legacy_group(JavaStringRef(env, group_id).view());
     if (lgc) {
-        return serialize_legacy_group(env, *lgc);
+        return serialize_legacy_group(env, *lgc).release();
     }
 
     return nullptr;
@@ -302,15 +406,15 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getOrConstructLegacyGroup(
         JNIEnv *env, jobject thiz, jstring group_id) {
     auto convos = ptrToConvoInfo(env, thiz);
-    auto lgc = convos->get_or_construct_legacy_group(jni_utils::JavaStringRef(env, group_id).view());
-    return serialize_legacy_group(env, lgc);
+    auto lgc = convos->get_or_construct_legacy_group(JavaStringRef(env, group_id).view());
+    return serialize_legacy_group(env, lgc).release();
 }
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_eraseLegacyClosedGroup(
         JNIEnv *env, jobject thiz, jstring group_id) {
     auto convos = ptrToConvoInfo(env, thiz);
-    return convos->erase_legacy_group(jni_utils::JavaStringRef(env, group_id).view());
+    return convos->erase_legacy_group(JavaStringRef(env, group_id).view());
 }
 
 extern "C"
@@ -342,14 +446,14 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_all(JNIE
                                                                             jobject thiz) {
     auto convos = ptrToConvoInfo(env, thiz);
 
-    return jni_utils::jlist_from_collection(env, *convos, serialize_any);
+    return jlist_from_collection(env, *convos, serialize_any);
 }
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_allOneToOnes(JNIEnv *env,
                                                                                      jobject thiz) {
     auto convos = ptrToConvoInfo(env, thiz);
-    return jni_utils::jlist_from_iterator(env, convos->begin_1to1(), convos->end(),
+    return jlist_from_iterator(env, convos->begin_1to1(), convos->end(),
                                           serialize_one_to_one);
 }
 extern "C"
@@ -357,7 +461,7 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_allCommunities(JNIEnv *env,
                                                                                       jobject thiz) {
     auto convos = ptrToConvoInfo(env, thiz);
-    return jni_utils::jlist_from_iterator(env, convos->begin_communities(), convos->end(),
+    return jlist_from_iterator(env, convos->begin_communities(), convos->end(),
                                           serialize_community);
 }
 extern "C"
@@ -365,7 +469,7 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_allLegacyClosedGroups(
         JNIEnv *env, jobject thiz) {
     auto convos = ptrToConvoInfo(env, thiz);
-    return jni_utils::jlist_from_iterator(env, convos->begin_legacy_groups(), convos->end(),
+    return jlist_from_iterator(env, convos->begin_legacy_groups(), convos->end(),
                                           serialize_legacy_group);
 }
 
@@ -374,7 +478,7 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_allClosedGroups(JNIEnv *env,
                                                                                         jobject thiz) {
     auto convos = ptrToConvoInfo(env, thiz);
-    return jni_utils::jlist_from_iterator(env, convos->begin_groups(), convos->end(),
+    return jlist_from_iterator(env, convos->begin_groups(), convos->end(),
                                           serialize_closed_group);
 }
 
@@ -384,9 +488,9 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getClose
                                                                                        jobject thiz,
                                                                                        jstring session_id) {
     auto config = ptrToConvoInfo(env, thiz);
-    auto group = config->get_group(jni_utils::JavaStringRef(env, session_id).view());
+    auto group = config->get_group(JavaStringRef(env, session_id).view());
     if (group) {
-        return serialize_closed_group(env, *group);
+        return serialize_closed_group(env, *group).release();
     }
     return nullptr;
 }
@@ -396,8 +500,8 @@ JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getOrConstructClosedGroup(
         JNIEnv *env, jobject thiz, jstring session_id) {
     auto config = ptrToConvoInfo(env, thiz);
-    auto group = config->get_or_construct_group(jni_utils::JavaStringRef(env, session_id).view());
-    return serialize_closed_group(env, group);
+    auto group = config->get_or_construct_group(JavaStringRef(env, session_id).view());
+    return serialize_closed_group(env, group).release();
 }
 
 extern "C"
@@ -405,7 +509,7 @@ JNIEXPORT jboolean JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_eraseClosedGroup(
         JNIEnv *env, jobject thiz, jstring session_id) {
     auto config = ptrToConvoInfo(env, thiz);
-    return config->erase_group(jni_utils::JavaStringRef(env, session_id).view());
+    return config->erase_group(JavaStringRef(env, session_id).view());
 }
 
 extern "C"
@@ -447,13 +551,36 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getOrConstructedBlindedOneToOne(
         JNIEnv *env, jobject thiz, jstring blinded_id) {
-    return serialize_blinded_one_to_one(env, ptrToConvoInfo(env, thiz)->get_or_construct_blinded_1to1(jni_utils::JavaStringRef(env, blinded_id).view()));
+    return serialize_blinded_one_to_one(
+            env,
+            ptrToConvoInfo(env, thiz)->get_or_construct_blinded_1to1(JavaStringRef(env, blinded_id).view())).get();
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_eraseBlindedOneToOne(
         JNIEnv *env, jobject thiz, jstring blinded_id) {
-    return ptrToConvoInfo(env, thiz)->erase_blinded_1to1(jni_utils::JavaStringRef(env, blinded_id).view());
+    return ptrToConvoInfo(env, thiz)->erase_blinded_1to1(JavaStringRef(env, blinded_id).view());
 }
 
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getBlindedOneToOne(
+        JNIEnv *env, jobject thiz, jstring pub_key_hex) {
+    auto blinded = ptrToConvoInfo(env, thiz)->get_blinded_1to1(JavaStringRef(env, pub_key_hex).view());
+    if (blinded) {
+        return serialize_blinded_one_to_one(env, *blinded).release();
+    }
+    return nullptr;
+}
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_allBlindedOneToOnes(
+        JNIEnv *env, jobject thiz) {
+    auto convo = ptrToConvoInfo(env, thiz);
+    return jlist_from_iterator(env,
+                               convo->begin_blinded_1to1(),
+                               convo->end(),
+                               serialize_blinded_one_to_one);
+}

@@ -1,5 +1,9 @@
 package network.loki.messenger.libsession_util.util
 
+import androidx.annotation.Keep
+import network.loki.messenger.libsession_util.ConversationPriority
+import network.loki.messenger.libsession_util.protocol.ProFeatures
+
 data class BlindedContact(
     val id: String,
     val communityServer: String,
@@ -8,9 +12,13 @@ data class BlindedContact(
     var createdEpochSeconds: Long,
     var profileUpdatedEpochSeconds: Long,
     var profilePic: UserPic,
-    var priority: Long,
+    var priority: ConversationPriority,
+    val proFeatures: ProFeatures,
 ) {
     @OptIn(ExperimentalStdlibApi::class)
     val communityServerPubKey: ByteArray
         get() = communityServerPubKeyHex.hexToByteArray()
+
+    @get:Keep
+    private val proFeaturesRaw: Long get() = proFeatures.rawValue
 }

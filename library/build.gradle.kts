@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlinx.serialization)
     id("maven-publish")
 }
 
@@ -119,4 +120,5 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext)
 
     implementation(libs.androidx.annotations)
+    implementation(libs.kotlinx.serialization.core)
 }

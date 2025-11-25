@@ -2,6 +2,43 @@
 #include "util.h"
 #include "jni_utils.h"
 
+
+std::pair<std::string, std::vector<unsigned char>> extractHashAndData(JNIEnv *env, jobject kotlin_pair) {
+    jni_utils::JavaLocalRef<jclass> pair(env, env->GetObjectClass(kotlin_pair));
+    jfieldID first = env->GetFieldID(pair.get(), "first", "Ljava/lang/Object;");
+    jfieldID second = env->GetFieldID(pair.get(), "second", "Ljava/lang/Object;");
+    auto hash_as_jstring = jni_utils::JavaLocalRef(env, reinterpret_cast<jstring>(env->GetObjectField(kotlin_pair, first)));
+    auto data_as_jbytes = jni_utils::JavaLocalRef(env, reinterpret_cast<jbyteArray>(env->GetObjectField(kotlin_pair, second)));
+
+    return std::make_pair(
+            std::string(jni_utils::JavaStringRef(env, hash_as_jstring.get()).view()),
+            jni_utils::JavaByteArrayRef(env, data_as_jbytes.get()).copy()
+    );
+}
+
+struct JavaConfigClassInfo : public jni_utils::JavaClassInfo {
+    jfieldID pointer_field;
+
+    JavaConfigClassInfo(JNIEnv *env, jobject obj)
+            :JavaClassInfo(env, obj),
+             pointer_field(env->GetFieldID(java_class, "pointer", "J")) {}
+
+    static const JavaConfigClassInfo& get(JNIEnv *env, jobject obj) {
+        static JavaConfigClassInfo class_info(env, obj);
+        return class_info;
+    }
+};
+
+session::config::ConfigBase* ptrToConfigBase(JNIEnv *env, jobject obj) {
+    return reinterpret_cast<session::config::ConfigBase*>(
+            env->GetLongField(obj, JavaConfigClassInfo::get(env, obj).pointer_field));
+}
+
+session::config::ConfigSig* ptrToConfigSig(JNIEnv* env, jobject obj) {
+    return reinterpret_cast<session::config::ConfigSig*>(
+            env->GetLongField(obj, JavaConfigClassInfo::get(env, obj).pointer_field));
+}
+
 extern "C" {
 JNIEXPORT jboolean JNICALL
 Java_network_loki_messenger_libsession_1util_ConfigBase_dirty(JNIEnv *env, jobject thiz) {
@@ -33,9 +70,14 @@ Java_network_loki_messenger_libsession_1util_ConfigBase_push(JNIEnv *env, jobjec
 
         jobject obsoleteHashes = jni_utils::jstring_list_from_collection(env, to_delete);
 
-        jclass returnObjectClass = env->FindClass("network/loki/messenger/libsession_util/util/ConfigPush");
-        jmethodID methodId = env->GetMethodID(returnObjectClass, "<init>", "(Ljava/util/List;JLjava/util/List;)V");
-        return env->NewObject(returnObjectClass, methodId, messages, static_cast<jlong>(seq_no), obsoleteHashes);
+        static jni_utils::BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/util/ConfigPush",
+            "(Ljava/util/List;JLjava/util/List;)V"
+        );
+
+        return env->NewObject(class_info.java_class, class_info.constructor,
+                              messages, static_cast<jlong>(seq_no), obsoleteHashes);
     });
 }
 
@@ -49,8 +91,7 @@ JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_ConfigBase_dump(JNIEnv *env, jobject thiz) {
     auto config = ptrToConfigBase(env, thiz);
     auto dumped = config->dump();
-    jbyteArray bytes = util::bytes_from_vector(env, dumped);
-    return bytes;
+    return util::bytes_from_vector(env, dumped).release();
 }
 
 JNIEXPORT jstring JNICALL
@@ -95,34 +136,6 @@ Java_network_loki_messenger_libsession_1util_ConfigBase_merge___3Lkotlin_Pair_2(
 }
 
 #pragma clang diagnostic pop
-}
-extern "C"
-JNIEXPORT jint JNICALL
-Java_network_loki_messenger_libsession_1util_ConfigBase_configNamespace(JNIEnv *env, jobject thiz) {
-    auto conf = ptrToConfigBase(env, thiz);
-    return (std::int16_t) conf->storage_namespace();
-}
-extern "C"
-JNIEXPORT jclass JNICALL
-Java_network_loki_messenger_libsession_1util_ConfigBase_00024Companion_kindFor(JNIEnv *env,
-                                                                               jobject thiz,
-                                                                               jint config_namespace) {
-    auto user_class = env->FindClass("network/loki/messenger/libsession_util/UserProfile");
-    auto contact_class = env->FindClass("network/loki/messenger/libsession_util/Contacts");
-    auto convo_volatile_class = env->FindClass("network/loki/messenger/libsession_util/ConversationVolatileConfig");
-    auto group_list_class = env->FindClass("network/loki/messenger/libsession_util/UserGroupsConfig");
-    switch (config_namespace) {
-        case (int)session::config::Namespace::UserProfile:
-            return user_class;
-        case (int)session::config::Namespace::Contacts:
-            return contact_class;
-        case (int)session::config::Namespace::ConvoInfoVolatile:
-            return convo_volatile_class;
-        case (int)session::config::Namespace::UserGroups:
-            return group_list_class;
-        default:
-            return nullptr;
-    }
 }
 
 extern "C"
