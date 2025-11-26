@@ -13,7 +13,7 @@ data class BlindedContact(
     var profileUpdatedEpochSeconds: Long,
     var profilePic: UserPic,
     var priority: ConversationPriority,
-    val proFeatures: ProFeatures,
+    var proFeatures: ProFeatures,
 ) {
     @OptIn(ExperimentalStdlibApi::class)
     val communityServerPubKey: ByteArray
