@@ -1,6 +1,6 @@
 package network.loki.messenger.libsession_util.protocol
 
-import androidx.annotation.Keep
+typealias ProFeaturesForMsgStatus = Int
 
 /**
  * Represents the result of trying to augment a message with Pro features.
@@ -11,27 +11,14 @@ import androidx.annotation.Keep
  * @param codepointCount The number of codepoints in the message
  */
 data class ProFeaturesForMsg(
-    val status: Status,
+    val status: ProFeaturesForMsgStatus,
     val error: String?,
-    val features: ProFeatures,
+    val features: ProMessageFeatures,
     val codepointCount: Int,
 ) {
-    @Keep
-    constructor(
-        statusNativeValue: Int,
-        error: String?,
-        featuresNativeValue: Long,
-        codepointCount: Int,
-    ) : this(
-        status = Status.entries.first { it.nativeValue == statusNativeValue },
-        error = error,
-        features = ProFeatures(featuresNativeValue),
-        codepointCount = codepointCount,
-    )
-
-    enum class Status(internal val nativeValue: Int) {
-        Success(0),
-        UTFDecodingError(1),
-        ExceedsCharacterLimit(2),
+    companion object {
+        const val SUCCESS: ProFeaturesForMsgStatus = 0
+        const val UTF_DECODING_ERROR: ProFeaturesForMsgStatus = 1
+        const val EXCEEDS_CHARACTER_LIMIT: ProFeaturesForMsgStatus = 2
     }
 }

@@ -5,6 +5,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.Instant
 
+typealias ProProofStatus = Int
+
 /**
  * Represents a proof of Pro. This class is marked as @Serializable to represent the JSON structure
  * received from the Pro Backend.
@@ -51,24 +53,6 @@ data class ProProof(
         }
     }
 
-    enum class Status(internal val nativeValue: Int) {
-        InvalidProBackendSignature(1),
-        InvalidUserSignature(2),
-        Valid(3),
-        Expired(4),
-
-        ;
-        companion object {
-            internal fun fromNativeValue(value: Int): Status {
-                return entries.first { it.nativeValue == value }
-            }
-
-            internal fun fromNativeValueOrNull(value: Int): Status? {
-                return entries.firstOrNull { it.nativeValue == value }
-            }
-        }
-    }
-
     class ProSignedMessage(
         val data: ByteArray,
         val signature: ByteArray,
@@ -85,17 +69,15 @@ data class ProProof(
         senderED25519PubKey: ByteArray,
         now: Instant,
         signedMessage: ProSignedMessage? = null,
-    ): Status {
+    ): ProProofStatus {
         val signedMessageData = signedMessage?.data
         val signedMessageSignature = signedMessage?.signature
-        val statusValue = nativeStatus(
+        return nativeStatus(
             nowUnixTs = now.toEpochMilli(),
             verifyPubKey = senderED25519PubKey,
             signedMessageData = signedMessageData,
             signedMessageSignature = signedMessageSignature
         )
-
-        return Status.fromNativeValue(statusValue)
     }
 
     private external fun nativeStatus(
@@ -104,4 +86,11 @@ data class ProProof(
         signedMessageData: ByteArray?,
         signedMessageSignature: ByteArray?
     ): Int
+
+    companion object {
+        const val STATUS_INVALID_PRO_BACKEND_SIGNATURE: ProProofStatus = 1
+        const val STATUS_INVALID_USER_SIGNATURE: ProProofStatus = 2
+        const val STATUS_VALID: ProProofStatus = 3
+        const val STATUS_EXPIRED: ProProofStatus = 4
+    }
 }

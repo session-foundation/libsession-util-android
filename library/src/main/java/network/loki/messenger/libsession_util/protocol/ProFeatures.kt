@@ -1,46 +1,19 @@
 package network.loki.messenger.libsession_util.protocol
 
-import kotlinx.serialization.Serializable
+import network.loki.messenger.libsession_util.util.BitSet
+import network.loki.messenger.libsession_util.util.BitSetEntry
 
+sealed interface ProFeature : BitSetEntry
 
-enum class ProFeature(internal val bitIndex: Int) {
-    HIGHER_CHARACTER_LIMIT(0),
-    PRO_BADGE(1),
-    ANIMATED_AVATAR(2),
+enum class ProMessageFeature(override val bitIndex: Int): ProFeature {
+    HIGHER_CHARACTER_LIMIT(0)
 }
 
-@Serializable
-@JvmInline
-value class ProFeatures(val rawValue: Long) {
-    companion object {
-        val NONE = ProFeatures(0L)
-
-        fun from(features: Collection<ProFeature>): ProFeatures {
-            return ProFeatures(features.toLong())
-        }
-    }
-
-    fun contains(feature: ProFeature): Boolean {
-        return (rawValue and (1L shl feature.bitIndex)) != 0L
-    }
-
-    fun toSet(): Set<ProFeature> {
-        return rawValue.toFeatures()
-    }
+enum class ProProfileFeature(override val bitIndex: Int): ProFeature {
+    PRO_BADGE(0),
+    ANIMATED_AVATAR(1),
 }
 
-internal fun Long.toFeatures(): Set<ProFeature> {
-    return buildSet(ProFeature.entries.size) {
-        for (entry in ProFeature.entries) {
-            if (this@toFeatures and (1L shl entry.bitIndex) != 0L) {
-                add(entry)
-            }
-        }
-    }
-}
+typealias ProMessageFeatures = BitSet<ProMessageFeature>
+typealias ProProfileFeatures = BitSet<ProProfileFeature>
 
-internal fun Collection<ProFeature>.toLong(): Long {
-    return fold(0L) { acc, entry ->
-        acc or (1L shl entry.bitIndex)
-    }
-}

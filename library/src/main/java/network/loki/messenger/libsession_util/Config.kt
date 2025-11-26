@@ -1,8 +1,7 @@
 package network.loki.messenger.libsession_util
 
 import network.loki.messenger.libsession_util.pro.ProConfig
-import network.loki.messenger.libsession_util.pro.ProProof
-import network.loki.messenger.libsession_util.protocol.ProFeatures
+import network.loki.messenger.libsession_util.protocol.ProProfileFeatures
 import network.loki.messenger.libsession_util.util.BaseCommunityInfo
 import network.loki.messenger.libsession_util.util.BlindedContact
 import network.loki.messenger.libsession_util.util.ConfigPush
@@ -12,7 +11,6 @@ import network.loki.messenger.libsession_util.util.ExpiryMode
 import network.loki.messenger.libsession_util.util.GroupInfo
 import network.loki.messenger.libsession_util.util.GroupMember
 import network.loki.messenger.libsession_util.util.UserPic
-import java.time.Instant
 
 typealias ConversationPriority = Long
 
@@ -85,7 +83,7 @@ interface ReadableUserProfile: ReadableConfig {
     fun getCommunityMessageRequests(): Boolean
     fun isBlockCommunityMessageRequestsSet(): Boolean
 
-    fun getProFeatures(): ProFeatures
+    fun getProFeatures(): ProProfileFeatures
     fun getProConfig(): ProConfig?
     fun getProAccessExpiryMs(): Long?
 }

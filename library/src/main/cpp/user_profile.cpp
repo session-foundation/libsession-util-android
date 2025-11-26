@@ -184,7 +184,7 @@ extern "C"
 JNIEXPORT jlong JNICALL
 Java_network_loki_messenger_libsession_1util_UserProfile_getProFeaturesRaw(JNIEnv *env,
                                                                            jobject thiz) {
-    return static_cast<jlong>(ptrToProfile(env, thiz)->get_pro_features());
+    return static_cast<jlong>(ptrToProfile(env, thiz)->get_profile_bitset().data);
 }
 
 extern "C"

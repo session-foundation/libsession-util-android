@@ -8,7 +8,20 @@
 
 using namespace jni_utils;
 
+static JavaLocalRef<jobject> serializeDecodedPro(JNIEnv *env, const session::DecodedPro &pro) {
+    static BasicJavaClassInfo class_info(
+            env,
+            "network/loki/messenger/libsession_util/protocol/DecodedPro",
+            "(ILnetwork/loki/messenger/libsession_util/pro/ProProof;JJ)V"
+    );
 
+    return {env, env->NewObject(class_info.java_class, class_info.constructor,
+                          static_cast<jint>(pro.status),
+                          cpp_to_java_proof(env, pro.proof).get(),
+                          static_cast<jlong>(pro.msg_bitset.data),
+                          static_cast<jlong>(pro.profile_bitset.data))
+    };
+}
 
 static JavaLocalRef<jobject> serializeEnvelop(JNIEnv *env, const session::Envelope &envelope) {
     static BasicJavaClassInfo class_info(
@@ -32,7 +45,7 @@ static JavaLocalRef<jobject> serializeDecodedEnvelope(JNIEnv *env, const session
     static BasicJavaClassInfo class_info(
             env,
             "network/loki/messenger/libsession_util/protocol/DecodedEnvelope",
-            "(Lnetwork/loki/messenger/libsession_util/protocol/Envelope;ILnetwork/loki/messenger/libsession_util/pro/ProProof;J[B[B[BJ)V"
+            "(Lnetwork/loki/messenger/libsession_util/protocol/Envelope;Lnetwork/loki/messenger/libsession_util/protocol/DecodedPro;[B[B[BJ)V"
     );
 
     JavaLocalRef sender_ed25519 = util::bytes_from_span(env, envelop.sender_ed25519_pubkey);
@@ -41,10 +54,7 @@ static JavaLocalRef<jobject> serializeDecodedEnvelope(JNIEnv *env, const session
 
     return {env, env->NewObject(class_info.java_class, class_info.constructor,
                           serializeEnvelop(env, envelop.envelope).get(),
-                          envelop.pro ? static_cast<jint>(envelop.pro->status)
-                                       : static_cast<jint>(-1),
-                          envelop.pro ? cpp_to_java_proof(env, envelop.pro->proof).get() : nullptr,
-                          static_cast<jlong>(envelop.pro ? envelop.pro->features : 0),
+                          envelop.pro ? nullptr : serializeDecodedPro(env, *envelop.pro).get(),
                           content.get(),
                           sender_ed25519.get(),
                           sender_x25519.get(),
@@ -144,21 +154,16 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForC
                 *java_to_cpp_array<32>(env, pro_backend_pub_key)
         );
 
-        JavaLocalRef envelopClass(env, env->FindClass(
-                "network/loki/messenger/libsession_util/protocol/DecodedCommunityMessage"));
-        jmethodID init = env->GetMethodID(
-                envelopClass.get(),
-                "<init>",
-                "(ILnetwork/loki/messenger/libsession_util/pro/ProProof;J[B)V"
+        static BasicJavaClassInfo class_info(
+                env,
+                "network/loki/messenger/libsession_util/protocol/DecodedCommunityMessage",
+                "(Lnetwork/loki/messenger/libsession_util/protocol/DecodedPro;[B)V"
         );
 
         return env->NewObject(
-                envelopClass.get(),
-                init,
-                decoded.pro ? static_cast<jint>(decoded.pro->status)
-                             : static_cast<jint>(-1),
-                decoded.pro ? cpp_to_java_proof(env, decoded.pro->proof).get() : nullptr,
-                static_cast<jlong>(decoded.pro ? decoded.pro->features : 0),
+                class_info.java_class,
+                class_info.constructor,
+                decoded.pro ? serializeDecodedPro(env, *decoded.pro).get() : nullptr,
                 util::bytes_from_vector(env, decoded.content_plaintext).get()
         );
     });
@@ -250,14 +255,13 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForG
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_proFeaturesForMessage(
-        JNIEnv *env, jobject thiz, jstring message_body, jlong proposed_features) {
+        JNIEnv *env, jobject thiz, jstring message_body) {
     return run_catching_cxx_exception_or_throws<jobject>(env, [=] {
         JavaCharsRef message_ref(env, message_body);
 
         auto features = session::pro_features_for_utf16(
                 reinterpret_cast<const char16_t *>(message_ref.chars()),
-                message_ref.size(),
-                static_cast<SESSION_PROTOCOL_PRO_FEATURES>(proposed_features)
+                message_ref.size()
         );
 
         static BasicJavaClassInfo class_info(
@@ -271,7 +275,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_proFeature
                 class_info.constructor,
                 static_cast<jint>(features.status),
                 features.error.empty() ? nullptr : env->NewStringUTF(std::string(features.error).c_str()),
-                static_cast<jlong>(features.features),
+                static_cast<jlong>(features.bitset.data),
                 static_cast<jint>(features.codepoint_count)
         );
     });
