@@ -2,7 +2,7 @@ package network.loki.messenger.libsession_util
 
 import network.loki.messenger.libsession_util.pro.ProConfig
 import network.loki.messenger.libsession_util.pro.ProProof
-import network.loki.messenger.libsession_util.protocol.ProFeatures
+import network.loki.messenger.libsession_util.protocol.ProProfileFeatures
 import network.loki.messenger.libsession_util.util.ExpiryMode
 import network.loki.messenger.libsession_util.util.UserPic
 
@@ -48,7 +48,7 @@ class UserProfile private constructor(pointer: Long) : ConfigBase(pointer), Muta
     external override fun setProAccessExpiryMs(epochMills: Long)
     external override fun removeProAccessExpiry()
     private external fun getProFeaturesRaw(): Long
-    override fun getProFeatures(): ProFeatures = ProFeatures(getProFeaturesRaw())
+    override fun getProFeatures(): ProProfileFeatures = ProProfileFeatures(getProFeaturesRaw())
     external override fun getProConfig(): ProConfig?
 
     private external fun getProAccessExpiryMsOrZero(): Long

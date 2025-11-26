@@ -1,7 +1,6 @@
 package network.loki.messenger.libsession_util.protocol
 
 import network.loki.messenger.libsession_util.LibSessionUtilCApi
-import network.loki.messenger.libsession_util.pro.PaymentProvider
 
 object SessionProtocol : LibSessionUtilCApi() {
     external fun encodeFor1o1(
@@ -67,6 +66,5 @@ object SessionProtocol : LibSessionUtilCApi() {
      */
     fun proFeaturesForMessage(
         messageBody: String,
-        proposedFeatures: ProFeatures
-    ): ProFeaturesForMsg = proFeaturesForMessage(messageBody, proposedFeatures.rawValue)
+    ): ProFeaturesForMsg = proFeaturesForMessage(messageBody)
 }

@@ -30,7 +30,7 @@ static JavaLocalRef<jobject> serialize_contact(JNIEnv *env, const session::confi
                                        (jlong) (info.profile_updated.time_since_epoch().count()),
                                        (jlong) info.priority,
                                        util::serialize_expiry(env, info.exp_mode, info.exp_timer).get(),
-                                       (jlong) info.pro_features);
+                                       (jlong) info.profile_bitset.data);
     return {env, returnObj};
 }
 
@@ -92,7 +92,9 @@ session::config::contact_info deserialize_contact(JNIEnv *env, jobject info, ses
     contact_info.priority = env->CallLongMethod(info, class_info.get_priority);
     contact_info.exp_mode = expiry_pair.first;
     contact_info.exp_timer = std::chrono::seconds(expiry_pair.second);
-    contact_info.pro_features = env->CallLongMethod(info, class_info.get_pro_features);
+    contact_info.profile_bitset = {
+            .data = static_cast<uint64_t>(env->CallLongMethod(info, class_info.get_pro_features))
+    };
 
     return contact_info;
 }
@@ -172,7 +174,7 @@ JavaLocalRef<jobject> serialize_blinded_contact(JNIEnv *env, const session::conf
             (jlong) (info.profile_updated.time_since_epoch().count()),
             util::serialize_user_pic(env, info.profile_picture).get(),
             (jlong) info.priority,
-            (jlong) info.pro_features
+            (jlong) info.profile_bitset.data
     )};
 }
 
@@ -196,7 +198,7 @@ session::config::blinded_contact_info deserialize_blinded_contact(JNIEnv *env, j
             , name_getter(env->GetMethodID(java_class, "getName", "()Ljava/lang/String;"))
             , created_epoch_seconds_getter(env->GetMethodID(java_class, "getCreatedEpochSeconds", "()J"))
             , profile_updated_epoch_seconds_getter(env->GetMethodID(java_class, "getProfileUpdatedEpochSeconds", "()J"))
-            , profile_pic_getter(env->GetMethodID(java_class, "getProfilePicture", "()Lnetwork/loki/messenger/libsession_util/util/UserPic;"))
+            , profile_pic_getter(env->GetMethodID(java_class, "getProfilePic", "()Lnetwork/loki/messenger/libsession_util/util/UserPic;"))
             , priority_getter(env->GetMethodID(java_class, "getPriority", "()J"))
             , pro_features_getter(env->GetMethodID(java_class, "getProFeaturesRaw", "()J")) {}
     };
@@ -219,7 +221,9 @@ session::config::blinded_contact_info deserialize_blinded_contact(JNIEnv *env, j
     info.name = JavaStringRef(env, JavaLocalRef(env, (jstring) env->CallObjectMethod(jInfo, class_info.name_getter)).get()).view();
     info.profile_updated = std::chrono::sys_seconds{std::chrono::seconds{env->CallLongMethod(jInfo, class_info.profile_updated_epoch_seconds_getter)}};
     info.priority = env->CallLongMethod(jInfo, class_info.priority_getter);
-    info.pro_features = env->CallLongMethod(jInfo, class_info.pro_features_getter);
+    info.profile_bitset = {
+            .data = static_cast<uint64_t>(env->CallLongMethod(jInfo, class_info.pro_features_getter))
+    };
 
     return info;
 }
