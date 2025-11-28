@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlinx.serialization)
     id("maven-publish")
+
+    alias(libs.plugins.protobuf.compiler)
 }
 
 group = "org.sessionfoundation"
@@ -20,10 +22,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         externalNativeBuild {
-          cmake {
-            arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
-              targets("session_util")
-          }
+            cmake {
+                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
+                targets("session_util")
+            }
         }
     }
 
@@ -76,6 +78,22 @@ kotlin {
     }
 }
 
+protobuf {
+    protoc {
+        artifact = libs.protoc.get().toString()
+    }
+
+    plugins {
+        generateProtoTasks {
+            all().forEach { task ->
+                task.builtins {
+                    create("java") {}
+                }
+            }
+        }
+    }
+}
+
 publishing {
     publications {
         create<MavenPublication>("release") {
@@ -121,4 +139,8 @@ dependencies {
 
     implementation(libs.androidx.annotations)
     implementation(libs.kotlinx.serialization.core)
+
+    compileOnly(libs.protobuf.java)
+
+    protobuf(files("../libsession-util/proto/SessionProtos.proto"))
 }
