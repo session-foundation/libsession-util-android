@@ -81,13 +81,7 @@ kotlin {
 
 protobuf {
     protoc {
-        artifact = libs.protoc.core.get().toString()
-    }
-
-    plugins {
-        id("kotlin") {
-            artifact = libs.protoc.kotlin.get().toString()
-        }
+        artifact = libs.protoc.get().toString()
     }
 
     plugins {
@@ -147,7 +141,7 @@ dependencies {
     implementation(libs.androidx.annotations)
     implementation(libs.kotlinx.serialization.core)
 
-    api(libs.protobuf.kotlin)
+    api(libs.protobuf.java)
 
     protobuf(files("../libsession-util/proto/SessionProtos.proto"))
 }
