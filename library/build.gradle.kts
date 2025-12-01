@@ -1,3 +1,4 @@
+import com.google.protobuf.gradle.id
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -80,7 +81,13 @@ kotlin {
 
 protobuf {
     protoc {
-        artifact = libs.protoc.get().toString()
+        artifact = libs.protoc.core.get().toString()
+    }
+
+    plugins {
+        id("kotlin") {
+            artifact = libs.protoc.kotlin.get().toString()
+        }
     }
 
     plugins {
@@ -140,7 +147,7 @@ dependencies {
     implementation(libs.androidx.annotations)
     implementation(libs.kotlinx.serialization.core)
 
-    compileOnly(libs.protobuf.java)
+    api(libs.protobuf.kotlin)
 
     protobuf(files("../libsession-util/proto/SessionProtos.proto"))
 }
