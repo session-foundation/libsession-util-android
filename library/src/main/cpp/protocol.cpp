@@ -54,7 +54,7 @@ static JavaLocalRef<jobject> serializeDecodedEnvelope(JNIEnv *env, const session
 
     return {env, env->NewObject(class_info.java_class, class_info.constructor,
                           serializeEnvelop(env, envelop.envelope).get(),
-                          envelop.pro ? nullptr : serializeDecodedPro(env, *envelop.pro).get(),
+                          envelop.pro ? serializeDecodedPro(env, *envelop.pro).get() : nullptr,
                           content.get(),
                           sender_ed25519.get(),
                           sender_x25519.get(),
