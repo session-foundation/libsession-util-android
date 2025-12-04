@@ -18,6 +18,10 @@ class Bytes(val data: ByteArray) {
         return data.contentHashCode()
     }
 
+    override fun toString(): String {
+        return "Bytes(${data.size} bytes)"
+    }
+
     companion object {
         fun ByteArray.toBytes(): Bytes {
             return Bytes(this)

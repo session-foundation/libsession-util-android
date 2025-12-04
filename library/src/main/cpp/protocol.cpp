@@ -142,7 +142,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForG
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForCommunity(
-        JNIEnv *env, jobject thiz, jbyteArray payload, jlong now_epoch_ms,
+        JNIEnv *env, jobject thiz, jbyteArray payload, jlong timestamp_ms,
         jbyteArray pro_backend_pub_key) {
     return run_catching_cxx_exception_or_throws<jobject>(env, [=] {
         jni_utils::JavaByteArrayRef payload_ref(env, payload);
@@ -150,7 +150,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForC
         auto decoded = session::decode_for_community(
                 payload_ref.get(),
                 std::chrono::sys_time<std::chrono::milliseconds>{
-                        std::chrono::milliseconds{now_epoch_ms}},
+                        std::chrono::milliseconds{timestamp_ms}},
                 *java_to_cpp_array<32>(env, pro_backend_pub_key)
         );
 
@@ -194,7 +194,6 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeFor1
                                                                                    jobject thiz,
                                                                                    jbyteArray key,
                                                                                    jbyteArray payload,
-                                                                                   jlong now_epoch_ms,
                                                                                    jbyteArray pro_backend_pub_key) {
     return run_catching_cxx_exception_or_throws<jobject>(env, [=] {
         JavaByteArrayRef key_ref(env, key);
@@ -208,8 +207,6 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeFor1
         return serializeDecodedEnvelope(env, session::decode_envelope(
                 decode_key,
                 JavaByteArrayRef(env, payload).get(),
-                std::chrono::sys_time<std::chrono::milliseconds>{
-                        std::chrono::milliseconds{now_epoch_ms}},
                 *java_to_cpp_array<32>(env, pro_backend_pub_key)
         )).release();
     });
@@ -222,7 +219,6 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForG
                                                                                      jobject thiz,
                                                                                      jbyteArray payload,
                                                                                      jbyteArray my_ed25519_priv_key,
-                                                                                     jlong now_epoch_ms,
                                                                                      jbyteArray group_ed25519_public_key,
                                                                                      jobjectArray group_ed25519_private_keys,
                                                                                      jbyteArray pro_backend_pub_key) {
@@ -245,38 +241,7 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForG
         return serializeDecodedEnvelope(env, session::decode_envelope(
                 decode_key,
                 JavaByteArrayRef(env, payload).get(),
-                std::chrono::sys_time<std::chrono::milliseconds>{
-                        std::chrono::milliseconds{now_epoch_ms}},
                 *java_to_cpp_array<32>(env, pro_backend_pub_key)
         )).release();
-    });
-}
-
-extern "C"
-JNIEXPORT jobject JNICALL
-Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_proFeaturesForMessage(
-        JNIEnv *env, jobject thiz, jstring message_body) {
-    return run_catching_cxx_exception_or_throws<jobject>(env, [=] {
-        JavaCharsRef message_ref(env, message_body);
-
-        auto features = session::pro_features_for_utf16(
-                reinterpret_cast<const char16_t *>(message_ref.chars()),
-                message_ref.size()
-        );
-
-        static BasicJavaClassInfo class_info(
-                env,
-                "network/loki/messenger/libsession_util/protocol/ProFeaturesForMsg",
-                "(ILjava/lang/String;JI)V"
-        );
-
-        return env->NewObject(
-                class_info.java_class,
-                class_info.constructor,
-                static_cast<jint>(features.status),
-                features.error.empty() ? nullptr : env->NewStringUTF(std::string(features.error).c_str()),
-                static_cast<jlong>(features.bitset.data),
-                static_cast<jint>(features.codepoint_count)
-        );
     });
 }

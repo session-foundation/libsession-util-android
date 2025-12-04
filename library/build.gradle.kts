@@ -1,17 +1,17 @@
-import com.google.protobuf.gradle.id
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlinx.serialization)
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("maven-publish")
-
-    alias(libs.plugins.protobuf.compiler)
+    id("com.google.protobuf") version "0.9.5"
 }
 
 group = "org.sessionfoundation"
 version = System.getenv("VERSION") ?: "dev-snapshot"
+
+val protobufVersion = "4.33.1"
 
 android {
     namespace = "org.sessionfoundation.libsession_util"
@@ -81,7 +81,7 @@ kotlin {
 
 protobuf {
     protoc {
-        artifact = libs.protoc.get().toString()
+        artifact = "com.google.protobuf:protoc:$protobufVersion"
     }
 
     plugins {
@@ -133,15 +133,16 @@ publishing {
 }
 
 dependencies {
-    androidTestImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.test.runner)
-    androidTestImplementation(libs.androidx.test.rules)
-    androidTestImplementation(libs.androidx.test.ext)
 
-    implementation(libs.androidx.annotations)
-    implementation(libs.kotlinx.serialization.core)
+    androidTestImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test:rules:1.7.0")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
 
-    api(libs.protobuf.java)
+    implementation("androidx.annotation:annotation:1.9.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.9.0")
+
+    api("com.google.protobuf:protobuf-java:$protobufVersion")
 
     protobuf(files("../libsession-util/proto/SessionProtos.proto"))
 }

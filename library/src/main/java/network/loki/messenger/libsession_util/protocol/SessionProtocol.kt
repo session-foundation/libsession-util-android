@@ -14,7 +14,6 @@ object SessionProtocol : LibSessionUtilCApi() {
     external fun decodeFor1o1(
         myEd25519PrivKey: ByteArray,
         payload: ByteArray,
-        nowEpochMs: Long,
         proBackendPubKey: ByteArray, // 32 bytes backend key
     ): DecodedEnvelope
 
@@ -34,7 +33,7 @@ object SessionProtocol : LibSessionUtilCApi() {
 
     external fun decodeForCommunity(
         payload: ByteArray,
-        nowEpochMs: Long,
+        timestampMs: Long,
         proBackendPubKey: ByteArray, // 32 bytes backend key
     ): DecodedCommunityMessage
 
@@ -50,21 +49,8 @@ object SessionProtocol : LibSessionUtilCApi() {
     external fun decodeForGroup(
         payload: ByteArray,
         myEd25519PrivKey: ByteArray,
-        nowEpochMs: Long,
         groupEd25519PublicKey: ByteArray, // 33 bytes 03 prefixed key
         groupEd25519PrivateKeys: Array<ByteArray>, // all available group private keys
         proBackendPubKey: ByteArray, // 32 bytes backend key
     ): DecodedEnvelope
-
-    private external fun proFeaturesForMessage(
-        messageBody: String,
-        proposedFeatures: Long
-    ): ProFeaturesForMsg
-
-    /**
-     * Determines which Pro features shall be applied to a message based on its content and the proposed features.
-     */
-    fun proFeaturesForMessage(
-        messageBody: String,
-    ): ProFeaturesForMsg = proFeaturesForMessage(messageBody)
 }
