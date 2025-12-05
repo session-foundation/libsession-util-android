@@ -49,6 +49,64 @@ JavaLocalRef<jobject> serialize_one_to_one(JNIEnv *env, const session::config::c
                                                    one_to_one.pro_expiry_unix_ts).get())};
 }
 
+
+struct WithProProofInfoClassInfo : public JavaClassInfo {
+    jmethodID proProofInfo_getter;
+
+    WithProProofInfoClassInfo(JNIEnv *env, jobject obj)
+        : JavaClassInfo(env, obj)
+        , proProofInfo_getter(env->GetMethodID(java_class, "getProProofInfo", "()Lnetwork/loki/messenger/libsession_util/util/Conversation$ProProofInfo;"))
+        {}
+
+    static const WithProProofInfoClassInfo& get(JNIEnv *env, jobject obj) {
+        static WithProProofInfoClassInfo instance(env, obj);
+        return instance;
+    }
+};
+
+struct ProProofInfoClassInfo : public JavaClassInfo {
+    jmethodID genIndexHash_getter;
+    jmethodID expiryUnixTs_getter;
+
+    ProProofInfoClassInfo(JNIEnv *env, jobject obj)
+        : JavaClassInfo(env, obj)
+        , genIndexHash_getter(env->GetMethodID(java_class, "getGenIndexHashBytes", "()[B"))
+        , expiryUnixTs_getter(env->GetMethodID(java_class, "getExpiryUnixTs", "()J"))
+        {}
+
+    static const ProProofInfoClassInfo& get(JNIEnv *env, jobject obj) {
+        static ProProofInfoClassInfo instance(env, obj);
+        return instance;
+    }
+
+    static void read_gen_index_hash(std::optional<session::array_uc32> &out, JNIEnv *env, jobject obj) {
+        if (!obj) {
+            out = std::nullopt;
+            return;
+        }
+
+        JavaLocalRef<jbyteArray> hash_bytes(
+                env,
+                (jbyteArray) env->CallObjectMethod(
+                        obj,
+                        get(env, obj).genIndexHash_getter));
+
+        JavaByteArrayRef bytes_ref(env, hash_bytes.get());
+
+        out.emplace();
+        std::copy_n(bytes_ref.get().begin(),
+                    std::min(env->GetArrayLength(hash_bytes.get()), 32), out->begin());
+    }
+
+    static std::chrono::sys_time<std::chrono::milliseconds> read_pro_expiry(JNIEnv *env, jobject obj) {
+        if (!obj) return {};
+
+        jlong expiry_ts = env->CallLongMethod(obj, get(env, obj).expiryUnixTs_getter);
+        return std::chrono::sys_time<std::chrono::milliseconds>{std::chrono::milliseconds{expiry_ts}};
+    }
+};
+
+
 session::config::convo::one_to_one deserialize_one_to_one(JNIEnv *env, jobject info) {
     struct ClassInfo : public JavaClassInfo {
         jmethodID id_getter;
@@ -73,6 +131,13 @@ session::config::convo::one_to_one deserialize_one_to_one(JNIEnv *env, jobject i
 
     r.last_read = env->CallLongMethod(info, class_info.lastRead_getter);
     r.unread = env->CallBooleanMethod(info, class_info.unread_getter);
+
+    JavaLocalRef<jobject> pro_proof(env, env->CallObjectMethod(
+            info, WithProProofInfoClassInfo::get(env, info).proProofInfo_getter));
+
+    ProProofInfoClassInfo::read_gen_index_hash(r.pro_gen_index_hash, env, pro_proof.get());
+    r.pro_expiry_unix_ts = ProProofInfoClassInfo::read_pro_expiry(env, pro_proof.get());
+
     return r;
 }
 
@@ -233,6 +298,13 @@ session::config::convo::blinded_one_to_one deserialize_blinded_one_to_one(JNIEnv
 
     r.last_read = env->CallLongMethod(info, class_info.last_read_getter);
     r.unread = env->CallBooleanMethod(info, class_info.unread_getter);
+
+    JavaLocalRef<jobject> pro_proof(env, env->CallObjectMethod(
+            info, WithProProofInfoClassInfo::get(env, info).proProofInfo_getter));
+
+    ProProofInfoClassInfo::read_gen_index_hash(r.pro_gen_index_hash, env, pro_proof.get());
+    r.pro_expiry_unix_ts = ProProofInfoClassInfo::read_pro_expiry(env, pro_proof.get());
+
 
     return r;
 }

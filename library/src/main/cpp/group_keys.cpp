@@ -127,11 +127,13 @@ extern "C"
 JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_rekey(JNIEnv *env, jobject thiz,
                                                                    jlong info_ptr, jlong members_ptr) {
-    auto keys = ptrToKeys(env, thiz);
-    auto info = reinterpret_cast<session::config::groups::Info*>(info_ptr);
-    auto members = reinterpret_cast<session::config::groups::Members*>(members_ptr);
-    auto rekey = keys->rekey(*info, *members);
-    return util::bytes_from_span(env, rekey).release();
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        auto keys = ptrToKeys(env, thiz);
+        auto info = reinterpret_cast<session::config::groups::Info*>(info_ptr);
+        auto members = reinterpret_cast<session::config::groups::Members*>(members_ptr);
+        auto rekey = keys->rekey(*info, *members);
+        return util::bytes_from_span(env, rekey).release();
+    });
 }
 
 extern "C"
@@ -188,8 +190,9 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_keys(JNIEnv *env, j
 extern "C"
 JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_groupEncKey(JNIEnv *env, jobject thiz) {
-    auto ptr = ptrToKeys(env, thiz);
-    return util::bytes_from_span(env, ptr->group_enc_key()).release();
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        return util::bytes_from_span(env, ptrToKeys(env, thiz)->group_enc_key()).release();
+    });
 }
 
 extern "C"
@@ -206,9 +209,11 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_makeSubAccount(JNIE
                                                                             jstring session_id,
                                                                             jboolean can_write,
                                                                             jboolean can_delete) {
-    auto ptr = ptrToKeys(env, thiz);
-    auto new_subaccount_key = ptr->swarm_make_subaccount(jni_utils::JavaStringRef(env, session_id).view(), can_write, can_delete);
-    return util::bytes_from_vector(env, new_subaccount_key).release();
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        auto new_subaccount_key = ptrToKeys(env, thiz)->swarm_make_subaccount(
+                jni_utils::JavaStringRef(env, session_id).view(), can_write, can_delete);
+        return util::bytes_from_vector(env, new_subaccount_key).release();
+    });
 }
 
 extern "C"
@@ -218,18 +223,21 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_getSubAccountToken(
                                                                                 jstring session_id,
                                                                                 jboolean can_write,
                                                                                 jboolean can_delete) {
-    auto ptr = ptrToKeys(env, thiz);
-    auto token = ptr->swarm_subaccount_token(jni_utils::JavaStringRef(env, session_id).view(), can_write, can_delete);
-    return util::bytes_from_vector(env, token).release();
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        auto token = ptrToKeys(env, thiz)->swarm_subaccount_token(
+                jni_utils::JavaStringRef(env, session_id).view(),
+                can_write, can_delete);
+        return util::bytes_from_vector(env, token).release();
+    });
 }
 
 static jni_utils::JavaLocalRef<jobject> deserialize_swarm_auth(JNIEnv *env, session::config::groups::Keys::swarm_auth auth) {
     static jni_utils::BasicJavaClassInfo class_info(
             env, "network/loki/messenger/libsession_util/GroupKeysConfig$SwarmAuth", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
 
-    auto sub_account = jni_utils::JavaLocalRef(env, env->NewStringUTF(auth.subaccount.data()));
-    auto sub_account_sig = jni_utils::JavaLocalRef(env, env->NewStringUTF(auth.subaccount_sig.data()));
-    auto signature = jni_utils::JavaLocalRef(env, env->NewStringUTF(auth.signature.data()));
+    jni_utils::JavaLocalRef sub_account(env, env->NewStringUTF(auth.subaccount.data()));
+    jni_utils::JavaLocalRef sub_account_sig(env, env->NewStringUTF(auth.subaccount_sig.data()));
+    jni_utils::JavaLocalRef signature(env, env->NewStringUTF(auth.signature.data()));
 
     return {env, env->NewObject(class_info.java_class, class_info.constructor, sub_account.get(), sub_account_sig.get(), signature.get())};
 }
@@ -240,11 +248,13 @@ Java_network_loki_messenger_libsession_1util_GroupKeysConfig_subAccountSign(JNIE
                                                                             jobject thiz,
                                                                             jbyteArray message,
                                                                             jbyteArray signing_value) {
-    auto ptr = ptrToKeys(env, thiz);
-    auto message_vector = util::vector_from_bytes(env, message);
-    auto signing_value_vector = util::vector_from_bytes(env, signing_value);
-    auto swarm_auth = ptr->swarm_subaccount_sign(message_vector, signing_value_vector, false);
-    return deserialize_swarm_auth(env, swarm_auth).release();
+    return jni_utils::run_catching_cxx_exception_or_throws<jobject>(env, [=] {
+        auto ptr = ptrToKeys(env, thiz);
+        auto message_vector = util::vector_from_bytes(env, message);
+        auto signing_value_vector = util::vector_from_bytes(env, signing_value);
+        auto swarm_auth = ptr->swarm_subaccount_sign(message_vector, signing_value_vector, false);
+        return deserialize_swarm_auth(env, swarm_auth).release();
+    });
 }
 
 extern "C"
@@ -252,14 +262,21 @@ JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_supplementFor(JNIEnv *env,
                                                                            jobject thiz,
                                                                            jobjectArray j_user_session_ids) {
-    auto ptr = ptrToKeys(env, thiz);
-    std::vector<std::string> user_session_ids;
-    for (int i = 0, size = env->GetArrayLength(j_user_session_ids); i < size; i++) {
-        user_session_ids.push_back(jni_utils::JavaStringRef(env, jni_utils::JavaLocalRef(env, (jstring)(env->GetObjectArrayElement(j_user_session_ids, i))).get()).copy());
-    }
-    auto supplement = ptr->key_supplement(user_session_ids);
-    return util::bytes_from_vector(env, supplement).release();
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        auto ptr = ptrToKeys(env, thiz);
+        std::vector<std::string> user_session_ids;
+        for (int i = 0, size = env->GetArrayLength(j_user_session_ids); i < size; i++) {
+            jni_utils::JavaLocalRef element(
+                    env, (jstring)(env->GetObjectArrayElement(j_user_session_ids, i)));
+
+            user_session_ids.emplace_back(jni_utils::JavaStringRef(env, element.get()).view());
+        }
+
+        auto supplement = ptr->key_supplement(user_session_ids);
+        return util::bytes_from_vector(env, supplement).release();
+    });
 }
+
 extern "C"
 JNIEXPORT jint JNICALL
 Java_network_loki_messenger_libsession_1util_GroupKeysConfig_currentGeneration(JNIEnv *env,

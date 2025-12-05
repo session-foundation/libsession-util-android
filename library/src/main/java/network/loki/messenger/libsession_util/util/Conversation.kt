@@ -24,6 +24,14 @@ sealed interface Conversation {
             genIndexHash = Bytes(genIndexHash),
             expiry = Instant.ofEpochMilli(expiryMs)
         )
+
+        @get:Keep
+        val genIndexHashBytes: ByteArray
+            get() = genIndexHash.data
+
+        @get:Keep
+        val expiryUnixTs: Long
+            get() = expiry.toEpochMilli()
     }
 
     /**
