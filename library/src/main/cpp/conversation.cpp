@@ -625,7 +625,8 @@ Java_network_loki_messenger_libsession_1util_ConversationVolatileConfig_getOrCon
         JNIEnv *env, jobject thiz, jstring blinded_id) {
     return serialize_blinded_one_to_one(
             env,
-            ptrToConvoInfo(env, thiz)->get_or_construct_blinded_1to1(JavaStringRef(env, blinded_id).view())).get();
+            ptrToConvoInfo(env, thiz)->get_or_construct_blinded_1to1(JavaStringRef(env, blinded_id).view())
+    ).release();
 }
 
 extern "C"
