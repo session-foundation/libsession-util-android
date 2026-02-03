@@ -8,3 +8,4 @@
 -keep class network.loki.messenger.libsession_util.** { *; }
 -keepnames class network.loki.messenger.libsession_util.** { *; }
 -keep class kotlin.Pair { *; }
+-keep class kotlin.Triple { *; }
