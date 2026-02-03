@@ -40,10 +40,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            consumerProguardFile(file("proguard-rules.pro"))
 
             externalNativeBuild {
                 cmake {
