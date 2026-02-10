@@ -1,8 +1,11 @@
 package network.loki.messenger.libsession_util.util
 
+import androidx.annotation.Keep
+
 typealias LogLevel = Int
 
 interface Logger {
+    @Keep
     fun log(message: String, category: String, level: LogLevel)
 
     companion object {

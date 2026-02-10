@@ -24,7 +24,7 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
+                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5")
                 targets("session_util")
             }
         }
@@ -40,10 +40,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            consumerProguardFile(file("proguard-rules.pro"))
 
             externalNativeBuild {
                 cmake {
