@@ -2,20 +2,19 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("maven-publish")
-    id("com.google.protobuf") version "0.9.5"
+    id("com.google.protobuf") version "0.9.6"
 }
 
 group = "org.sessionfoundation"
 version = System.getenv("VERSION") ?: "dev-snapshot"
 
-val protobufVersion = "4.33.1"
+val protobufVersion = "4.33.5"
 
 android {
     namespace = "org.sessionfoundation.libsession_util"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
@@ -130,14 +129,13 @@ publishing {
 }
 
 dependencies {
-
     androidTestImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test:rules:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
 
     implementation("androidx.annotation:annotation:1.9.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.10.0")
 
     api("com.google.protobuf:protobuf-java:$protobufVersion")
 
