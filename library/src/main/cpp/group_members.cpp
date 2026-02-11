@@ -90,7 +90,9 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_GroupMembersConfig_set(JNIEnv *env, jobject thiz,
                                                                     jobject group_member) {
-    ptrToMembers(env, thiz)->set(*ptrToMember(env, group_member));
+    return run_catching_cxx_exception_or_throws<void>(env, [=] {
+        ptrToMembers(env, thiz)->set(*ptrToMember(env, group_member));
+    });
 }
 
 extern "C"
@@ -232,5 +234,7 @@ Java_network_loki_messenger_libsession_1util_GroupMembersConfig_setPendingSend(J
                                                                                jobject thiz,
                                                                                jstring pub_key_hex,
                                                                                jboolean pending) {
-    ptrToMembers(env, thiz)->set_pending_send(JavaStringRef(env, pub_key_hex).copy(), pending);
+    run_catching_cxx_exception_or_throws<void>(env, [=] {
+        ptrToMembers(env, thiz)->set_pending_send(JavaStringRef(env, pub_key_hex).copy(), pending);
+    });
 }

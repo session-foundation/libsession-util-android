@@ -37,8 +37,10 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_destroyGroup(JNIEnv *env,
                                                                           jobject thiz) {
-    auto group_info = ptrToInfo(env, thiz);
-    group_info->destroy_group();
+    jni_utils::run_catching_cxx_exception_or_throws<void>(env, [=] {
+        auto group_info = ptrToInfo(env, thiz);
+        group_info->destroy_group();
+    });
 }
 
 
@@ -103,8 +105,10 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_setCreated(JNIEnv *env, jobject thiz,
                                                                         jlong created_at) {
-    auto group_info = ptrToInfo(env, thiz);
-    group_info->set_created(created_at);
+    jni_utils::run_catching_cxx_exception_or_throws<void>(env, [=] {
+        auto group_info = ptrToInfo(env, thiz);
+        group_info->set_created(created_at);
+    });
 }
 
 extern "C"
@@ -112,8 +116,10 @@ JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_setDeleteAttachmentsBefore(JNIEnv *env,
                                                                                         jobject thiz,
                                                                                         jlong delete_before) {
-    auto group_info = ptrToInfo(env, thiz);
-    group_info->set_delete_attach_before(delete_before);
+    jni_utils::run_catching_cxx_exception_or_throws<void>(env, [=] {
+        auto group_info = ptrToInfo(env, thiz);
+        group_info->set_delete_attach_before(delete_before);
+    });
 }
 
 extern "C"
@@ -121,8 +127,10 @@ JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_setDeleteBefore(JNIEnv *env,
                                                                              jobject thiz,
                                                                              jlong delete_before) {
-    auto group_info = ptrToInfo(env, thiz);
-    group_info->set_delete_before(delete_before);
+    jni_utils::run_catching_cxx_exception_or_throws<void>(env, [=] {
+        auto group_info = ptrToInfo(env, thiz);
+        group_info->set_delete_before(delete_before);
+    });
 }
 
 extern "C"
@@ -130,16 +138,20 @@ JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_setExpiryTimer(JNIEnv *env,
                                                                             jobject thiz,
                                                                             jlong  expire_seconds) {
-    auto group_info = ptrToInfo(env, thiz);
-    group_info->set_expiry_timer(std::chrono::seconds{expire_seconds});
+    jni_utils::run_catching_cxx_exception_or_throws<void>(env, [=] {
+        auto group_info = ptrToInfo(env, thiz);
+        group_info->set_expiry_timer(std::chrono::seconds{expire_seconds});
+    });
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_setName(JNIEnv *env, jobject thiz,
                                                                      jstring new_name) {
-    auto group_info = ptrToInfo(env, thiz);
-    group_info->set_name(jni_utils::JavaStringRef(env, new_name).view());
+    jni_utils::run_catching_cxx_exception_or_throws<void>(env, [=] {
+        auto group_info = ptrToInfo(env, thiz);
+        group_info->set_name(jni_utils::JavaStringRef(env, new_name).view());
+    });
 }
 
 extern "C"
@@ -147,8 +159,10 @@ JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_setProfilePic(JNIEnv *env,
                                                                            jobject thiz,
                                                                            jobject new_profile_pic) {
-    auto group_info = ptrToInfo(env, thiz);
-    group_info->set_profile_pic(util::deserialize_user_pic(env, new_profile_pic));
+    jni_utils::run_catching_cxx_exception_or_throws<void>(env, [=] {
+        auto group_info = ptrToInfo(env, thiz);
+        group_info->set_profile_pic(util::deserialize_user_pic(env, new_profile_pic));
+    });
 }
 
 extern "C"
@@ -183,6 +197,8 @@ JNIEXPORT void JNICALL
 Java_network_loki_messenger_libsession_1util_GroupInfoConfig_setDescription(JNIEnv *env,
                                                                             jobject thiz,
                                                                             jstring new_description) {
-    auto group_info = ptrToInfo(env, thiz);
-    group_info->set_description(jni_utils::JavaStringRef(env, new_description).view());
+    jni_utils::run_catching_cxx_exception_or_throws<void>(env, [=] {
+        auto group_info = ptrToInfo(env, thiz);
+        group_info->set_description(jni_utils::JavaStringRef(env, new_description).view());
+    });
 }
