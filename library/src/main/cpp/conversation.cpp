@@ -53,13 +53,13 @@ JavaLocalRef<jobject> serialize_one_to_one(JNIEnv *env, const session::config::c
 struct WithProProofInfoClassInfo : public JavaClassInfo {
     jmethodID proProofInfo_getter;
 
-    WithProProofInfoClassInfo(JNIEnv *env, jobject obj)
-        : JavaClassInfo(env, obj)
+    WithProProofInfoClassInfo(JNIEnv *env)
+        : JavaClassInfo(env, "network/loki/messenger/libsession_util/util/WithProProofInfo")
         , proProofInfo_getter(env->GetMethodID(java_class, "getProProofInfo", "()Lnetwork/loki/messenger/libsession_util/util/Conversation$ProProofInfo;"))
         {}
 
-    static const WithProProofInfoClassInfo& get(JNIEnv *env, jobject obj) {
-        static WithProProofInfoClassInfo instance(env, obj);
+    static const WithProProofInfoClassInfo& get(JNIEnv *env) {
+        static WithProProofInfoClassInfo instance(env);
         return instance;
     }
 };
@@ -133,7 +133,7 @@ session::config::convo::one_to_one deserialize_one_to_one(JNIEnv *env, jobject i
     r.unread = env->CallBooleanMethod(info, class_info.unread_getter);
 
     JavaLocalRef<jobject> pro_proof(env, env->CallObjectMethod(
-            info, WithProProofInfoClassInfo::get(env, info).proProofInfo_getter));
+            info, WithProProofInfoClassInfo::get(env).proProofInfo_getter));
 
     ProProofInfoClassInfo::read_gen_index_hash(r.pro_gen_index_hash, env, pro_proof.get());
     r.pro_expiry_unix_ts = ProProofInfoClassInfo::read_pro_expiry(env, pro_proof.get());
@@ -300,7 +300,7 @@ session::config::convo::blinded_one_to_one deserialize_blinded_one_to_one(JNIEnv
     r.unread = env->CallBooleanMethod(info, class_info.unread_getter);
 
     JavaLocalRef<jobject> pro_proof(env, env->CallObjectMethod(
-            info, WithProProofInfoClassInfo::get(env, info).proProofInfo_getter));
+            info, WithProProofInfoClassInfo::get(env).proProofInfo_getter));
 
     ProProofInfoClassInfo::read_gen_index_hash(r.pro_gen_index_hash, env, pro_proof.get());
     r.pro_expiry_unix_ts = ProProofInfoClassInfo::read_pro_expiry(env, pro_proof.get());
