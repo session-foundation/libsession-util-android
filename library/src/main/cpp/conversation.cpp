@@ -54,7 +54,7 @@ struct WithProProofInfoClassInfo : public JavaClassInfo {
     jmethodID proProofInfo_getter;
 
     WithProProofInfoClassInfo(JNIEnv *env)
-        : JavaClassInfo(env, "network/loki/messenger/libsession_util/util/WithProProofInfo")
+        : JavaClassInfo(env, "network/loki/messenger/libsession_util/util/Conversation$WithProProofInfo")
         , proProofInfo_getter(env->GetMethodID(java_class, "getProProofInfo", "()Lnetwork/loki/messenger/libsession_util/util/Conversation$ProProofInfo;"))
         {}
 
