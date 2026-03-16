@@ -11,11 +11,11 @@ plugins {
 group = "org.sessionfoundation"
 version = System.getenv("VERSION") ?: "dev-snapshot"
 
-val protobufVersion = "4.33.1"
+val protobufVersion = "4.34.0"
 
 android {
     namespace = "org.sessionfoundation.libsession_util"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
@@ -24,7 +24,12 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5")
+                arguments += listOf(
+                    "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                    "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+                    "-DENABLE_NETWORKING=OFF",
+                    "-DENABLE_NETWORKING_SROUTER=OFF",
+                )
                 targets("session_util")
             }
         }
@@ -137,7 +142,7 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
 
     implementation("androidx.annotation:annotation:1.9.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.10.0")
 
     api("com.google.protobuf:protobuf-java:$protobufVersion")
 
