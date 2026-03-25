@@ -203,25 +203,30 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_util_BaseCommunityInfo_00024Companion_parseFullUrl(
         JNIEnv *env, jobject thiz, jstring full_url) {
-    auto [base, room, pk] = session::config::community::parse_full_url(JavaStringRef(env, full_url).view());
+    return run_catching_cxx_exception_or_throws<jobject>(env, [=] {
+        auto [base, room, pk] = session::config::community::parse_full_url(JavaStringRef(env, full_url).view());
 
-    jclass clazz = env->FindClass("kotlin/Triple");
-    jmethodID constructor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V");
+        jclass clazz = env->FindClass("kotlin/Triple");
+        jmethodID constructor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V");
 
-    auto base_j = env->NewStringUTF(base.data());
-    auto room_j = env->NewStringUTF(room.data());
-    auto pk_jbytes = util::bytes_from_vector(env, pk);
+        auto base_j = env->NewStringUTF(base.data());
+        auto room_j = env->NewStringUTF(room.data());
+        auto pk_jbytes = util::bytes_from_vector(env, pk);
 
-    jobject triple = env->NewObject(clazz, constructor, base_j, room_j, pk_jbytes.get());
-    return triple;
+        jobject triple = env->NewObject(clazz, constructor, base_j, room_j, pk_jbytes.get());
+        return triple;
+    });
 }
+
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_network_loki_messenger_libsession_1util_util_BaseCommunityInfo_fullUrl(JNIEnv *env,
                                                                             jobject thiz) {
-    auto deserialized = deserialize_base_community(env, thiz);
-    auto full_url = deserialized.full_url();
-    return env->NewStringUTF(full_url.data());
+    return run_catching_cxx_exception_or_throws<jstring>(env, [=] {
+        auto deserialized = deserialize_base_community(env, thiz);
+        auto full_url = deserialized.full_url();
+        return env->NewStringUTF(full_url.data());
+    });
 }
 
 extern "C"
