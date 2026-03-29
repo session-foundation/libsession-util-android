@@ -269,15 +269,17 @@ Java_network_loki_messenger_libsession_1util_UserGroupsConfig_getCommunityInfo(J
                                                                                jobject thiz,
                                                                                jstring base_url,
                                                                                jstring room) {
-    auto conf = ptrToUserGroups(env, thiz);
+    return run_catching_cxx_exception_or_throws<jobject>(env, [=]() -> jobject {
+        auto conf = ptrToUserGroups(env, thiz);
 
-    auto community = conf->get_community(JavaStringRef(env, base_url).view(), JavaStringRef(env, room).view());
+        auto community = conf->get_community(JavaStringRef(env, base_url).view(), JavaStringRef(env, room).view());
 
-    if (community) {
-        return serialize_community_info(env, *community).release();
-    }
+        if (community) {
+            return serialize_community_info(env, *community).release();
+        }
 
-    return nullptr;
+        return nullptr;
+    });
 }
 
 extern "C"
