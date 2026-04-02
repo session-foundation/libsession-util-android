@@ -29,7 +29,9 @@ This library's versioning rules are:
 1. If there is a tag related to this commit, the tag will be used as the version name
 2. Otherwise, the version name will look like "lastGitTag-numberOfChangesSinceLastTag-shortCommitHash", for example "1.0.0-5-abcd12345". "-dirty" will be appended if the git workspace contains uncommitted changes.
 
-Normally you don't have to worry about versioning as it's fully automatic and determinstic. If changes warrant a new release, then Session devs should push a tag and we'll have a formal release version built.
+Normally you don't have to worry about versioning as it's fully automatic and deterministic. If
+changes warrant a new release, then Session devs should push a tag,
+and we'll have a formal release version built.
 
 #### Development & deployment
 
