@@ -85,7 +85,7 @@ interface ReadableUserProfile: ReadableConfig {
 
     fun getProFeatures(): ProProfileFeatures
     fun getProConfig(): ProConfig?
-    fun getProAccessExpiryMs(): Long?
+    fun getProAccessExpiry(): Long?
 }
 
 interface MutableUserProfile : ReadableUserProfile, MutableConfig {
@@ -108,7 +108,7 @@ interface MutableUserProfile : ReadableUserProfile, MutableConfig {
     fun setProConfig(proConfig: ProConfig)
     fun setProBadge(proBadge: Boolean)
     fun setAnimatedAvatar(animatedAvatar: Boolean)
-    fun setProAccessExpiryMs(epochMills: Long)
+    fun setProAccessExpiry(epochSeconds: Long)
     fun removeProAccessExpiry()
 }
 

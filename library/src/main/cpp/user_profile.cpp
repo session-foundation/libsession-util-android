@@ -165,11 +165,11 @@ Java_network_loki_messenger_libsession_1util_UserProfile_setAnimatedAvatar(JNIEn
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_network_loki_messenger_libsession_1util_UserProfile_setProAccessExpiryMs(JNIEnv *env,
-                                                                              jobject thiz,
-                                                                              jlong epoch_mills) {
-    ptrToProfile(env, thiz)->set_pro_access_expiry(std::chrono::sys_time<std::chrono::milliseconds>{
-            std::chrono::milliseconds{epoch_mills}
+Java_network_loki_messenger_libsession_1util_UserProfile_setProAccessExpiry(JNIEnv *env,
+                                                                            jobject thiz,
+                                                                            jlong epoch_seconds) {
+    ptrToProfile(env, thiz)->set_pro_access_expiry(std::chrono::sys_seconds{
+            std::chrono::seconds{epoch_seconds}
     });
 }
 
@@ -210,8 +210,8 @@ Java_network_loki_messenger_libsession_1util_UserProfile_getProConfig(JNIEnv *en
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_network_loki_messenger_libsession_1util_UserProfile_getProAccessExpiryMsOrZero(JNIEnv *env,
-                                                                                    jobject thiz) {
+Java_network_loki_messenger_libsession_1util_UserProfile_getProAccessExpiryOrZero(JNIEnv *env,
+                                                                                   jobject thiz) {
     auto expiry = ptrToProfile(env, thiz)->get_pro_access_expiry();
     return expiry ? expiry->time_since_epoch().count() : 0;
 }

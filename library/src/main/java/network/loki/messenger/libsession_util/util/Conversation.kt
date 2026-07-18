@@ -13,25 +13,25 @@ sealed interface Conversation {
      * This is not a full ProProof, it contains just enough for the clients to check it it's revoked.
      */
     data class ProProofInfo(
-        val genIndexHash: Bytes,
+        val revocationTag: Bytes,
         val expiry: Instant,
     ) {
         @Keep
         constructor(
-            genIndexHash: ByteArray,
-            expiryMs: Long,
+            revocationTag: ByteArray,
+            expirySeconds: Long,
         ) : this(
-            genIndexHash = Bytes(genIndexHash),
-            expiry = Instant.ofEpochMilli(expiryMs)
+            revocationTag = Bytes(revocationTag),
+            expiry = Instant.ofEpochSecond(expirySeconds)
         )
 
         @get:Keep
-        val genIndexHashBytes: ByteArray
-            get() = genIndexHash.data
+        val revocationTagBytes: ByteArray
+            get() = revocationTag.data
 
         @get:Keep
         val expiryUnixTs: Long
-            get() = expiry.toEpochMilli()
+            get() = expiry.epochSecond
     }
 
     /**
