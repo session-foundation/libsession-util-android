@@ -41,12 +41,17 @@ data class ProResponseHeader(
     val isSuccess: Boolean get() = errors.isEmpty()
 }
 
+/** Common interface for the parsed Pro backend responses; check [header] before reading the data. */
+interface ProResponse {
+    val header: ProResponseHeader
+}
+
 /** Response to add-payment / generate-proof: carries the freshly-issued proof (null on error). */
 @Keep
 data class ProProofResponse(
-    val header: ProResponseHeader,
+    override val header: ProResponseHeader,
     val proof: ProProof?,
-)
+) : ProResponse
 
 /** One payment/subscription record from get-details. */
 @Keep
@@ -68,7 +73,7 @@ data class ProPaymentItem(
 /** Response to get-details. */
 @Keep
 data class GetProDetailsResponse(
-    val header: ProResponseHeader,
+    override val header: ProResponseHeader,
     val items: List<ProPaymentItem>,
     val userStatus: Int,           // SESSION_PRO_BACKEND_USER_PRO_STATUS
     val errorReport: Int,          // SESSION_PRO_BACKEND_GET_PRO_DETAILS_ERROR_REPORT
@@ -77,7 +82,7 @@ data class GetProDetailsResponse(
     val gracePeriodDurationSeconds: Long,
     val refundRequestedUnixTs: Long, // seconds; 0 if none
     val paymentsTotal: Int,
-)
+) : ProResponse
 
 /** One revocation-list entry. */
 @Keep
@@ -89,16 +94,16 @@ data class ProRevocationItem(
 /** Response to get-revocations. */
 @Keep
 data class GetProRevocationsResponse(
-    val header: ProResponseHeader,
+    override val header: ProResponseHeader,
     val ticket: Long,
     val retryInSeconds: Long,
     val retainForSeconds: Long,
     val items: List<ProRevocationItem>,
-)
+) : ProResponse
 
 /** Response to set-refund-requested. */
 @Keep
 data class SetPaymentRefundRequestedResponse(
-    val header: ProResponseHeader,
+    override val header: ProResponseHeader,
     val updated: Boolean,
-)
+) : ProResponse
