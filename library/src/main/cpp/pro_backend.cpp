@@ -52,9 +52,9 @@ JavaLocalRef<jobject> serialize_provider_urls(JNIEnv* env, const pb::ProviderUrl
 
 JavaLocalRef<jobject> serialize_payment_item(JNIEnv* env, const pb::ProPaymentItem& it) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProPaymentItem",
-            "(ILjava/lang/String;Ljava/lang/String;ZJJJJJJJLjava/lang/String;)V");
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZJJJJJJJLjava/lang/String;)V");
     return {env, env->NewObject(cls.java_class, cls.constructor,
-            static_cast<jint>(it.status),
+            jstring_from_optional(env, std::string_view(it.status)).get(),   // opaque status code string
             jstring_from_optional(env, std::string_view(it.plan)).get(),
             jstring_from_optional(env, std::string_view(it.payment_provider)).get(),
             static_cast<jboolean>(it.auto_renewing),
@@ -90,7 +90,7 @@ jobject serialize_pro_proof_response(JNIEnv* env, const pb::ProProofResponse& re
 
 jobject serialize_get_details_response(JNIEnv* env, const pb::GetProDetailsResponse& resp) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/GetProDetailsResponse",
-            "(Lnetwork/loki/messenger/libsession_util/pro/ProResponseHeader;Ljava/util/List;IIZJJJI)V");
+            "(Lnetwork/loki/messenger/libsession_util/pro/ProResponseHeader;Ljava/util/List;Ljava/lang/String;IZJJJI)V");
     auto header = serialize_response_header(env, resp);
     JavaLocalRef<jobject> items(env, jlist_from_collection(env, resp.items,
             [](JNIEnv* env, const pb::ProPaymentItem& it) -> std::optional<JavaLocalRef<jobject>> {
@@ -98,7 +98,7 @@ jobject serialize_get_details_response(JNIEnv* env, const pb::GetProDetailsRespo
             }));
     return env->NewObject(cls.java_class, cls.constructor,
             header.get(), items.get(),
-            static_cast<jint>(resp.user_status),
+            jstring_from_optional(env, std::string_view(resp.user_status)).get(),   // opaque status code string
             static_cast<jint>(resp.error_report),
             static_cast<jboolean>(resp.auto_renewing),
             static_cast<jlong>(resp.expiry_unix_ts.time_since_epoch().count()),
@@ -271,5 +271,26 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_providerUrls(
         if (!urls)
             return nullptr;
         return serialize_provider_urls(env, *urls).release();
+    });
+}
+
+// --- Backend identity constants (single source of truth in libsession) ---
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_network_loki_messenger_libsession_1util_pro_BackendRequests_proBackendUrl(
+        JNIEnv* env, jobject) {
+    return run_catching_cxx_exception_or_throws<jstring>(env, [=]() {
+        return env->NewStringUTF(std::string(pb::URL).c_str());
+    });
+}
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_network_loki_messenger_libsession_1util_pro_BackendRequests_proBackendPubKeyHex(
+        JNIEnv* env, jobject) {
+    return run_catching_cxx_exception_or_throws<jstring>(env, [=]() {
+        auto hex = oxenc::to_hex(pb::PUBKEY.begin(), pb::PUBKEY.end());
+        return env->NewStringUTF(hex.c_str());
     });
 }

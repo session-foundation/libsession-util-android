@@ -57,4 +57,12 @@ object BackendRequests : LibSessionUtilCApi() {
     // --- Provider URLs (libsession is the source of truth; null if none, e.g. rangeproof/unknown) ---
 
     external fun providerUrls(providerCode: String): ProviderUrls?
+
+    // --- Backend identity (single source of truth in libsession; read these, don't hard-code) ---
+
+    /** The Session Pro backend base URL (overridable prod/default), e.g. "https://pro.session.codes". */
+    external fun proBackendUrl(): String
+
+    /** The Session Pro backend Ed25519 signing pubkey, hex (64 chars). */
+    external fun proBackendPubKeyHex(): String
 }

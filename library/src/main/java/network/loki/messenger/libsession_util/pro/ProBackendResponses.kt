@@ -56,7 +56,7 @@ data class ProProofResponse(
 /** One payment/subscription record from get-details. */
 @Keep
 data class ProPaymentItem(
-    val status: Int,               // SESSION_PRO_BACKEND_PAYMENT_STATUS
+    val status: String,            // opaque status code: unredeemed/redeemed/expired/revoked
     val plan: String,              // period code, e.g. "1m"/"3m"/"1y"; opaque
     val paymentProvider: String,   // provider slug, e.g. "google_play"; opaque
     val autoRenewing: Boolean,
@@ -75,7 +75,7 @@ data class ProPaymentItem(
 data class GetProDetailsResponse(
     override val header: ProResponseHeader,
     val items: List<ProPaymentItem>,
-    val userStatus: Int,           // SESSION_PRO_BACKEND_USER_PRO_STATUS
+    val userStatus: String,        // opaque status code: never/active/expired
     val errorReport: Int,          // SESSION_PRO_BACKEND_GET_PRO_DETAILS_ERROR_REPORT
     val autoRenewing: Boolean,
     val expiryUnixTs: Long,        // seconds; includes grace period; may be in the past
