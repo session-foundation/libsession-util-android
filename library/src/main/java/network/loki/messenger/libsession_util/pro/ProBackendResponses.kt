@@ -1,16 +1,28 @@
 package network.loki.messenger.libsession_util.pro
 
 import androidx.annotation.Keep
+import java.time.Duration
+import java.time.Instant
 
 /**
  * Kotlin mirrors of the `session::pro_backend` request/response structs. libsession-util owns both
  * request construction and response parsing (the single source of truth for the wire shape); these
  * types are what the JNI layer hands back so the app never re-parses the JSON itself.
  *
- * Timestamp conventions match the C++ structs: fields named `...UnixTs` are whole **unix seconds**;
- * `...UnixTsMs` are **unix milliseconds** (the provider's sub-second precision, kept as ms); duration
- * fields are **seconds**. A `0` timestamp means "not set".
+ * The JNI boundary can only carry primitives efficiently, so the constructor fields are raw epoch
+ * integers (`...UnixTs` = whole **unix seconds**, `...UnixTsMs` = **unix milliseconds**; duration
+ * fields are **seconds**; `0` means "not set"). Consumers should prefer the typed `Instant`/`Duration`
+ * accessors below instead of the raw longs — the epoch→datetime conversion (and the `0 → null` "unset"
+ * mapping) happens once, here at the glue boundary, rather than being repeated at every call site.
  */
+
+/** Epoch **seconds** as an [Instant], or null when unset (`0`). */
+private fun Long.secondsToInstantOrNull(): Instant? =
+    if (this == 0L) null else Instant.ofEpochSecond(this)
+
+/** Epoch **milliseconds** as an [Instant], or null when unset (`0`). */
+private fun Long.msToInstantOrNull(): Instant? =
+    if (this == 0L) null else Instant.ofEpochMilli(this)
 
 /** Route + content-type + body for a request to POST to the Pro backend (from the `*Request` builders). */
 @Keep
@@ -69,7 +81,22 @@ data class ProPaymentItem(
     val revokedUnixTsMs: Long,     // sys_ms; 0 if not revoked
     val refundRequestedUnixTs: Long, // seconds; 0 if none
     val paymentId: String,         // opaque; confidential
-)
+) {
+    /** Provider purchase instant (always set). */
+    val purchased: Instant get() = Instant.ofEpochMilli(purchasedUnixTsMs)
+    /** When the payment was activated, or null if not yet activated. */
+    val redeemed: Instant? get() = redeemedUnixTs.secondsToInstantOrNull()
+    /** Access expiry for this payment, or null if not activated. */
+    val expiry: Instant? get() = expiryUnixTs.secondsToInstantOrNull()
+    /** Grace period beyond [expiry] before access is really lost. */
+    val gracePeriodDuration: Duration get() = Duration.ofSeconds(gracePeriodDurationSeconds)
+    /** Deadline for a platform ("quick") refund, or null if not applicable. */
+    val platformRefundExpiry: Instant? get() = platformRefundExpiryUnixTs.secondsToInstantOrNull()
+    /** When the payment was revoked, or null if not revoked. */
+    val revoked: Instant? get() = revokedUnixTsMs.msToInstantOrNull()
+    /** When a refund was requested, or null if none. */
+    val refundRequested: Instant? get() = refundRequestedUnixTs.secondsToInstantOrNull()
+}
 
 /** Response to get-details. */
 @Keep
@@ -83,14 +110,24 @@ data class GetProDetailsResponse(
     val gracePeriodDurationSeconds: Long,
     val refundRequestedUnixTs: Long, // seconds; 0 if none
     val paymentsTotal: Int,
-) : ProResponse
+) : ProResponse {
+    /** Account-level access expiry (includes grace period), or null if never subscribed. */
+    val expiry: Instant? get() = expiryUnixTs.secondsToInstantOrNull()
+    /** Grace period included in [expiry]. */
+    val gracePeriodDuration: Duration get() = Duration.ofSeconds(gracePeriodDurationSeconds)
+    /** When a refund was requested, or null if none. */
+    val refundRequested: Instant? get() = refundRequestedUnixTs.secondsToInstantOrNull()
+}
 
 /** One revocation-list entry. */
 @Keep
 data class ProRevocationItem(
     val revocationTagHex: String,  // 32-byte opaque tag, hex
     val effectiveUnixTs: Long,     // seconds; revoked only once client clock >= this
-)
+) {
+    /** The revocation only takes effect once the client clock reaches this instant. */
+    val effective: Instant get() = Instant.ofEpochSecond(effectiveUnixTs)
+}
 
 /** Response to get-revocations. */
 @Keep
