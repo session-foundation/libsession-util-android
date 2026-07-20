@@ -33,10 +33,11 @@ JavaLocalRef<jobject> serialize_response_header(JNIEnv* env, const pb::Response&
 
 jobject serialize_pro_request(JNIEnv* env, const pb::ProRequest& r) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProRequest",
-                                  "(Ljava/lang/String;Ljava/lang/String;)V");
+                                  "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
     return env->NewObject(cls.java_class, cls.constructor,
                           jstring_from_optional(env, r.endpoint).get(),
-                          jstring_from_optional(env, std::string_view(r.body)).get());
+                          jstring_from_optional(env, r.content_type).get(),
+                          jstring_from_optional(env, std::string_view(r.data)).get());
 }
 
 JavaLocalRef<jobject> serialize_provider_urls(JNIEnv* env, const pb::ProviderUrls& u) {
@@ -58,13 +59,13 @@ JavaLocalRef<jobject> serialize_payment_item(JNIEnv* env, const pb::ProPaymentIt
             jstring_from_optional(env, std::string_view(it.plan)).get(),
             jstring_from_optional(env, std::string_view(it.payment_provider)).get(),
             static_cast<jboolean>(it.auto_renewing),
-            static_cast<jlong>(it.purchased_unix_ts.time_since_epoch().count()),           // ms
-            static_cast<jlong>(it.redeemed_unix_ts.time_since_epoch().count()),            // s
-            static_cast<jlong>(it.expiry_unix_ts.time_since_epoch().count()),              // s
+            static_cast<jlong>(it.purchased_at.time_since_epoch().count()),           // ms
+            static_cast<jlong>(it.redeemed_at.time_since_epoch().count()),            // s
+            static_cast<jlong>(it.expiry_at.time_since_epoch().count()),              // s
             static_cast<jlong>(it.grace_period_duration.count()),                          // s
-            static_cast<jlong>(it.platform_refund_expiry_unix_ts.time_since_epoch().count()), // s
-            static_cast<jlong>(it.revoked_unix_ts.time_since_epoch().count()),             // ms
-            static_cast<jlong>(it.refund_requested_unix_ts.time_since_epoch().count()),    // s
+            static_cast<jlong>(it.platform_refund_expiry_at.time_since_epoch().count()), // s
+            static_cast<jlong>(it.revoked_at.time_since_epoch().count()),             // ms
+            static_cast<jlong>(it.refund_requested_at.time_since_epoch().count()),    // s
             jstring_from_optional(env, std::string_view(it.payment_id)).get())};
 }
 
@@ -74,7 +75,7 @@ JavaLocalRef<jobject> serialize_revocation_item(JNIEnv* env, const pb::ProRevoca
     auto hex = oxenc::to_hex(it.revocation_tag.begin(), it.revocation_tag.end());
     return {env, env->NewObject(cls.java_class, cls.constructor,
             jstring_from_optional(env, std::string_view(hex)).get(),
-            static_cast<jlong>(it.effective_unix_ts.time_since_epoch().count()))};
+            static_cast<jlong>(it.effective_at.time_since_epoch().count()))};
 }
 
 jobject serialize_pro_proof_response(JNIEnv* env, const pb::ProProofResponse& resp) {
@@ -101,9 +102,9 @@ jobject serialize_get_details_response(JNIEnv* env, const pb::GetProDetailsRespo
             jstring_from_optional(env, std::string_view(resp.user_status)).get(),   // opaque status code string
             static_cast<jint>(resp.error_report),
             static_cast<jboolean>(resp.auto_renewing),
-            static_cast<jlong>(resp.expiry_unix_ts.time_since_epoch().count()),
+            static_cast<jlong>(resp.expiry_at.time_since_epoch().count()),
             static_cast<jlong>(resp.grace_period_duration.count()),
-            static_cast<jlong>(resp.refund_requested_unix_ts.time_since_epoch().count()),
+            static_cast<jlong>(resp.refund_requested_at.time_since_epoch().count()),
             static_cast<jint>(resp.payments_total));
 }
 

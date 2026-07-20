@@ -46,7 +46,7 @@ JavaLocalRef<jobject> serialize_one_to_one(JNIEnv *env, const session::config::c
                           (jlong) one_to_one.last_read,
                           (jboolean) one_to_one.unread,
                           serialize_pro_proof_info(env, one_to_one.pro_revocation_tag,
-                                                   one_to_one.pro_expiry_unix_ts).get())};
+                                                   one_to_one.pro_expiry_at).get())};
 }
 
 
@@ -136,7 +136,7 @@ session::config::convo::one_to_one deserialize_one_to_one(JNIEnv *env, jobject i
             info, WithProProofInfoClassInfo::get(env).proProofInfo_getter));
 
     ProProofInfoClassInfo::read_revocation_tag(r.pro_revocation_tag, env, pro_proof.get());
-    r.pro_expiry_unix_ts = ProProofInfoClassInfo::read_pro_expiry(env, pro_proof.get());
+    r.pro_expiry_at = ProProofInfoClassInfo::read_pro_expiry(env, pro_proof.get());
 
     return r;
 }
@@ -274,7 +274,7 @@ JavaLocalRef<jobject> serialize_blinded_one_to_one(JNIEnv *env, const session::c
             JavaLocalRef(env, env->NewStringUTF(blinded_one_to_one.blinded_session_id.data())).get(),
             (jlong) blinded_one_to_one.last_read,
             (jboolean) blinded_one_to_one.unread,
-            serialize_pro_proof_info(env, blinded_one_to_one.pro_revocation_tag, blinded_one_to_one.pro_expiry_unix_ts).get()
+            serialize_pro_proof_info(env, blinded_one_to_one.pro_revocation_tag, blinded_one_to_one.pro_expiry_at).get()
     )};
 }
 
@@ -303,7 +303,7 @@ session::config::convo::blinded_one_to_one deserialize_blinded_one_to_one(JNIEnv
             info, WithProProofInfoClassInfo::get(env).proProofInfo_getter));
 
     ProProofInfoClassInfo::read_revocation_tag(r.pro_revocation_tag, env, pro_proof.get());
-    r.pro_expiry_unix_ts = ProProofInfoClassInfo::read_pro_expiry(env, pro_proof.get());
+    r.pro_expiry_at = ProProofInfoClassInfo::read_pro_expiry(env, pro_proof.get());
 
 
     return r;

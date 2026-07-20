@@ -45,7 +45,7 @@ session::ProProof java_to_cpp_proof(JNIEnv *env, jobject proof) {
             .version = static_cast<std::uint8_t>(env->CallIntMethod(proof, methods.get_version)),
             .revocation_tag = from_hex<32>(jni_utils::JavaStringRef(env, revocation_tag.get()).get()),
             .rotating_pubkey = from_hex<32>(jni_utils::JavaStringRef(env, rotating_pub_key.get()).get()),
-            .expiry_unix_ts = std::chrono::sys_seconds(
+            .expiry_at = std::chrono::sys_seconds(
                     std::chrono::seconds(env->CallLongMethod(proof, methods.get_expiry_seconds))),
             .sig = from_hex<64>(jni_utils::JavaStringRef(env, signature.get()).get()),
     };
@@ -62,7 +62,7 @@ JavaLocalRef<jobject> cpp_to_java_proof(JNIEnv *env, const session::ProProof &pr
             static_cast<jint>(proof.version),
             util::bytes_from_span(env, proof.revocation_tag).get(),
             util::bytes_from_span(env, proof.rotating_pubkey).get(),
-            static_cast<jlong>(proof.expiry_unix_ts.time_since_epoch().count()),
+            static_cast<jlong>(proof.expiry_at.time_since_epoch().count()),
             util::bytes_from_span(env, proof.sig).get()
     )};
 }

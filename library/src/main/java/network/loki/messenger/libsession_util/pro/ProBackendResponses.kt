@@ -12,10 +12,11 @@ import androidx.annotation.Keep
  * fields are **seconds**. A `0` timestamp means "not set".
  */
 
-/** Route + body for a request to POST to the Pro backend (from the `*Request` builders). */
+/** Route + content-type + body for a request to POST to the Pro backend (from the `*Request` builders). */
 @Keep
 data class ProRequest(
     val endpoint: String,
+    val contentType: String,   // relay verbatim as the Content-Type header; don't assume a format
     val body: String,
 )
 
