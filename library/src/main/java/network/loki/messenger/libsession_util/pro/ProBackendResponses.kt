@@ -64,21 +64,37 @@ data class ProviderUrls(
 )
 
 /**
- * Common response header. A non-empty [errors] means the parse failed or was partial — always check
- * [isSuccess] first.
+ * Outcome category for a Pro backend response (Delta #12). CLOSED set: [Ok] = success (payload fields
+ * set); [Fail] = rejected on client input / a precondition; [Error] = backend fault (the same request
+ * may succeed later, i.e. retryable). Ordinals match the C `SESSION_PRO_BACKEND_RESPONSE_STATUS` enum.
+ */
+@Serializable
+enum class ProResponseStatus { Ok, Fail, Error }
+
+/**
+ * Common response header (Delta #12). Check [isSuccess] first.
  *
- * NOTE: [status] is libsession's raw numeric status code, whose meaning varies by endpoint (a generic
- * success/error flag for most responses, an add-payment outcome enum for add-payment). It is redundant
- * with [errors] for everything except add-payment and is pending removal upstream — prefer [isSuccess]
- * / [errors]; don't build new logic on the raw int.
+ * On non-[ProResponseStatus.Ok]: [errorCode] is a stable machine-readable slug (spec §5.1) — map known
+ * ones to a localized (Crowdin) string; an unknown slug is forward-compatible (falls through). [error] is
+ * an English diagnostic — NOT user-facing text; show it only when the slug has no i18n entry at all, and
+ * it's always safe to log. Both are null on success.
  */
 @Serializable
 @Keep
 data class ProResponseHeader(
-    val status: Int,
-    val errors: List<String>,
+    val status: ProResponseStatus,
+    val errorCode: String?,
+    val error: String?,
 ) {
-    val isSuccess: Boolean get() = errors.isEmpty()
+    val isSuccess: Boolean get() = status == ProResponseStatus.Ok
+
+    /** JNI-facing constructor: status as the C enum ordinal, nullable slug + diagnostic. */
+    @Keep
+    constructor(statusOrdinal: Int, errorCode: String?, error: String?) : this(
+        status = ProResponseStatus.values().getOrElse(statusOrdinal) { ProResponseStatus.Error },
+        errorCode = errorCode,
+        error = error,
+    )
 }
 
 /** Common interface for the parsed Pro backend responses; check [header] before reading the data. */

@@ -23,12 +23,21 @@ std::span<const uint8_t> string_to_span(std::string_view s) {
 
 // --- struct -> Kotlin marshalling helpers ---
 
-JavaLocalRef<jobject> serialize_response_header(JNIEnv* env, const pb::Response& r) {
+JavaLocalRef<jobject> serialize_response_header(JNIEnv* env, const pb::ResponseBase& r) {
+    // Delta #12: status is now an enum (Ok/Fail/Error), plus an optional machine slug (error_code)
+    // and an optional English diagnostic (error); no more errors[] array. We marshal status as its
+    // ordinal (int) — the Kotlin @Keep ctor maps it to the ProResponseStatus enum.
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProResponseHeader",
-                                  "(ILjava/util/List;)V");
-    JavaLocalRef<jobject> errors(env, jstring_list_from_collection(env, r.errors));
+                                  "(ILjava/lang/String;Ljava/lang/String;)V");
+    auto sv = [](const std::optional<std::string>& o) -> std::optional<std::string_view> {
+        if (o)
+            return std::string_view{*o};
+        return std::nullopt;
+    };
     return {env, env->NewObject(cls.java_class, cls.constructor,
-                                static_cast<jint>(r.status), errors.get())};
+                                static_cast<jint>(r.status),
+                                jstring_from_optional(env, sv(r.error_code)).get(),
+                                jstring_from_optional(env, sv(r.error)).get())};
 }
 
 jobject serialize_pro_request(JNIEnv* env, const pb::ProRequest& r) {
