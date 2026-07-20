@@ -1,19 +1,26 @@
 package network.loki.messenger.libsession_util.pro
 
 import androidx.annotation.Keep
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import java.time.Duration
 import java.time.Instant
 
 /**
- * Kotlin mirrors of the `session::pro_backend` request/response structs. libsession-util owns both
- * request construction and response parsing (the single source of truth for the wire shape); these
- * types are what the JNI layer hands back so the app never re-parses the JSON itself.
+ * Kotlin mirrors of the `session::pro_backend` response structs. libsession-util owns request
+ * construction and response parsing (the single source of truth for the wire shape); these types are
+ * what the glue hands the app so it never re-parses the wire itself.
  *
- * The JNI boundary can only carry primitives efficiently, so the constructor fields are raw epoch
- * integers (`...UnixTs` = whole **unix seconds**, `...UnixTsMs` = **unix milliseconds**; duration
- * fields are **seconds**; `0` means "not set"). Consumers should prefer the typed `Instant`/`Duration`
- * accessors below instead of the raw longs — the epoch→datetime conversion (and the `0 → null` "unset"
- * mapping) happens once, here at the glue boundary, rather than being repeated at every call site.
+ * These are the app-facing shapes: dates are [Instant], intervals are [Duration], and opaque codes
+ * (plan/provider/status) stay [String] slugs — no magic-int constants. Because the JNI boundary can
+ * only marshal primitives, each type keeps a `@Keep` secondary constructor taking the raw epoch
+ * integers (the shape the C++ builds via `NewObject`); it converts once — here at the glue boundary —
+ * into the typed primary constructor, mapping the `0` "unset" sentinel to null. The types are
+ * `@Serializable` so the app can persist them directly (e.g. its SQLite pro-details cache).
  */
 
 /** Epoch **seconds** as an [Instant], or null when unset (`0`). */
@@ -23,6 +30,20 @@ private fun Long.secondsToInstantOrNull(): Instant? =
 /** Epoch **milliseconds** as an [Instant], or null when unset (`0`). */
 private fun Long.msToInstantOrNull(): Instant? =
     if (this == 0L) null else Instant.ofEpochMilli(this)
+
+/** Serializes an [Instant] as epoch-millis, for the app's local persistence of these types. */
+private object InstantAsEpochMillisSerializer : KSerializer<Instant> {
+    override val descriptor = PrimitiveSerialDescriptor("Instant", PrimitiveKind.LONG)
+    override fun serialize(encoder: Encoder, value: Instant) = encoder.encodeLong(value.toEpochMilli())
+    override fun deserialize(decoder: Decoder): Instant = Instant.ofEpochMilli(decoder.decodeLong())
+}
+
+/** Serializes a [Duration] as whole seconds. */
+private object DurationAsSecondsSerializer : KSerializer<Duration> {
+    override val descriptor = PrimitiveSerialDescriptor("Duration", PrimitiveKind.LONG)
+    override fun serialize(encoder: Encoder, value: Duration) = encoder.encodeLong(value.seconds)
+    override fun deserialize(decoder: Decoder): Duration = Duration.ofSeconds(decoder.decodeLong())
+}
 
 /** Route + content-type + body for a request to POST to the Pro backend (from the `*Request` builders). */
 @Keep
@@ -43,9 +64,15 @@ data class ProviderUrls(
 )
 
 /**
- * Common response header. `status` is 0 for success (or a request-specific status enum, e.g.
- * add-payment); a non-empty [errors] means the parse failed or was partial — always check first.
+ * Common response header. A non-empty [errors] means the parse failed or was partial — always check
+ * [isSuccess] first.
+ *
+ * NOTE: [status] is libsession's raw numeric status code, whose meaning varies by endpoint (a generic
+ * success/error flag for most responses, an add-payment outcome enum for add-payment). It is redundant
+ * with [errors] for everything except add-payment and is pending removal upstream — prefer [isSuccess]
+ * / [errors]; don't build new logic on the raw int.
  */
+@Serializable
 @Keep
 data class ProResponseHeader(
     val status: Int,
@@ -67,56 +94,100 @@ data class ProProofResponse(
 ) : ProResponse
 
 /** One payment/subscription record from get-details. */
+@Serializable
 @Keep
 data class ProPaymentItem(
-    val status: String,            // opaque status code: unredeemed/redeemed/expired/revoked
-    val plan: String,              // period code, e.g. "1m"/"3m"/"1y"; opaque
-    val paymentProvider: String,   // provider slug, e.g. "google_play"; opaque
+    val status: String,            // opaque per-payment status slug: unredeemed/redeemed/expired/revoked
+    val plan: String,              // period-code slug, e.g. "1m"/"3m"/"1y"
+    val paymentProvider: String,   // provider slug, e.g. "google_play"
     val autoRenewing: Boolean,
-    val purchasedUnixTsMs: Long,   // sys_ms (provider purchase instant); always set
-    val redeemedUnixTs: Long,      // seconds; 0 if not activated
-    val expiryUnixTs: Long,        // seconds; 0 if not activated
-    val gracePeriodDurationSeconds: Long,
-    val platformRefundExpiryUnixTs: Long, // seconds
-    val revokedUnixTsMs: Long,     // sys_ms; 0 if not revoked
-    val refundRequestedUnixTs: Long, // seconds; 0 if none
+    @Serializable(with = InstantAsEpochMillisSerializer::class)
+    val purchased: Instant,                  // provider purchase instant; always set
+    @Serializable(with = InstantAsEpochMillisSerializer::class)
+    val redeemed: Instant?,                  // when activated; null if not activated
+    @Serializable(with = InstantAsEpochMillisSerializer::class)
+    val expiry: Instant?,                    // access expiry for this payment; null if not activated
+    @Serializable(with = DurationAsSecondsSerializer::class)
+    val gracePeriod: Duration,               // grace beyond [expiry] before access is really lost
+    @Serializable(with = InstantAsEpochMillisSerializer::class)
+    val platformRefundExpiry: Instant?,      // deadline for a platform ("quick") refund; null if n/a
+    @Serializable(with = InstantAsEpochMillisSerializer::class)
+    val revoked: Instant?,                   // when revoked; null if not revoked
+    @Serializable(with = InstantAsEpochMillisSerializer::class)
+    val refundRequested: Instant?,           // when a refund was requested; null if none
     val paymentId: String,         // opaque; confidential
 ) {
-    /** Provider purchase instant (always set). */
-    val purchased: Instant get() = Instant.ofEpochMilli(purchasedUnixTsMs)
-    /** When the payment was activated, or null if not yet activated. */
-    val redeemed: Instant? get() = redeemedUnixTs.secondsToInstantOrNull()
-    /** Access expiry for this payment, or null if not activated. */
-    val expiry: Instant? get() = expiryUnixTs.secondsToInstantOrNull()
-    /** Grace period beyond [expiry] before access is really lost. */
-    val gracePeriodDuration: Duration get() = Duration.ofSeconds(gracePeriodDurationSeconds)
-    /** Deadline for a platform ("quick") refund, or null if not applicable. */
-    val platformRefundExpiry: Instant? get() = platformRefundExpiryUnixTs.secondsToInstantOrNull()
-    /** When the payment was revoked, or null if not revoked. */
-    val revoked: Instant? get() = revokedUnixTsMs.msToInstantOrNull()
-    /** When a refund was requested, or null if none. */
-    val refundRequested: Instant? get() = refundRequestedUnixTs.secondsToInstantOrNull()
+    /** Raw-epoch constructor used by the JNI layer (see the file header); converts to the typed fields. */
+    @Keep
+    constructor(
+        status: String,
+        plan: String,
+        paymentProvider: String,
+        autoRenewing: Boolean,
+        purchasedUnixTsMs: Long,
+        redeemedUnixTs: Long,
+        expiryUnixTs: Long,
+        gracePeriodDurationSeconds: Long,
+        platformRefundExpiryUnixTs: Long,
+        revokedUnixTsMs: Long,
+        refundRequestedUnixTs: Long,
+        paymentId: String,
+    ) : this(
+        status = status,
+        plan = plan,
+        paymentProvider = paymentProvider,
+        autoRenewing = autoRenewing,
+        purchased = Instant.ofEpochMilli(purchasedUnixTsMs),
+        redeemed = redeemedUnixTs.secondsToInstantOrNull(),
+        expiry = expiryUnixTs.secondsToInstantOrNull(),
+        gracePeriod = Duration.ofSeconds(gracePeriodDurationSeconds),
+        platformRefundExpiry = platformRefundExpiryUnixTs.secondsToInstantOrNull(),
+        revoked = revokedUnixTsMs.msToInstantOrNull(),
+        refundRequested = refundRequestedUnixTs.secondsToInstantOrNull(),
+        paymentId = paymentId,
+    )
 }
 
 /** Response to get-details. */
+@Serializable
 @Keep
 data class GetProDetailsResponse(
     override val header: ProResponseHeader,
     val items: List<ProPaymentItem>,
-    val userStatus: String,        // opaque status code: never/active/expired
+    val userStatus: String,        // opaque account-status slug: never/active/expired
     val errorReport: Int,          // SESSION_PRO_BACKEND_GET_PRO_DETAILS_ERROR_REPORT
     val autoRenewing: Boolean,
-    val expiryUnixTs: Long,        // seconds; includes grace period; may be in the past
-    val gracePeriodDurationSeconds: Long,
-    val refundRequestedUnixTs: Long, // seconds; 0 if none
+    @Serializable(with = InstantAsEpochMillisSerializer::class)
+    val expiry: Instant?,                    // account access expiry (incl. grace); null if never subscribed
+    @Serializable(with = DurationAsSecondsSerializer::class)
+    val gracePeriod: Duration,               // grace included in [expiry]
+    @Serializable(with = InstantAsEpochMillisSerializer::class)
+    val refundRequested: Instant?,           // when a refund was requested; null if none
     val paymentsTotal: Int,
 ) : ProResponse {
-    /** Account-level access expiry (includes grace period), or null if never subscribed. */
-    val expiry: Instant? get() = expiryUnixTs.secondsToInstantOrNull()
-    /** Grace period included in [expiry]. */
-    val gracePeriodDuration: Duration get() = Duration.ofSeconds(gracePeriodDurationSeconds)
-    /** When a refund was requested, or null if none. */
-    val refundRequested: Instant? get() = refundRequestedUnixTs.secondsToInstantOrNull()
+    /** Raw-epoch constructor used by the JNI layer (see the file header); converts to the typed fields. */
+    @Keep
+    constructor(
+        header: ProResponseHeader,
+        items: List<ProPaymentItem>,
+        userStatus: String,
+        errorReport: Int,
+        autoRenewing: Boolean,
+        expiryUnixTs: Long,
+        gracePeriodDurationSeconds: Long,
+        refundRequestedUnixTs: Long,
+        paymentsTotal: Int,
+    ) : this(
+        header = header,
+        items = items,
+        userStatus = userStatus,
+        errorReport = errorReport,
+        autoRenewing = autoRenewing,
+        expiry = expiryUnixTs.secondsToInstantOrNull(),
+        gracePeriod = Duration.ofSeconds(gracePeriodDurationSeconds),
+        refundRequested = refundRequestedUnixTs.secondsToInstantOrNull(),
+        paymentsTotal = paymentsTotal,
+    )
 }
 
 /** One revocation-list entry. */
