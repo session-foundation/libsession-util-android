@@ -58,6 +58,13 @@ object BackendRequests : LibSessionUtilCApi() {
 
     external fun providerUrls(providerCode: String): ProviderUrls?
 
+    /**
+     * The purchasable payment-provider slugs to surface to users (single source of truth in libsession;
+     * excludes non-purchasable providers like `rangeproof`). Order is not significant — the client
+     * applies its own ordering and skips slugs it has no display translation for.
+     */
+    external fun visiblePlatforms(): Array<String>
+
     // --- Backend identity (single source of truth in libsession; read these, don't hard-code) ---
 
     /** The Session Pro backend base URL (overridable prod/default), e.g. "https://pro.session.codes". */

@@ -304,3 +304,25 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_proBackendPubKe
         return env->NewStringUTF(hex.c_str());
     });
 }
+
+// --- Visible (purchasable) payment-provider slugs (single source of truth in libsession) ---
+
+extern "C"
+JNIEXPORT jobjectArray JNICALL
+Java_network_loki_messenger_libsession_1util_pro_BackendRequests_visiblePlatforms(
+        JNIEnv* env, jobject) {
+    return run_catching_cxx_exception_or_throws<jobjectArray>(env, [=]() -> jobjectArray {
+        auto platforms = pb::visible_platforms();  // std::span<const std::string_view>
+        jclass string_cls = env->FindClass("java/lang/String");
+        jobjectArray arr = env->NewObjectArray(
+                static_cast<jsize>(platforms.size()), string_cls, nullptr);
+        jsize i = 0;
+        for (auto slug : platforms) {
+            std::string s(slug);
+            jstring js = env->NewStringUTF(s.c_str());
+            env->SetObjectArrayElement(arr, i++, js);
+            env->DeleteLocalRef(js);
+        }
+        return arr;
+    });
+}
