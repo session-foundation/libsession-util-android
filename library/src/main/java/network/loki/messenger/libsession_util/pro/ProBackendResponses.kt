@@ -64,7 +64,7 @@ data class ProviderUrls(
 )
 
 /**
- * Outcome category for a Pro backend response (Delta #12). CLOSED set: [Ok] = success (payload fields
+ * Outcome category for a Pro backend response (§5). CLOSED set: [Ok] = success (payload fields
  * set); [Fail] = rejected on client input / a precondition; [Error] = backend fault (the same request
  * may succeed later, i.e. retryable). Ordinals match the C `SESSION_PRO_BACKEND_RESPONSE_STATUS` enum.
  */
@@ -72,7 +72,7 @@ data class ProviderUrls(
 enum class ProResponseStatus { Ok, Fail, Error }
 
 /**
- * Common response header (Delta #12). Check [isSuccess] first.
+ * Common response header (§5). Check [isSuccess] first.
  *
  * On non-[ProResponseStatus.Ok]: [errorCode] is a stable machine-readable slug (spec §5.1) — map known
  * ones to a localized (Crowdin) string; an unknown slug is forward-compatible (falls through). [error] is
@@ -168,7 +168,7 @@ data class ProPaymentItem(
 }
 
 /**
- * Response to get-pro-status (endpoint `get_pro_status`, Delta #15 — the split-out "am I Pro?" call).
+ * Response to get-pro-status (endpoint `get_pro_status`, §3.4 — the "am I Pro?" read).
  * Carries the account status plus its single most-recent payment; the full payment history is a
  * separate (library-only) query and is not wired here.
  */

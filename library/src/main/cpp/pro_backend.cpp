@@ -24,7 +24,7 @@ std::span<const uint8_t> string_to_span(std::string_view s) {
 // --- struct -> Kotlin marshalling helpers ---
 
 JavaLocalRef<jobject> serialize_response_header(JNIEnv* env, const pb::ResponseBase& r) {
-    // Delta #12: status is now an enum (Ok/Fail/Error), plus an optional machine slug (error_code)
+    // §5: status is an enum (Ok/Fail/Error), plus an optional machine slug (error_code, §5.1)
     // and an optional English diagnostic (error); no more errors[] array. We marshal status as its
     // ordinal (int) — the Kotlin @Keep ctor maps it to the ProResponseStatus enum.
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProResponseHeader",
@@ -60,7 +60,7 @@ JavaLocalRef<jobject> serialize_provider_urls(JNIEnv* env, const pb::ProviderURL
                                 jstring_from_optional(env, u.cancel_subscription_url).get())};
 }
 
-// Delta #14: `plan` is a parsed ProPlanPeriod (count + unit). We hand the app the structured pair —
+// §1: `plan` is a parsed ProPlanPeriod (count + unit). We hand the app the structured pair —
 // count as an int, unit as a lowercase name — so nothing downstream has to re-parse a slug (matching
 // the nodejs glue's {planCount, planUnit}). The unit is preserved exactly, never canonicalized.
 std::string_view plan_unit_to_string(pb::ProPlanUnit unit) {
@@ -115,7 +115,7 @@ jobject serialize_pro_proof_response(JNIEnv* env, const pb::ProProofResponse& re
 }
 
 jobject serialize_pro_status_response(JNIEnv* env, const pb::ProStatusResponse& resp) {
-    // Delta #15: get_pro_details split into get_pro_status; the response now carries a single optional
+    // §3.4: get_pro_status carries a single optional
     // latest_payment (has-flag + nullable item) instead of an items[] list + payments_total.
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/GetProStatusResponse",
             "(Lnetwork/loki/messenger/libsession_util/pro/ProResponseHeader;Ljava/lang/String;Z"
