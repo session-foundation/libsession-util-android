@@ -114,7 +114,8 @@ data class ProProofResponse(
 @Keep
 data class ProPaymentItem(
     val status: String,            // opaque per-payment status slug: unredeemed/redeemed/expired/revoked
-    val plan: String,              // period-code slug, e.g. "1m"/"3m"/"1y"
+    val planCount: Int,            // parsed billing-period count; >= 1 for periodic units, 0 for "lifetime"
+    val planUnit: String,          // parsed unit name: second/day/week/month/year/lifetime (never canonicalized)
     val paymentProvider: String,   // provider slug, e.g. "google_play"
     val autoRenewing: Boolean,
     @Serializable(with = InstantAsEpochMillisSerializer::class)
@@ -137,7 +138,8 @@ data class ProPaymentItem(
     @Keep
     constructor(
         status: String,
-        plan: String,
+        planCount: Int,
+        planUnit: String,
         paymentProvider: String,
         autoRenewing: Boolean,
         purchasedUnixTsMs: Long,
@@ -150,7 +152,8 @@ data class ProPaymentItem(
         paymentId: String,
     ) : this(
         status = status,
-        plan = plan,
+        planCount = planCount,
+        planUnit = planUnit,
         paymentProvider = paymentProvider,
         autoRenewing = autoRenewing,
         purchased = Instant.ofEpochMilli(purchasedUnixTsMs),

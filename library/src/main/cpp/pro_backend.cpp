@@ -60,16 +60,16 @@ JavaLocalRef<jobject> serialize_provider_urls(JNIEnv* env, const pb::ProviderURL
                                 jstring_from_optional(env, u.cancel_subscription_url).get())};
 }
 
-// Delta #14/#15: `plan` is now a parsed ProPlanPeriod (count + unit) rather than a raw slug. Render it
-// back to the canonical "<N><unit>" slug (or "lifetime") the Kotlin/app layer still consumes as a
-// String, so the app-facing shape is unchanged.
-std::string plan_to_string(const pb::ProPlanPeriod& plan) {
-    switch (plan.unit) {
-        case pb::ProPlanUnit::second: return std::to_string(plan.count) + "s";
-        case pb::ProPlanUnit::day: return std::to_string(plan.count) + "d";
-        case pb::ProPlanUnit::week: return std::to_string(plan.count) + "w";
-        case pb::ProPlanUnit::month: return std::to_string(plan.count) + "m";
-        case pb::ProPlanUnit::year: return std::to_string(plan.count) + "y";
+// Delta #14: `plan` is a parsed ProPlanPeriod (count + unit). We hand the app the structured pair —
+// count as an int, unit as a lowercase name — so nothing downstream has to re-parse a slug (matching
+// the nodejs glue's {planCount, planUnit}). The unit is preserved exactly, never canonicalized.
+std::string_view plan_unit_to_string(pb::ProPlanUnit unit) {
+    switch (unit) {
+        case pb::ProPlanUnit::second: return "second";
+        case pb::ProPlanUnit::day: return "day";
+        case pb::ProPlanUnit::week: return "week";
+        case pb::ProPlanUnit::month: return "month";
+        case pb::ProPlanUnit::year: return "year";
         case pb::ProPlanUnit::lifetime: return "lifetime";
     }
     return "";
@@ -77,11 +77,11 @@ std::string plan_to_string(const pb::ProPlanPeriod& plan) {
 
 JavaLocalRef<jobject> serialize_payment_item(JNIEnv* env, const pb::ProPaymentItem& it) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProPaymentItem",
-            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZJJJJJJJLjava/lang/String;)V");
-    auto plan = plan_to_string(it.plan);
+            "(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;ZJJJJJJJLjava/lang/String;)V");
     return {env, env->NewObject(cls.java_class, cls.constructor,
             jstring_from_optional(env, std::string_view(it.status)).get(),   // opaque status code string
-            jstring_from_optional(env, std::string_view(plan)).get(),
+            static_cast<jint>(it.plan.count),
+            jstring_from_optional(env, plan_unit_to_string(it.plan.unit)).get(),
             jstring_from_optional(env, std::string_view(it.payment_provider)).get(),
             static_cast<jboolean>(it.auto_renewing),
             static_cast<jlong>(it.purchased_at.time_since_epoch().count()),           // ms
