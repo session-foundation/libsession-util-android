@@ -20,7 +20,7 @@ import java.time.Instant
  * only marshal primitives, each type keeps a `@Keep` secondary constructor taking the raw epoch
  * integers (the shape the C++ builds via `NewObject`); it converts once — here at the glue boundary —
  * into the typed primary constructor, mapping the `0` "unset" sentinel to null. The types are
- * `@Serializable` so the app can persist them directly (e.g. its SQLite pro-details cache).
+ * `@Serializable` so the app can persist them directly (e.g. its SQLite pro-status cache).
  */
 
 /** Epoch **seconds** as an [Instant], or null when unset (`0`). */
@@ -109,7 +109,7 @@ data class ProProofResponse(
     val proof: ProProof?,
 ) : ProResponse
 
-/** One payment/subscription record from get-details. */
+/** One payment/subscription record from get-pro-status. */
 @Serializable
 @Keep
 data class ProPaymentItem(
@@ -164,14 +164,18 @@ data class ProPaymentItem(
     )
 }
 
-/** Response to get-details. */
+/**
+ * Response to get-pro-status (endpoint `get_pro_status`, Delta #15 — the split-out "am I Pro?" call).
+ * Carries the account status plus its single most-recent payment; the full payment history is a
+ * separate (library-only) query and is not wired here.
+ */
 @Serializable
 @Keep
-data class GetProDetailsResponse(
+data class GetProStatusResponse(
     override val header: ProResponseHeader,
-    val items: List<ProPaymentItem>,
     val userStatus: String,        // opaque account-status slug: never/active/expired
-    val errorReport: Int,          // SESSION_PRO_BACKEND_GET_PRO_DETAILS_ERROR_REPORT
+    val latestPayment: ProPaymentItem?,      // the single most-recent payment, or null when none
+    val errorReport: Int,          // SESSION_PRO_BACKEND_GET_PRO_STATUS_ERROR_REPORT
     val autoRenewing: Boolean,
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val expiry: Instant?,                    // account access expiry (incl. grace); null if never subscribed
@@ -179,30 +183,28 @@ data class GetProDetailsResponse(
     val gracePeriod: Duration,               // grace included in [expiry]
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val refundRequested: Instant?,           // when a refund was requested; null if none
-    val paymentsTotal: Int,
 ) : ProResponse {
     /** Raw-epoch constructor used by the JNI layer (see the file header); converts to the typed fields. */
     @Keep
     constructor(
         header: ProResponseHeader,
-        items: List<ProPaymentItem>,
         userStatus: String,
+        hasLatestPayment: Boolean,
+        latestPayment: ProPaymentItem?,
         errorReport: Int,
         autoRenewing: Boolean,
         expiryUnixTs: Long,
         gracePeriodDurationSeconds: Long,
         refundRequestedUnixTs: Long,
-        paymentsTotal: Int,
     ) : this(
         header = header,
-        items = items,
         userStatus = userStatus,
+        latestPayment = if (hasLatestPayment) latestPayment else null,
         errorReport = errorReport,
         autoRenewing = autoRenewing,
         expiry = expiryUnixTs.secondsToInstantOrNull(),
         gracePeriod = Duration.ofSeconds(gracePeriodDurationSeconds),
         refundRequested = refundRequestedUnixTs.secondsToInstantOrNull(),
-        paymentsTotal = paymentsTotal,
     )
 }
 

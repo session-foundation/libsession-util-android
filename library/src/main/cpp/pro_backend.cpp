@@ -49,7 +49,7 @@ jobject serialize_pro_request(JNIEnv* env, const pb::ProRequest& r) {
                           jstring_from_optional(env, std::string_view(r.data)).get());
 }
 
-JavaLocalRef<jobject> serialize_provider_urls(JNIEnv* env, const pb::ProviderUrls& u) {
+JavaLocalRef<jobject> serialize_provider_urls(JNIEnv* env, const pb::ProviderURLs& u) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProviderUrls",
             "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
     return {env, env->NewObject(cls.java_class, cls.constructor,
@@ -60,12 +60,28 @@ JavaLocalRef<jobject> serialize_provider_urls(JNIEnv* env, const pb::ProviderUrl
                                 jstring_from_optional(env, u.cancel_subscription_url).get())};
 }
 
+// Delta #14/#15: `plan` is now a parsed ProPlanPeriod (count + unit) rather than a raw slug. Render it
+// back to the canonical "<N><unit>" slug (or "lifetime") the Kotlin/app layer still consumes as a
+// String, so the app-facing shape is unchanged.
+std::string plan_to_string(const pb::ProPlanPeriod& plan) {
+    switch (plan.unit) {
+        case pb::ProPlanUnit::second: return std::to_string(plan.count) + "s";
+        case pb::ProPlanUnit::day: return std::to_string(plan.count) + "d";
+        case pb::ProPlanUnit::week: return std::to_string(plan.count) + "w";
+        case pb::ProPlanUnit::month: return std::to_string(plan.count) + "m";
+        case pb::ProPlanUnit::year: return std::to_string(plan.count) + "y";
+        case pb::ProPlanUnit::lifetime: return "lifetime";
+    }
+    return "";
+}
+
 JavaLocalRef<jobject> serialize_payment_item(JNIEnv* env, const pb::ProPaymentItem& it) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProPaymentItem",
             "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZJJJJJJJLjava/lang/String;)V");
+    auto plan = plan_to_string(it.plan);
     return {env, env->NewObject(cls.java_class, cls.constructor,
             jstring_from_optional(env, std::string_view(it.status)).get(),   // opaque status code string
-            jstring_from_optional(env, std::string_view(it.plan)).get(),
+            jstring_from_optional(env, std::string_view(plan)).get(),
             jstring_from_optional(env, std::string_view(it.payment_provider)).get(),
             static_cast<jboolean>(it.auto_renewing),
             static_cast<jlong>(it.purchased_at.time_since_epoch().count()),           // ms
@@ -93,28 +109,31 @@ jobject serialize_pro_proof_response(JNIEnv* env, const pb::ProProofResponse& re
             "Lnetwork/loki/messenger/libsession_util/pro/ProProof;)V");
     auto header = serialize_response_header(env, resp);
     JavaLocalRef<jobject> proof(env, nullptr);
-    if (resp.errors.empty())
+    if (resp)  // ResponseBase::operator bool: true iff status == Ok (proof populated on success)
         proof = cpp_to_java_proof(env, resp.proof);
     return env->NewObject(cls.java_class, cls.constructor, header.get(), proof.get());
 }
 
-jobject serialize_get_details_response(JNIEnv* env, const pb::GetProDetailsResponse& resp) {
-    static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/GetProDetailsResponse",
-            "(Lnetwork/loki/messenger/libsession_util/pro/ProResponseHeader;Ljava/util/List;Ljava/lang/String;IZJJJI)V");
+jobject serialize_pro_status_response(JNIEnv* env, const pb::ProStatusResponse& resp) {
+    // Delta #15: get_pro_details split into get_pro_status; the response now carries a single optional
+    // latest_payment (has-flag + nullable item) instead of an items[] list + payments_total.
+    static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/GetProStatusResponse",
+            "(Lnetwork/loki/messenger/libsession_util/pro/ProResponseHeader;Ljava/lang/String;Z"
+            "Lnetwork/loki/messenger/libsession_util/pro/ProPaymentItem;IZJJJ)V");
     auto header = serialize_response_header(env, resp);
-    JavaLocalRef<jobject> items(env, jlist_from_collection(env, resp.items,
-            [](JNIEnv* env, const pb::ProPaymentItem& it) -> std::optional<JavaLocalRef<jobject>> {
-                return serialize_payment_item(env, it);
-            }));
+    JavaLocalRef<jobject> latest_payment(env, nullptr);
+    if (resp.latest_payment)
+        latest_payment = serialize_payment_item(env, *resp.latest_payment);
     return env->NewObject(cls.java_class, cls.constructor,
-            header.get(), items.get(),
+            header.get(),
             jstring_from_optional(env, std::string_view(resp.user_status)).get(),   // opaque status code string
+            static_cast<jboolean>(resp.latest_payment.has_value()),
+            latest_payment.get(),
             static_cast<jint>(resp.error_report),
             static_cast<jboolean>(resp.auto_renewing),
             static_cast<jlong>(resp.expiry_at.time_since_epoch().count()),
             static_cast<jlong>(resp.grace_period_duration.count()),
-            static_cast<jlong>(resp.refund_requested_at.time_since_epoch().count()),
-            static_cast<jint>(resp.payments_total));
+            static_cast<jlong>(resp.refund_requested_at.time_since_epoch().count()));
 }
 
 jobject serialize_revocations_response(JNIEnv* env, const pb::GetProRevocationsResponse& resp) {
@@ -178,13 +197,12 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGeneratePr
 
 extern "C"
 JNIEXPORT jobject JNICALL
-Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGetProDetailsRequest(
-        JNIEnv* env, jobject, jbyteArray master_private_key, jlong now_seconds, jint count) {
+Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGetProStatusRequest(
+        JNIEnv* env, jobject, jbyteArray master_private_key, jlong now_seconds) {
     return run_catching_cxx_exception_or_throws<jobject>(env, [=]() {
-        auto req = pb::payment_details_request(
+        auto req = pb::pro_status_request(
                 JavaByteArrayRef(env, master_private_key).get(),
-                std::chrono::sys_seconds{std::chrono::seconds(now_seconds)},
-                static_cast<uint32_t>(count));
+                std::chrono::sys_seconds{std::chrono::seconds(now_seconds)});
         return serialize_pro_request(env, req);
     });
 }
@@ -241,11 +259,11 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_parseProProofRe
 
 extern "C"
 JNIEXPORT jobject JNICALL
-Java_network_loki_messenger_libsession_1util_pro_BackendRequests_parsePaymentDetailsResponse(
+Java_network_loki_messenger_libsession_1util_pro_BackendRequests_parseProStatusResponse(
         JNIEnv* env, jobject, jstring json) {
     return run_catching_cxx_exception_or_throws<jobject>(env, [=]() {
         JavaStringRef json_ref(env, json);
-        return serialize_get_details_response(env, pb::parse_payment_details(json_ref.view()));
+        return serialize_pro_status_response(env, pb::parse_pro_status(json_ref.view()));
     });
 }
 

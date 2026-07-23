@@ -30,10 +30,9 @@ object BackendRequests : LibSessionUtilCApi() {
         nowSeconds: Long,
     ): ProRequest
 
-    external fun buildGetProDetailsRequest(
+    external fun buildGetProStatusRequest(
         masterPrivateKey: ByteArray,
         nowSeconds: Long,
-        count: Int,
     ): ProRequest
 
     external fun buildRefundRequest(
@@ -50,7 +49,7 @@ object BackendRequests : LibSessionUtilCApi() {
 
     external fun parseAddPaymentResponse(json: String): ProProofResponse
     external fun parseProProofResponse(json: String): ProProofResponse
-    external fun parsePaymentDetailsResponse(json: String): GetProDetailsResponse
+    external fun parseProStatusResponse(json: String): GetProStatusResponse
     external fun parseRefundResponse(json: String): SetPaymentRefundRequestedResponse
     external fun parseRevocationsResponse(json: String): GetProRevocationsResponse
 
