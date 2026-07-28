@@ -15,14 +15,14 @@ typealias ProProofStatus = Int
 data class ProProof(
     val version: Int,
 
-    @SerialName("gen_index_hash")
-    val genIndexHashHex: String,
+    @SerialName("revocation_tag")
+    val revocationTagHex: String,
 
     @SerialName("rotating_pkey")
     val rotatingPubKeyHex: String,
 
-    @SerialName("expiry_unix_ts_ms")
-    val expiryMs: Long,
+    @SerialName("expiry_ts")
+    val expirySeconds: Long,
 
     @SerialName("sig")
     val signatureHex: String
@@ -30,15 +30,15 @@ data class ProProof(
     @Keep
     constructor(
         version: Int,
-        genIndexHash: ByteArray,
+        revocationTag: ByteArray,
         rotatingPubKey: ByteArray,
-        expiryMs: Long,
+        expirySeconds: Long,
         signature: ByteArray
     ): this(
         version = version,
-        genIndexHashHex = genIndexHash.toHexString(),
+        revocationTagHex = revocationTag.toHexString(),
         rotatingPubKeyHex = rotatingPubKey.toHexString(),
-        expiryMs = expiryMs,
+        expirySeconds = expirySeconds,
         signatureHex = signature.toHexString()
     )
 
@@ -73,7 +73,7 @@ data class ProProof(
         val signedMessageData = signedMessage?.data
         val signedMessageSignature = signedMessage?.signature
         return nativeStatus(
-            nowUnixTs = now.toEpochMilli(),
+            nowUnixTs = now.epochSecond,
             verifyPubKey = senderED25519PubKey,
             signedMessageData = signedMessageData,
             signedMessageSignature = signedMessageSignature

@@ -149,8 +149,9 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForC
 
         auto decoded = session::decode_for_community(
                 payload_ref.get(),
-                std::chrono::sys_time<std::chrono::milliseconds>{
-                        std::chrono::milliseconds{timestamp_ms}},
+                std::chrono::sys_seconds{
+                        std::chrono::duration_cast<std::chrono::seconds>(
+                                std::chrono::milliseconds{timestamp_ms})},
                 *java_to_cpp_array<32>(env, pro_backend_pub_key)
         );
 

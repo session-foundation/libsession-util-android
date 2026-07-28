@@ -45,12 +45,12 @@ class UserProfile private constructor(pointer: Long) : ConfigBase(pointer), Muta
 
     external override fun setProBadge(proBadge: Boolean)
     external override fun setAnimatedAvatar(animatedAvatar: Boolean)
-    external override fun setProAccessExpiryMs(epochMills: Long)
+    external override fun setProAccessExpiry(epochSeconds: Long)
     external override fun removeProAccessExpiry()
     private external fun getProFeaturesRaw(): Long
     override fun getProFeatures(): ProProfileFeatures = ProProfileFeatures(getProFeaturesRaw())
     external override fun getProConfig(): ProConfig?
 
-    private external fun getProAccessExpiryMsOrZero(): Long
-    override fun getProAccessExpiryMs(): Long? = getProAccessExpiryMsOrZero().takeIf { it != 0L }
+    private external fun getProAccessExpiryOrZero(): Long
+    override fun getProAccessExpiry(): Long? = getProAccessExpiryOrZero().takeIf { it != 0L }
 }
