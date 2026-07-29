@@ -215,3 +215,53 @@ Java_network_loki_messenger_libsession_1util_UserProfile_getProAccessExpiryOrZer
     auto expiry = ptrToProfile(env, thiz)->get_pro_access_expiry();
     return expiry ? expiry->time_since_epoch().count() : 0;
 }
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_getRefundRequestedOrZero(JNIEnv *env,
+                                                                                  jobject thiz) {
+    auto when = ptrToProfile(env, thiz)->get_refund_requested();
+    return when ? when->time_since_epoch().count() : 0;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_nativeSetRefundRequested(JNIEnv *env,
+                                                                                  jobject thiz,
+                                                                                  jlong epoch_seconds) {
+    if (epoch_seconds <= 0)
+        ptrToProfile(env, thiz)->set_refund_requested(std::nullopt);
+    else
+        ptrToProfile(env, thiz)->set_refund_requested(
+                std::chrono::sys_seconds{std::chrono::seconds{epoch_seconds}});
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_getProPrepaidOrZero(JNIEnv *env,
+                                                                             jobject thiz) {
+    auto when = ptrToProfile(env, thiz)->get_pro_prepaid();
+    return when ? when->time_since_epoch().count() : 0;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_nativeSetProPrepaid(JNIEnv *env,
+                                                                             jobject thiz,
+                                                                             jlong epoch_seconds) {
+    if (epoch_seconds <= 0)
+        ptrToProfile(env, thiz)->set_pro_prepaid(std::nullopt);
+    else
+        ptrToProfile(env, thiz)->set_pro_prepaid(
+                std::chrono::sys_seconds{std::chrono::seconds{epoch_seconds}});
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_getProRenewalTargetOrZero(JNIEnv *env,
+                                                                                   jobject thiz,
+                                                                                   jlong now_seconds) {
+    auto target = ptrToProfile(env, thiz)->pro_renewal_target(
+            std::chrono::sys_seconds{std::chrono::seconds{now_seconds}});
+    return target ? target->time_since_epoch().count() : 0;
+}

@@ -130,8 +130,6 @@ data class ProPaymentItem(
     val platformRefundExpiry: Instant?,      // deadline for a platform ("quick") refund; null if n/a
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val revoked: Instant?,                   // when revoked; null if not revoked
-    @Serializable(with = InstantAsEpochMillisSerializer::class)
-    val refundRequested: Instant?,           // when a refund was requested; null if none
     val paymentId: String,         // opaque; confidential
 ) {
     /** Raw-epoch constructor used by the JNI layer (see the file header); converts to the typed fields. */
@@ -148,7 +146,6 @@ data class ProPaymentItem(
         gracePeriodDurationSeconds: Long,
         platformRefundExpiryUnixTs: Long,
         revokedUnixTsMs: Long,
-        refundRequestedUnixTs: Long,
         paymentId: String,
     ) : this(
         status = status,
@@ -162,7 +159,6 @@ data class ProPaymentItem(
         gracePeriod = Duration.ofSeconds(gracePeriodDurationSeconds),
         platformRefundExpiry = platformRefundExpiryUnixTs.secondsToInstantOrNull(),
         revoked = revokedUnixTsMs.msToInstantOrNull(),
-        refundRequested = refundRequestedUnixTs.secondsToInstantOrNull(),
         paymentId = paymentId,
     )
 }
@@ -184,8 +180,6 @@ data class GetProStatusResponse(
     val expiry: Instant?,                    // account access expiry (incl. grace); null if never subscribed
     @Serializable(with = DurationAsSecondsSerializer::class)
     val gracePeriod: Duration,               // grace included in [expiry]
-    @Serializable(with = InstantAsEpochMillisSerializer::class)
-    val refundRequested: Instant?,           // when a refund was requested; null if none
 ) : ProResponse {
     /** Raw-epoch constructor used by the JNI layer (see the file header); converts to the typed fields. */
     @Keep
@@ -198,7 +192,6 @@ data class GetProStatusResponse(
         autoRenewing: Boolean,
         expiryUnixTs: Long,
         gracePeriodDurationSeconds: Long,
-        refundRequestedUnixTs: Long,
     ) : this(
         header = header,
         userStatus = userStatus,
@@ -207,7 +200,6 @@ data class GetProStatusResponse(
         autoRenewing = autoRenewing,
         expiry = expiryUnixTs.secondsToInstantOrNull(),
         gracePeriod = Duration.ofSeconds(gracePeriodDurationSeconds),
-        refundRequested = refundRequestedUnixTs.secondsToInstantOrNull(),
     )
 }
 
@@ -231,9 +223,3 @@ data class GetProRevocationsResponse(
     val items: List<ProRevocationItem>,
 ) : ProResponse
 
-/** Response to set-refund-requested. */
-@Keep
-data class SetPaymentRefundRequestedResponse(
-    override val header: ProResponseHeader,
-    val updated: Boolean,
-) : ProResponse

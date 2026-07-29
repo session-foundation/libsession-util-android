@@ -39,6 +39,14 @@ object ED25519 : LibSessionUtilCApi() {
      */
     external fun generateProMasterKey(ed25519Seed: ByteArray): ByteArray
 
+    /**
+     * Deterministically derive the rotating Session Pro seed (32 bytes) for the weekly rotation
+     * period containing [unixTs], from the account's Pro master seed (see [generateProMasterKey]).
+     * Every device derives the same seed for the same period, so concurrent proof regenerations
+     * converge. Expand to a full keypair with [generate] when a libsodium key is needed.
+     */
+    external fun proRotatingSeed(masterSeed: ByteArray, unixTs: Long): ByteArray
+
     private external fun positiveEd25519PubKeyFromCurve25519(curve25519PubKey: ByteArray): ByteArray
 
     fun ed25519PubKeysFromCurve25519(curve25519PubKey: ByteArray): List<ByteArray> {

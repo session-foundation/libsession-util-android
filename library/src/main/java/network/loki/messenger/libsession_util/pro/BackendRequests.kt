@@ -17,13 +17,6 @@ object BackendRequests : LibSessionUtilCApi() {
 
     // --- Request builders (sign internally; return endpoint + JSON body) ---
 
-    external fun buildAddProPaymentRequest(
-        masterPrivateKey: ByteArray,
-        rotatingPrivateKey: ByteArray,
-        providerCode: String,
-        paymentId: String,
-    ): ProRequest
-
     external fun buildGenerateProProofRequest(
         masterPrivateKey: ByteArray,
         rotatingPrivateKey: ByteArray,
@@ -35,22 +28,12 @@ object BackendRequests : LibSessionUtilCApi() {
         nowSeconds: Long,
     ): ProRequest
 
-    external fun buildRefundRequest(
-        masterPrivateKey: ByteArray,
-        nowSeconds: Long,
-        refundRequestedSeconds: Long,
-        providerCode: String,
-        paymentId: String,
-    ): ProRequest
-
     external fun buildRevocationsRequest(ticket: Long): ProRequest
 
     // --- Response parsers (typed structs; check header.errors first) ---
 
-    external fun parseAddPaymentResponse(json: String): ProProofResponse
     external fun parseProProofResponse(json: String): ProProofResponse
     external fun parseProStatusResponse(json: String): GetProStatusResponse
-    external fun parseRefundResponse(json: String): SetPaymentRefundRequestedResponse
     external fun parseRevocationsResponse(json: String): GetProRevocationsResponse
 
     // --- Provider URLs (libsession is the source of truth; null if none, e.g. rangeproof/unknown) ---

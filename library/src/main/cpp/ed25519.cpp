@@ -2,6 +2,7 @@
 #include "util.h"
 
 #include <session/ed25519.hpp>
+#include <session/session_protocol.hpp>
 #include <session/xed25519.hpp>
 
 extern "C"
@@ -57,6 +58,19 @@ Java_network_loki_messenger_libsession_1util_ED25519_generateProMasterKey(JNIEnv
                         jni_utils::JavaByteArrayRef(env, ed25519_seed).get()
                 )
         ).release();
+    });
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_network_loki_messenger_libsession_1util_ED25519_proRotatingSeed(JNIEnv *env, jobject thiz,
+                                                                     jbyteArray master_seed,
+                                                                     jlong unix_ts) {
+    return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        auto seed = session::ProProof::rotating_seed(
+                jni_utils::JavaByteArrayRef(env, master_seed).get(),
+                std::chrono::sys_seconds{std::chrono::seconds{unix_ts}});
+        return util::bytes_from_span(env, seed).release();
     });
 }
 

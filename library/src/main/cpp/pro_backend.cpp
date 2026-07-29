@@ -77,7 +77,7 @@ std::string_view plan_unit_to_string(pb::ProPlanUnit unit) {
 
 JavaLocalRef<jobject> serialize_payment_item(JNIEnv* env, const pb::ProPaymentItem& it) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProPaymentItem",
-            "(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;ZJJJJJJJLjava/lang/String;)V");
+            "(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;ZJJJJJJLjava/lang/String;)V");
     return {env, env->NewObject(cls.java_class, cls.constructor,
             jstring_from_optional(env, std::string_view(it.status)).get(),   // opaque status code string
             static_cast<jint>(it.plan.count),
@@ -90,7 +90,6 @@ JavaLocalRef<jobject> serialize_payment_item(JNIEnv* env, const pb::ProPaymentIt
             static_cast<jlong>(it.grace_period_duration.count()),                          // s
             static_cast<jlong>(it.platform_refund_expiry_at.time_since_epoch().count()), // s
             static_cast<jlong>(it.revoked_at.time_since_epoch().count()),             // ms
-            static_cast<jlong>(it.refund_requested_at.time_since_epoch().count()),    // s
             jstring_from_optional(env, std::string_view(it.payment_id)).get())};
 }
 
@@ -103,7 +102,7 @@ JavaLocalRef<jobject> serialize_revocation_item(JNIEnv* env, const pb::ProRevoca
             static_cast<jlong>(it.effective_at.time_since_epoch().count()))};
 }
 
-jobject serialize_pro_proof_response(JNIEnv* env, const pb::ProProofResponse& resp) {
+jobject serialize_pro_proof_response(JNIEnv* env, const pb::GenerateProProofResponse& resp) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProProofResponse",
             "(Lnetwork/loki/messenger/libsession_util/pro/ProResponseHeader;"
             "Lnetwork/loki/messenger/libsession_util/pro/ProProof;)V");
@@ -119,7 +118,7 @@ jobject serialize_pro_status_response(JNIEnv* env, const pb::ProStatusResponse& 
     // latest_payment (has-flag + nullable item) instead of an items[] list + payments_total.
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/GetProStatusResponse",
             "(Lnetwork/loki/messenger/libsession_util/pro/ProResponseHeader;Ljava/lang/String;Z"
-            "Lnetwork/loki/messenger/libsession_util/pro/ProPaymentItem;IZJJJ)V");
+            "Lnetwork/loki/messenger/libsession_util/pro/ProPaymentItem;IZJJ)V");
     auto header = serialize_response_header(env, resp);
     JavaLocalRef<jobject> latest_payment(env, nullptr);
     if (resp.latest_payment)
@@ -132,8 +131,7 @@ jobject serialize_pro_status_response(JNIEnv* env, const pb::ProStatusResponse& 
             static_cast<jint>(resp.error_report),
             static_cast<jboolean>(resp.auto_renewing),
             static_cast<jlong>(resp.expiry_at.time_since_epoch().count()),
-            static_cast<jlong>(resp.grace_period_duration.count()),
-            static_cast<jlong>(resp.refund_requested_at.time_since_epoch().count()));
+            static_cast<jlong>(resp.grace_period_duration.count()));
 }
 
 jobject serialize_revocations_response(JNIEnv* env, const pb::GetProRevocationsResponse& resp) {
@@ -152,34 +150,9 @@ jobject serialize_revocations_response(JNIEnv* env, const pb::GetProRevocationsR
             items.get());
 }
 
-jobject serialize_refund_response(JNIEnv* env, const pb::SetPaymentRefundRequestedResponse& resp) {
-    static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/SetPaymentRefundRequestedResponse",
-            "(Lnetwork/loki/messenger/libsession_util/pro/ProResponseHeader;Z)V");
-    auto header = serialize_response_header(env, resp);
-    return env->NewObject(cls.java_class, cls.constructor, header.get(),
-                          static_cast<jboolean>(resp.updated));
-}
-
 }  // namespace
 
 // --- Request builders (return ProRequest{endpoint, body}) ---
-
-extern "C"
-JNIEXPORT jobject JNICALL
-Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildAddProPaymentRequest(
-        JNIEnv* env, jobject, jbyteArray master_private_key, jbyteArray rotating_private_key,
-        jstring provider_code, jstring payment_id) {
-    return run_catching_cxx_exception_or_throws<jobject>(env, [=]() {
-        JavaStringRef provider_ref(env, provider_code);
-        JavaStringRef payment_ref(env, payment_id);
-        auto req = pb::add_payment_request(
-                JavaByteArrayRef(env, master_private_key).get(),
-                JavaByteArrayRef(env, rotating_private_key).get(),
-                provider_ref.view(),
-                string_to_span(payment_ref.view()));
-        return serialize_pro_request(env, req);
-    });
-}
 
 extern "C"
 JNIEXPORT jobject JNICALL
@@ -209,24 +182,6 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildGetProStat
 
 extern "C"
 JNIEXPORT jobject JNICALL
-Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildRefundRequest(
-        JNIEnv* env, jobject, jbyteArray master_private_key, jlong now_seconds,
-        jlong refund_requested_seconds, jstring provider_code, jstring payment_id) {
-    return run_catching_cxx_exception_or_throws<jobject>(env, [=]() {
-        JavaStringRef provider_ref(env, provider_code);
-        JavaStringRef payment_ref(env, payment_id);
-        auto req = pb::refund_request(
-                JavaByteArrayRef(env, master_private_key).get(),
-                std::chrono::sys_seconds{std::chrono::seconds(now_seconds)},
-                std::chrono::sys_seconds{std::chrono::seconds(refund_requested_seconds)},
-                provider_ref.view(),
-                string_to_span(payment_ref.view()));
-        return serialize_pro_request(env, req);
-    });
-}
-
-extern "C"
-JNIEXPORT jobject JNICALL
 Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildRevocationsRequest(
         JNIEnv* env, jobject, jlong ticket) {
     return run_catching_cxx_exception_or_throws<jobject>(env, [=]() {
@@ -236,16 +191,6 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_buildRevocation
 }
 
 // --- Response parsers (return typed structs) ---
-
-extern "C"
-JNIEXPORT jobject JNICALL
-Java_network_loki_messenger_libsession_1util_pro_BackendRequests_parseAddPaymentResponse(
-        JNIEnv* env, jobject, jstring json) {
-    return run_catching_cxx_exception_or_throws<jobject>(env, [=]() {
-        JavaStringRef json_ref(env, json);
-        return serialize_pro_proof_response(env, pb::parse_add_payment(json_ref.view()));
-    });
-}
 
 extern "C"
 JNIEXPORT jobject JNICALL
@@ -264,16 +209,6 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_parseProStatusR
     return run_catching_cxx_exception_or_throws<jobject>(env, [=]() {
         JavaStringRef json_ref(env, json);
         return serialize_pro_status_response(env, pb::parse_pro_status(json_ref.view()));
-    });
-}
-
-extern "C"
-JNIEXPORT jobject JNICALL
-Java_network_loki_messenger_libsession_1util_pro_BackendRequests_parseRefundResponse(
-        JNIEnv* env, jobject, jstring json) {
-    return run_catching_cxx_exception_or_throws<jobject>(env, [=]() {
-        JavaStringRef json_ref(env, json);
-        return serialize_refund_response(env, pb::parse_refund(json_ref.view()));
     });
 }
 

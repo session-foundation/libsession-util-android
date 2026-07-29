@@ -90,7 +90,8 @@ extern "C"
 JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForCommunityInbox(
         JNIEnv *env, jobject thiz, jbyteArray plaintext, jbyteArray my_ed25519_priv_key,
-        jlong timestamp_ms, jbyteArray recipient_pub_key, jbyteArray community_server_pub_key,
+        jlong /* timestamp_ms: removed from libsession — community-inbox carries no envelope ts */,
+        jbyteArray recipient_pub_key, jbyteArray community_server_pub_key,
         jbyteArray rotating_key) {
     return run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
         return util::bytes_from_vector(
@@ -98,7 +99,6 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_encodeForC
                 session::encode_for_community_inbox(
                         JavaByteArrayRef(env, plaintext).get(),
                         JavaByteArrayRef(env, my_ed25519_priv_key).get(),
-                        std::chrono::milliseconds{timestamp_ms},
                         *java_to_cpp_array<33>(env, recipient_pub_key),
                         *java_to_cpp_array<32>(env, community_server_pub_key),
                         rotating_key ? std::optional(JavaByteArrayRef(env, rotating_key).get())

@@ -86,6 +86,18 @@ interface ReadableUserProfile: ReadableConfig {
     fun getProFeatures(): ProProfileFeatures
     fun getProConfig(): ProConfig?
     fun getProAccessExpiry(): Long?
+
+    /** When a refund was requested (unix seconds), or null if none (values >1 week old read as null). */
+    fun getRefundRequested(): Long?
+
+    /** The "purchase in flight" marker timestamp (unix seconds), or null (values >1 week old read as null). */
+    fun getProPrepaid(): Long?
+
+    /**
+     * When to (re)request a Pro proof given [nowSeconds]: a value <= now means renew now, a future value
+     * can be scheduled, null means no renewal needed. Not gated on autoRenewing (entitlement gates it).
+     */
+    fun getProRenewalTarget(nowSeconds: Long): Long?
 }
 
 interface MutableUserProfile : ReadableUserProfile, MutableConfig {
@@ -110,6 +122,12 @@ interface MutableUserProfile : ReadableUserProfile, MutableConfig {
     fun setAnimatedAvatar(animatedAvatar: Boolean)
     fun setProAccessExpiry(epochSeconds: Long)
     fun removeProAccessExpiry()
+
+    /** Record (epochSeconds) or clear (null) the "refund requested" flag; synced across devices. */
+    fun setRefundRequested(epochSeconds: Long?)
+
+    /** Record (epochSeconds) or clear (null) the "purchase in flight" marker; no-op if already Pro. */
+    fun setProPrepaid(epochSeconds: Long?)
 }
 
 interface ReadableConversationVolatileConfig: ReadableConfig {
