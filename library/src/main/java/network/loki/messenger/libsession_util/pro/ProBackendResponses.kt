@@ -102,12 +102,27 @@ interface ProResponse {
     val header: ProResponseHeader
 }
 
-/** Response to add-payment / generate-proof: carries the freshly-issued proof (null on error). */
+/** Response to generate-proof: carries the freshly-issued proof (null on error). */
 @Keep
 data class ProProofResponse(
     override val header: ProResponseHeader,
     val proof: ProProof?,
-) : ProResponse
+    /**
+     * Advisory account (subscription) expiry — grace-inclusive true entitlement end; set on a
+     * successful proof and on a `subscription_expired` failure (a past value), null otherwise.
+     * Distinct from [proof]'s own clamped expiry; use for the "Pro until X" display and to refresh
+     * the cached access expiry, never for entitlement gating.
+     */
+    val accountExpiry: Instant?,
+) : ProResponse {
+    /** Raw-epoch constructor used by the JNI layer (see the file header). */
+    @Keep
+    constructor(
+        header: ProResponseHeader,
+        proof: ProProof?,
+        accountExpirySeconds: Long,
+    ) : this(header, proof, accountExpirySeconds.secondsToInstantOrNull())
+}
 
 /** One payment/subscription record from get-pro-status. */
 @Serializable

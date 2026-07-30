@@ -105,12 +105,18 @@ JavaLocalRef<jobject> serialize_revocation_item(JNIEnv* env, const pb::ProRevoca
 jobject serialize_pro_proof_response(JNIEnv* env, const pb::GenerateProProofResponse& resp) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProProofResponse",
             "(Lnetwork/loki/messenger/libsession_util/pro/ProResponseHeader;"
-            "Lnetwork/loki/messenger/libsession_util/pro/ProProof;)V");
+            "Lnetwork/loki/messenger/libsession_util/pro/ProProof;J)V");
     auto header = serialize_response_header(env, resp);
     JavaLocalRef<jobject> proof(env, nullptr);
     if (resp)  // ResponseBase::operator bool: true iff status == Ok (proof populated on success)
         proof = cpp_to_java_proof(env, resp.proof);
-    return env->NewObject(cls.java_class, cls.constructor, header.get(), proof.get());
+    // Advisory account expiry as epoch seconds (0 = absent); present on success + subscription_expired.
+    jlong account_expiry_s =
+            resp.account_expiry
+                    ? static_cast<jlong>(resp.account_expiry->time_since_epoch().count())
+                    : 0;
+    return env->NewObject(
+            cls.java_class, cls.constructor, header.get(), proof.get(), account_expiry_s);
 }
 
 jobject serialize_pro_status_response(JNIEnv* env, const pb::ProStatusResponse& resp) {
