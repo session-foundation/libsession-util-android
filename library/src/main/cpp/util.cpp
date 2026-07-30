@@ -306,26 +306,3 @@ Java_network_loki_messenger_libsession_1util_Config_free(JNIEnv *env, jobject th
         delete config;
     }
 }
-
-extern "C"
-JNIEXPORT jint JNICALL
-Java_network_loki_messenger_libsession_1util_util_Util_lengthForCodepoints(JNIEnv *env,
-                                                                           jobject thiz,
-                                                                           jstring str,
-                                                                           jint max_codepoints) {
-    return run_catching_cxx_exception_or_throws<jint>(env, [=]() {
-        JavaCharsRef str_ref(env, str);
-        return session::utf16_count_truncated_to_codepoints(
-                {reinterpret_cast<const char16_t *>(str_ref.chars()), str_ref.size()},
-                max_codepoints
-        );
-    });
-}
-
-extern "C"
-JNIEXPORT jint JNICALL
-Java_network_loki_messenger_libsession_1util_util_Util_countCodepoints(JNIEnv *env, jobject thiz,
-                                                                       jstring str) {
-    JavaCharsRef str_ref(env, str);
-    return session::utf16_count({reinterpret_cast<const char16_t*>(str_ref.chars()), str_ref.size()});
-}

@@ -53,4 +53,20 @@ object SessionProtocol : LibSessionUtilCApi() {
         groupEd25519PrivateKeys: Array<ByteArray>, // all available group private keys
         proBackendPubKey: ByteArray, // 32 bytes backend key
     ): DecodedEnvelope
+
+    /**
+     * Given a message's codepoint count (counted natively), applies libsession's message-feature
+     * policy and returns the raw [ProMessageFeatures] bitset (e.g. the higher-character-limit bit
+     * when the message exceeds the standard limit). Convert with [Long.toProMessageFeatures].
+     */
+    external fun proFeaturesForMessage(codepointCount: Int): Long
+
+    private external fun standardCharacterLimit(): Int
+    private external fun proHigherCharacterLimit(): Int
+
+    /** Maximum message codepoints for a non-Pro message (libsession-owned constant). */
+    val STANDARD_CHARACTER_LIMIT: Int by lazy { standardCharacterLimit() }
+
+    /** Maximum message codepoints for a Pro message (libsession-owned constant). */
+    val PRO_HIGHER_CHARACTER_LIMIT: Int by lazy { proHigherCharacterLimit() }
 }

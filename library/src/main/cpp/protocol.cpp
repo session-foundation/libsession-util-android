@@ -246,3 +246,27 @@ Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_decodeForG
         )).release();
     });
 }
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_proFeaturesForMessage(
+        JNIEnv *env, jobject thiz, jint codepoint_count) {
+    return run_catching_cxx_exception_or_throws<jlong>(env, [=]() {
+        return static_cast<jlong>(
+                session::pro_features_for_message(static_cast<size_t>(codepoint_count)).bitset.data);
+    });
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_standardCharacterLimit(
+        JNIEnv *env, jobject thiz) {
+    return static_cast<jint>(session::STANDARD_CHARACTER_LIMIT);
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_network_loki_messenger_libsession_1util_protocol_SessionProtocol_proHigherCharacterLimit(
+        JNIEnv *env, jobject thiz) {
+    return static_cast<jint>(session::PRO_HIGHER_CHARACTER_LIMIT);
+}
