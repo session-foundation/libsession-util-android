@@ -128,15 +128,13 @@ data class ProProofResponse(
 @Serializable
 @Keep
 data class ProPaymentItem(
-    val status: String,            // opaque per-payment status slug: unredeemed/redeemed/expired/revoked
+    val status: String,            // opaque per-payment status slug: redeemed/expired/revoked
     val planCount: Int,            // parsed billing-period count; >= 1 for periodic units, 0 for "lifetime"
     val planUnit: String,          // parsed unit name: second/day/week/month/year/lifetime (never canonicalized)
     val paymentProvider: String,   // provider slug, e.g. "google_play"
     val autoRenewing: Boolean,
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val purchased: Instant,                  // provider purchase instant; always set
-    @Serializable(with = InstantAsEpochMillisSerializer::class)
-    val redeemed: Instant?,                  // when activated; null if not activated
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val expiry: Instant?,                    // access expiry for this payment; null if not activated
     @Serializable(with = DurationAsSecondsSerializer::class)
@@ -156,7 +154,6 @@ data class ProPaymentItem(
         paymentProvider: String,
         autoRenewing: Boolean,
         purchasedUnixTsMs: Long,
-        redeemedUnixTs: Long,
         expiryUnixTs: Long,
         gracePeriodDurationSeconds: Long,
         platformRefundExpiryUnixTs: Long,
@@ -169,7 +166,6 @@ data class ProPaymentItem(
         paymentProvider = paymentProvider,
         autoRenewing = autoRenewing,
         purchased = Instant.ofEpochMilli(purchasedUnixTsMs),
-        redeemed = redeemedUnixTs.secondsToInstantOrNull(),
         expiry = expiryUnixTs.secondsToInstantOrNull(),
         gracePeriod = Duration.ofSeconds(gracePeriodDurationSeconds),
         platformRefundExpiry = platformRefundExpiryUnixTs.secondsToInstantOrNull(),

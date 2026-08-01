@@ -77,7 +77,7 @@ std::string_view plan_unit_to_string(pb::ProPlanUnit unit) {
 
 JavaLocalRef<jobject> serialize_payment_item(JNIEnv* env, const pb::ProPaymentItem& it) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProPaymentItem",
-            "(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;ZJJJJJJLjava/lang/String;)V");
+            "(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;ZJJJJJLjava/lang/String;)V");
     return {env, env->NewObject(cls.java_class, cls.constructor,
             jstring_from_optional(env, std::string_view(it.status)).get(),   // opaque status code string
             static_cast<jint>(it.plan.count),
@@ -85,7 +85,6 @@ JavaLocalRef<jobject> serialize_payment_item(JNIEnv* env, const pb::ProPaymentIt
             jstring_from_optional(env, std::string_view(it.payment_provider)).get(),
             static_cast<jboolean>(it.auto_renewing),
             static_cast<jlong>(it.purchased_at.time_since_epoch().count()),           // ms
-            static_cast<jlong>(it.redeemed_at.time_since_epoch().count()),            // s
             static_cast<jlong>(it.expiry_at.time_since_epoch().count()),              // s
             static_cast<jlong>(it.grace_period_duration.count()),                          // s
             static_cast<jlong>(it.platform_refund_expiry_at.time_since_epoch().count()), // s

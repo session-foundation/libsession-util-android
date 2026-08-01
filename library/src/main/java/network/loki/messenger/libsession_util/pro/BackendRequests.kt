@@ -13,7 +13,7 @@ object BackendRequests : LibSessionUtilCApi() {
     // SESSION_PRO_BACKEND_PAYMENT_PROVIDER_CODE_* constants (opaque wire codes).
     const val PAYMENT_PROVIDER_GOOGLE_PLAY: String = "google_play"
     const val PAYMENT_PROVIDER_APP_STORE: String = "app_store"
-    const val PAYMENT_PROVIDER_RANGEPROOF: String = "rangeproof"
+    const val PAYMENT_PROVIDER_STF: String = "stf"
 
     // --- Request builders (sign internally; return endpoint + JSON body) ---
 
@@ -36,13 +36,13 @@ object BackendRequests : LibSessionUtilCApi() {
     external fun parseProStatusResponse(json: String): GetProStatusResponse
     external fun parseRevocationsResponse(json: String): GetProRevocationsResponse
 
-    // --- Provider URLs (libsession is the source of truth; null if none, e.g. rangeproof/unknown) ---
+    // --- Provider URLs (libsession is the source of truth; null if none, e.g. stf/unknown) ---
 
     external fun providerUrls(providerCode: String): ProviderUrls?
 
     /**
      * The purchasable payment-provider slugs to surface to users (single source of truth in libsession;
-     * excludes non-purchasable providers like `rangeproof`). Order is not significant — the client
+     * excludes non-purchasable providers like `stf`). Order is not significant — the client
      * applies its own ordering and skips slugs it has no display translation for.
      */
     external fun visiblePlatforms(): Array<String>
