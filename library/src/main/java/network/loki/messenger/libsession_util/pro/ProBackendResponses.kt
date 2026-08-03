@@ -185,7 +185,6 @@ data class GetProStatusResponse(
     override val header: ProResponseHeader,
     val userStatus: String,        // opaque account-status slug: never/active/expired
     val latestPayment: ProPaymentItem?,      // the single most-recent payment, or null when none
-    val errorReport: Int,          // SESSION_PRO_BACKEND_GET_PRO_STATUS_ERROR_REPORT
     val autoRenewing: Boolean,
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val expiry: Instant?,                    // account access expiry (incl. grace); null if never subscribed
@@ -199,7 +198,6 @@ data class GetProStatusResponse(
         userStatus: String,
         hasLatestPayment: Boolean,
         latestPayment: ProPaymentItem?,
-        errorReport: Int,
         autoRenewing: Boolean,
         expiryUnixTs: Long,
         gracePeriodDurationSeconds: Long,
@@ -207,7 +205,6 @@ data class GetProStatusResponse(
         header = header,
         userStatus = userStatus,
         latestPayment = if (hasLatestPayment) latestPayment else null,
-        errorReport = errorReport,
         autoRenewing = autoRenewing,
         expiry = expiryUnixTs.secondsToInstantOrNull(),
         gracePeriod = Duration.ofSeconds(gracePeriodDurationSeconds),
