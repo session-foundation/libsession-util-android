@@ -53,4 +53,18 @@ class UserProfile private constructor(pointer: Long) : ConfigBase(pointer), Muta
 
     private external fun getProAccessExpiryOrZero(): Long
     override fun getProAccessExpiry(): Long? = getProAccessExpiryOrZero().takeIf { it != 0L }
+
+    private external fun getRefundRequestedOrZero(): Long
+    override fun getRefundRequested(): Long? = getRefundRequestedOrZero().takeIf { it != 0L }
+    private external fun nativeSetRefundRequested(epochSeconds: Long)
+    override fun setRefundRequested(epochSeconds: Long?) = nativeSetRefundRequested(epochSeconds ?: 0L)
+
+    private external fun getProPrepaidOrZero(): Long
+    override fun getProPrepaid(): Long? = getProPrepaidOrZero().takeIf { it != 0L }
+    private external fun nativeSetProPrepaid(epochSeconds: Long)
+    override fun setProPrepaid(epochSeconds: Long?) = nativeSetProPrepaid(epochSeconds ?: 0L)
+
+    private external fun getProRenewalTargetOrZero(nowSeconds: Long): Long
+    override fun getProRenewalTarget(nowSeconds: Long): Long? =
+        getProRenewalTargetOrZero(nowSeconds).takeIf { it != 0L }
 }

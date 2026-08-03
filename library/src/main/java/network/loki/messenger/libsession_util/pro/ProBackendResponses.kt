@@ -102,26 +102,39 @@ interface ProResponse {
     val header: ProResponseHeader
 }
 
-/** Response to add-payment / generate-proof: carries the freshly-issued proof (null on error). */
+/** Response to generate-proof: carries the freshly-issued proof (null on error). */
 @Keep
 data class ProProofResponse(
     override val header: ProResponseHeader,
     val proof: ProProof?,
-) : ProResponse
+    /**
+     * Advisory account (subscription) expiry — grace-inclusive true entitlement end; set on a
+     * successful proof and on a `subscription_expired` failure (a past value), null otherwise.
+     * Distinct from [proof]'s own clamped expiry; use for the "Pro until X" display and to refresh
+     * the cached access expiry, never for entitlement gating.
+     */
+    val accountExpiry: Instant?,
+) : ProResponse {
+    /** Raw-epoch constructor used by the JNI layer (see the file header). */
+    @Keep
+    constructor(
+        header: ProResponseHeader,
+        proof: ProProof?,
+        accountExpirySeconds: Long,
+    ) : this(header, proof, accountExpirySeconds.secondsToInstantOrNull())
+}
 
 /** One payment/subscription record from get-pro-status. */
 @Serializable
 @Keep
 data class ProPaymentItem(
-    val status: String,            // opaque per-payment status slug: unredeemed/redeemed/expired/revoked
+    val status: String,            // opaque per-payment status slug: redeemed/expired/revoked
     val planCount: Int,            // parsed billing-period count; >= 1 for periodic units, 0 for "lifetime"
     val planUnit: String,          // parsed unit name: second/day/week/month/year/lifetime (never canonicalized)
     val paymentProvider: String,   // provider slug, e.g. "google_play"
     val autoRenewing: Boolean,
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val purchased: Instant,                  // provider purchase instant; always set
-    @Serializable(with = InstantAsEpochMillisSerializer::class)
-    val redeemed: Instant?,                  // when activated; null if not activated
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val expiry: Instant?,                    // access expiry for this payment; null if not activated
     @Serializable(with = DurationAsSecondsSerializer::class)
@@ -130,8 +143,6 @@ data class ProPaymentItem(
     val platformRefundExpiry: Instant?,      // deadline for a platform ("quick") refund; null if n/a
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val revoked: Instant?,                   // when revoked; null if not revoked
-    @Serializable(with = InstantAsEpochMillisSerializer::class)
-    val refundRequested: Instant?,           // when a refund was requested; null if none
     val paymentId: String,         // opaque; confidential
 ) {
     /** Raw-epoch constructor used by the JNI layer (see the file header); converts to the typed fields. */
@@ -143,12 +154,10 @@ data class ProPaymentItem(
         paymentProvider: String,
         autoRenewing: Boolean,
         purchasedUnixTsMs: Long,
-        redeemedUnixTs: Long,
         expiryUnixTs: Long,
         gracePeriodDurationSeconds: Long,
         platformRefundExpiryUnixTs: Long,
         revokedUnixTsMs: Long,
-        refundRequestedUnixTs: Long,
         paymentId: String,
     ) : this(
         status = status,
@@ -157,12 +166,10 @@ data class ProPaymentItem(
         paymentProvider = paymentProvider,
         autoRenewing = autoRenewing,
         purchased = Instant.ofEpochMilli(purchasedUnixTsMs),
-        redeemed = redeemedUnixTs.secondsToInstantOrNull(),
         expiry = expiryUnixTs.secondsToInstantOrNull(),
         gracePeriod = Duration.ofSeconds(gracePeriodDurationSeconds),
         platformRefundExpiry = platformRefundExpiryUnixTs.secondsToInstantOrNull(),
         revoked = revokedUnixTsMs.msToInstantOrNull(),
-        refundRequested = refundRequestedUnixTs.secondsToInstantOrNull(),
         paymentId = paymentId,
     )
 }
@@ -178,14 +185,11 @@ data class GetProStatusResponse(
     override val header: ProResponseHeader,
     val userStatus: String,        // opaque account-status slug: never/active/expired
     val latestPayment: ProPaymentItem?,      // the single most-recent payment, or null when none
-    val errorReport: Int,          // SESSION_PRO_BACKEND_GET_PRO_STATUS_ERROR_REPORT
     val autoRenewing: Boolean,
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val expiry: Instant?,                    // account access expiry (incl. grace); null if never subscribed
     @Serializable(with = DurationAsSecondsSerializer::class)
     val gracePeriod: Duration,               // grace included in [expiry]
-    @Serializable(with = InstantAsEpochMillisSerializer::class)
-    val refundRequested: Instant?,           // when a refund was requested; null if none
 ) : ProResponse {
     /** Raw-epoch constructor used by the JNI layer (see the file header); converts to the typed fields. */
     @Keep
@@ -194,20 +198,16 @@ data class GetProStatusResponse(
         userStatus: String,
         hasLatestPayment: Boolean,
         latestPayment: ProPaymentItem?,
-        errorReport: Int,
         autoRenewing: Boolean,
         expiryUnixTs: Long,
         gracePeriodDurationSeconds: Long,
-        refundRequestedUnixTs: Long,
     ) : this(
         header = header,
         userStatus = userStatus,
         latestPayment = if (hasLatestPayment) latestPayment else null,
-        errorReport = errorReport,
         autoRenewing = autoRenewing,
         expiry = expiryUnixTs.secondsToInstantOrNull(),
         gracePeriod = Duration.ofSeconds(gracePeriodDurationSeconds),
-        refundRequested = refundRequestedUnixTs.secondsToInstantOrNull(),
     )
 }
 
@@ -231,9 +231,3 @@ data class GetProRevocationsResponse(
     val items: List<ProRevocationItem>,
 ) : ProResponse
 
-/** Response to set-refund-requested. */
-@Keep
-data class SetPaymentRefundRequestedResponse(
-    override val header: ProResponseHeader,
-    val updated: Boolean,
-) : ProResponse

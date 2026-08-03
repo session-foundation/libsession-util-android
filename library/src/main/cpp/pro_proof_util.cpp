@@ -75,20 +75,22 @@ Java_network_loki_messenger_libsession_1util_pro_ProProof_nativeStatus(JNIEnv *e
                                                                        jbyteArray signed_message_data,
                                                                        jbyteArray signed_message_signature) {
     return run_catching_cxx_exception_or_throws<jint>(env, [=]() {
-        std::optional<session::ProSignedMessage> signed_msg;
         JavaByteArrayRef signed_message_data_ref(env, signed_message_data);
         JavaByteArrayRef signed_message_signature_ref(env, signed_message_signature);
 
+        // §4: ProProof::status now takes an optional 64-byte user signature span + the message span
+        // directly (ProSignedMessage was removed).
+        std::optional<std::span<const std::uint8_t>> user_sig;
+        std::span<const std::uint8_t> signed_msg;
         if (signed_message_data && signed_message_signature) {
-            signed_msg.emplace(session::ProSignedMessage {
-                    .sig = signed_message_signature_ref.get(),
-                    .msg = signed_message_data_ref.get(),
-            });
+            user_sig = signed_message_signature_ref.get();
+            signed_msg = signed_message_data_ref.get();
         }
 
         return static_cast<jint>(java_to_cpp_proof(env, thiz).status(
                 JavaByteArrayRef(env, verify_pub_key).get(),
                 std::chrono::sys_seconds{std::chrono::seconds(now_unix_ts)},
+                user_sig,
                 signed_msg
         ));
     });
