@@ -81,6 +81,24 @@ namespace jni_utils {
 
         JavaLocalRef(const JavaLocalRef&) = delete;
 
+        // Ownership-transferring assignment. Without this, deleting only the copy-constructor leaves
+        // the compiler-generated copy-assignment in place: `lhs = f()` would shallow-copy ref_ while
+        // the moved-from temporary's destructor still DeleteLocalRef's it, leaving lhs holding a
+        // deleted local reference (a CheckJNI "invalid local reference" abort on next use).
+        JavaLocalRef& operator=(JavaLocalRef&& other) noexcept {
+            if (this != &other) {
+                if (ref_) {
+                    env_->DeleteLocalRef(ref_);
+                }
+                env_ = other.env_;
+                ref_ = other.ref_;
+                other.ref_ = nullptr;
+            }
+            return *this;
+        }
+
+        JavaLocalRef& operator=(const JavaLocalRef&) = delete;
+
         void reset(JNIType new_ref) {
             if (ref_ != new_ref) {
                 env_->DeleteLocalRef(ref_);
