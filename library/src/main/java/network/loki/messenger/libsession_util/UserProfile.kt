@@ -47,6 +47,8 @@ class UserProfile private constructor(pointer: Long) : ConfigBase(pointer), Muta
     external override fun setAnimatedAvatar(animatedAvatar: Boolean)
     external override fun setProAccessExpiry(epochSeconds: Long)
     external override fun removeProAccessExpiry()
+    external override fun getProAutoRenewing(): Boolean
+    external override fun setProAutoRenewing(autoRenewing: Boolean)
     private external fun getProFeaturesRaw(): Long
     override fun getProFeatures(): ProProfileFeatures = ProProfileFeatures(getProFeaturesRaw())
     external override fun getProConfig(): ProConfig?

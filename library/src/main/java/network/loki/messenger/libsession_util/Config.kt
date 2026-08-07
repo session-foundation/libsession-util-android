@@ -87,6 +87,15 @@ interface ReadableUserProfile: ReadableConfig {
     fun getProConfig(): ProConfig?
     fun getProAccessExpiry(): Long?
 
+    /**
+     * Whether the subscription is auto-renewing, from synced config (key `A`, libsession #121).
+     *
+     * **Presence-only.** `setProAutoRenewing(false)` ERASES the key, so `false` here means either
+     * "not auto-renewing" or "never written" — absent reads as terminal/unknown. Callers that need
+     * to tell those apart cannot, through this API.
+     */
+    fun getProAutoRenewing(): Boolean
+
     /** When a refund was requested (unix seconds), or null if none (values >1 week old read as null). */
     fun getRefundRequested(): Long?
 
@@ -122,6 +131,9 @@ interface MutableUserProfile : ReadableUserProfile, MutableConfig {
     fun setAnimatedAvatar(animatedAvatar: Boolean)
     fun setProAccessExpiry(epochSeconds: Long)
     fun removeProAccessExpiry()
+
+    /** See [getProAutoRenewing] — writing `false` erases the key rather than storing it. */
+    fun setProAutoRenewing(autoRenewing: Boolean)
 
     /** Record (epochSeconds) or clear (null) the "refund requested" flag; synced across devices. */
     fun setRefundRequested(epochSeconds: Long?)

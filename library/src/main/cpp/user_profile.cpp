@@ -181,6 +181,25 @@ Java_network_loki_messenger_libsession_1util_UserProfile_removeProAccessExpiry(J
 }
 
 extern "C"
+JNIEXPORT jboolean JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_getProAutoRenewing(JNIEnv *env,
+                                                                            jobject thiz) {
+    return static_cast<jboolean>(ptrToProfile(env, thiz)->get_pro_auto_renewing());
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_setProAutoRenewing(JNIEnv *env,
+                                                                            jobject thiz,
+                                                                            jboolean auto_renewing) {
+    // Presence-only upstream: set_pro_auto_renewing uses set_nonzero_int, so writing false ERASES
+    // the key rather than storing it. Absent therefore means "terminal/unknown", and a caller
+    // cannot distinguish it from an explicit false through this binding — which is the whole of
+    // libsession PR #121's tri-state limitation, not something introduced here.
+    ptrToProfile(env, thiz)->set_pro_auto_renewing(auto_renewing);
+}
+
+extern "C"
 JNIEXPORT jlong JNICALL
 Java_network_loki_messenger_libsession_1util_UserProfile_getProFeaturesRaw(JNIEnv *env,
                                                                            jobject thiz) {
