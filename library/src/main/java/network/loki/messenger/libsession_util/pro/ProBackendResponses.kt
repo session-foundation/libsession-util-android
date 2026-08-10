@@ -118,43 +118,44 @@ data class ProProofResponse(
      * The grace period folded into [accountExpiry], so the paid-through instant is
      * `accountExpiry - accountGracePeriod`.
      *
-     * **null means the backend did not say — it does NOT mean zero.** Zero is a legitimate value (the
-     * backend sends it whenever the subscription is not auto-renewing), so the two must stay distinct:
-     * writing zero into config on an absent field would erase a grace period learned from
-     * `get_pro_status`. Absent happens against a backend predating the field.
+     * **Not nullable, unlike [accountExpiry].** Core requires this field on a successful proof, so
+     * there is no "the backend did not say" state to represent; zero on the failure outcomes that
+     * carry no proof, which is the truthful value there. A nullable type here would be a lie that
+     * invites `?: Duration.ZERO` at call sites, and zero is not inert — writing it can clear the
+     * config key.
      */
-    val accountGracePeriod: Duration?,
+    val accountGracePeriod: Duration,
     /**
      * Whether the subscription behind [accountExpiry] renews itself.
      *
-     * **null means the backend did not say — it does NOT mean false.** The config key is
-     * presence-only, so writing false ERASES it; collapsing absent to false would destroy a flag
-     * learned from `get_pro_status` on every proof fetch against an older backend.
+     * **Not nullable** — same reasoning as [accountGracePeriod]. Required on a successful proof, so
+     * `false` here means "not renewing" rather than "unknown". Note that writing `false` into config
+     * ERASES the key, which is the correct representation of not-renewing under a presence-only
+     * encoding — but it is why a *defaulted* false would have been dangerous and the field is
+     * required rather than lenient.
      */
-    val accountAutoRenewing: Boolean?,
+    val accountAutoRenewing: Boolean,
 ) : ProResponse {
     /**
      * Raw-epoch constructor used by the JNI layer (see the file header).
      *
-     * The two advisory fields arrive as value + presence pairs because absent and zero/false are
-     * different states and neither wire type can express both. Same shape as
-     * [GetProStatusResponse]'s `hasLatestPayment`.
+     * [accountExpirySeconds] keeps the 0-means-absent sentinel because that field genuinely is absent
+     * on some outcomes; the other two are always populated on success, so they cross as plain values.
+     * That asymmetry is real rather than an oversight — see each property.
      */
     @Keep
     constructor(
         header: ProResponseHeader,
         proof: ProProof?,
         accountExpirySeconds: Long,
-        hasAccountGracePeriod: Boolean,
         accountGracePeriodSeconds: Long,
-        hasAccountAutoRenewing: Boolean,
         accountAutoRenewing: Boolean,
     ) : this(
         header = header,
         proof = proof,
         accountExpiry = accountExpirySeconds.secondsToInstantOrNull(),
-        accountGracePeriod = if (hasAccountGracePeriod) Duration.ofSeconds(accountGracePeriodSeconds) else null,
-        accountAutoRenewing = if (hasAccountAutoRenewing) accountAutoRenewing else null,
+        accountGracePeriod = Duration.ofSeconds(accountGracePeriodSeconds),
+        accountAutoRenewing = accountAutoRenewing,
     )
 }
 

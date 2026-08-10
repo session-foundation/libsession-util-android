@@ -104,7 +104,7 @@ JavaLocalRef<jobject> serialize_revocation_item(JNIEnv* env, const pb::ProRevoca
 jobject serialize_pro_proof_response(JNIEnv* env, const pb::GenerateProProofResponse& resp) {
     static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProProofResponse",
             "(Lnetwork/loki/messenger/libsession_util/pro/ProResponseHeader;"
-            "Lnetwork/loki/messenger/libsession_util/pro/ProProof;JZJZZ)V");
+            "Lnetwork/loki/messenger/libsession_util/pro/ProProof;JJZ)V");
     auto header = serialize_response_header(env, resp);
     JavaLocalRef<jobject> proof(env, nullptr);
     if (resp)  // ResponseBase::operator bool: true iff status == Ok (proof populated on success)
@@ -114,17 +114,16 @@ jobject serialize_pro_proof_response(JNIEnv* env, const pb::GenerateProProofResp
             resp.account_expiry
                     ? static_cast<jlong>(resp.account_expiry->time_since_epoch().count())
                     : 0;
-    // The two advisory fields below cross as value + presence pairs. Absent must stay
-    // distinguishable from zero/false: the client writes them into presence-only config keys, where
-    // writing false or zero ERASES a value learned from get_pro_status. An older backend sends
-    // neither field, so collapsing absent would make every proof fetch destructive.
-    jboolean has_grace = resp.account_grace_period.has_value();
-    jlong grace_s = has_grace ? static_cast<jlong>(resp.account_grace_period->count()) : 0;
-    jboolean has_auto_renewing = resp.account_auto_renewing.has_value();
-    jboolean auto_renewing = has_auto_renewing && *resp.account_auto_renewing;
+    // Both advisory fields are REQUIRED on a successful proof (json_require in core), so there is no
+    // absent case and they cross as plain values. Zero/false on the failure outcomes that carry no
+    // proof, which is the truthful value there. Deliberately not optional: a defaulted false is not
+    // inert, because writing false to the presence-only config key ERASES it — so a malformed
+    // response now fails the parse and the client keeps what it has, rather than persisting a default.
+    jlong grace_s = static_cast<jlong>(resp.account_grace_period.count());
+    jboolean auto_renewing = resp.account_auto_renewing;
     return env->NewObject(
             cls.java_class, cls.constructor, header.get(), proof.get(), account_expiry_s,
-            has_grace, grace_s, has_auto_renewing, auto_renewing);
+            grace_s, auto_renewing);
 }
 
 jobject serialize_pro_status_response(JNIEnv* env, const pb::ProStatusResponse& resp) {
