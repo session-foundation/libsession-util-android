@@ -1,6 +1,7 @@
 package network.loki.messenger.libsession_util
 
 import network.loki.messenger.libsession_util.pro.ProConfig
+import java.time.Duration
 import network.loki.messenger.libsession_util.protocol.ProProfileFeatures
 import network.loki.messenger.libsession_util.util.BaseCommunityInfo
 import network.loki.messenger.libsession_util.util.BlindedContact
@@ -96,6 +97,17 @@ interface ReadableUserProfile: ReadableConfig {
      */
     fun getProAutoRenewing(): Boolean
 
+    /**
+     * The account's grace period, from synced config (key `G`).
+     *
+     * Only meaningful as `proAccessExpiry - proGracePeriod`, which is the paid-through instant: the
+     * backend folds grace INTO the expiry it sends, so the expiry is coverage end. Zero when unset,
+     * and zero is also what the backend sends when the subscription is not auto-renewing — the two
+     * describe the same account and both give `E - 0 == E`, so there is nothing for a presence check
+     * to disambiguate.
+     */
+    fun getProGracePeriod(): Duration
+
     /** When a refund was requested (unix seconds), or null if none (values >1 week old read as null). */
     fun getRefundRequested(): Long?
 
@@ -134,6 +146,9 @@ interface MutableUserProfile : ReadableUserProfile, MutableConfig {
 
     /** See [getProAutoRenewing] — writing `false` erases the key rather than storing it. */
     fun setProAutoRenewing(autoRenewing: Boolean)
+
+    /** See [getProGracePeriod]. Write it from the SAME response that supplied the access expiry. */
+    fun setProGracePeriod(grace: Duration)
 
     /** Record (epochSeconds) or clear (null) the "refund requested" flag; synced across devices. */
     fun setRefundRequested(epochSeconds: Long?)

@@ -1,5 +1,7 @@
 package network.loki.messenger.libsession_util
 
+import java.time.Duration
+
 import network.loki.messenger.libsession_util.pro.ProConfig
 import network.loki.messenger.libsession_util.pro.ProProof
 import network.loki.messenger.libsession_util.protocol.ProProfileFeatures
@@ -49,6 +51,10 @@ class UserProfile private constructor(pointer: Long) : ConfigBase(pointer), Muta
     external override fun removeProAccessExpiry()
     external override fun getProAutoRenewing(): Boolean
     external override fun setProAutoRenewing(autoRenewing: Boolean)
+    private external fun getProGracePeriodSeconds(): Long
+    override fun getProGracePeriod(): Duration = Duration.ofSeconds(getProGracePeriodSeconds())
+    private external fun setProGracePeriodSeconds(seconds: Long)
+    override fun setProGracePeriod(grace: Duration) = setProGracePeriodSeconds(grace.seconds)
     private external fun getProFeaturesRaw(): Long
     override fun getProFeatures(): ProProfileFeatures = ProProfileFeatures(getProFeaturesRaw())
     external override fun getProConfig(): ProConfig?

@@ -201,6 +201,21 @@ Java_network_loki_messenger_libsession_1util_UserProfile_setProAutoRenewing(JNIE
 
 extern "C"
 JNIEXPORT jlong JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_getProGracePeriodSeconds(JNIEnv *env,
+                                                                                  jobject thiz) {
+    return static_cast<jlong>(ptrToProfile(env, thiz)->get_pro_grace_period().count());
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_network_loki_messenger_libsession_1util_UserProfile_setProGracePeriodSeconds(JNIEnv *env,
+                                                                                  jobject thiz,
+                                                                                  jlong grace_seconds) {
+    ptrToProfile(env, thiz)->set_pro_grace_period(std::chrono::seconds{grace_seconds});
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL
 Java_network_loki_messenger_libsession_1util_UserProfile_getProFeaturesRaw(JNIEnv *env,
                                                                            jobject thiz) {
     return static_cast<jlong>(ptrToProfile(env, thiz)->get_profile_bitset().data);
