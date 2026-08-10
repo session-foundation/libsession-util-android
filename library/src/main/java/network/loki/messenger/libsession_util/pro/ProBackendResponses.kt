@@ -118,21 +118,27 @@ data class ProProofResponse(
      * The grace period folded into [accountExpiry], so the paid-through instant is
      * `accountExpiry - accountGracePeriod`.
      *
-     * **Not nullable, unlike [accountExpiry].** Core requires this field on a successful proof, so
-     * there is no "the backend did not say" state to represent; zero on the failure outcomes that
-     * carry no proof, which is the truthful value there. A nullable type here would be a lie that
-     * invites `?: Duration.ZERO` at call sites, and zero is not inert — writing it can clear the
-     * config key.
+     * ⚠️ **Only meaningful on a SUCCESSFUL proof.** Core's parser returns on the failure path before
+     * filling this, so on every non-OK outcome it holds a struct default of zero — and nothing here
+     * can tell you that: there is no presence flag and the type is not nullable. **Read it inside a
+     * success branch or not at all.**
+     *
+     * Not nullable because core no longer models the absent case, so a nullable type would be a lie
+     * that invites `?: Duration.ZERO` — and zero is not inert, since writing it can clear the config
+     * key. The protection moved from the type to the call site's placement; it did not disappear.
      */
     val accountGracePeriod: Duration,
     /**
      * Whether the subscription behind [accountExpiry] renews itself.
      *
-     * **Not nullable** — same reasoning as [accountGracePeriod]. Required on a successful proof, so
-     * `false` here means "not renewing" rather than "unknown". Note that writing `false` into config
-     * ERASES the key, which is the correct representation of not-renewing under a presence-only
-     * encoding — but it is why a *defaulted* false would have been dangerous and the field is
-     * required rather than lenient.
+     * ⚠️ **Only meaningful on a SUCCESSFUL proof** — same as [accountGracePeriod], and worse here,
+     * because the default is `false` and writing `false` into the presence-only config key **ERASES**
+     * it. On `subscription_expired`/`not_subscribed`/`revoked` that erasure is truthful; on a protocol
+     * error or transport failure it would wipe a flag `get_pro_status` had correctly learned, from a
+     * response that said nothing about the account.
+     *
+     * Not nullable because core no longer models absence — but absence did not go away, it collapsed
+     * into an indistinguishable value. **Read it inside a success branch or not at all.**
      */
     val accountAutoRenewing: Boolean,
 ) : ProResponse {
