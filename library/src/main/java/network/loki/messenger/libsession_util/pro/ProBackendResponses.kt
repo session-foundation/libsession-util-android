@@ -114,14 +114,48 @@ data class ProProofResponse(
      * the cached access expiry, never for entitlement gating.
      */
     val accountExpiry: Instant?,
+    /**
+     * The grace period folded into [accountExpiry], so the paid-through instant is
+     * `accountExpiry - accountGracePeriod`.
+     *
+     * **null means the backend did not say — it does NOT mean zero.** Zero is a legitimate value (the
+     * backend sends it whenever the subscription is not auto-renewing), so the two must stay distinct:
+     * writing zero into config on an absent field would erase a grace period learned from
+     * `get_pro_status`. Absent happens against a backend predating the field.
+     */
+    val accountGracePeriod: Duration?,
+    /**
+     * Whether the subscription behind [accountExpiry] renews itself.
+     *
+     * **null means the backend did not say — it does NOT mean false.** The config key is
+     * presence-only, so writing false ERASES it; collapsing absent to false would destroy a flag
+     * learned from `get_pro_status` on every proof fetch against an older backend.
+     */
+    val accountAutoRenewing: Boolean?,
 ) : ProResponse {
-    /** Raw-epoch constructor used by the JNI layer (see the file header). */
+    /**
+     * Raw-epoch constructor used by the JNI layer (see the file header).
+     *
+     * The two advisory fields arrive as value + presence pairs because absent and zero/false are
+     * different states and neither wire type can express both. Same shape as
+     * [GetProStatusResponse]'s `hasLatestPayment`.
+     */
     @Keep
     constructor(
         header: ProResponseHeader,
         proof: ProProof?,
         accountExpirySeconds: Long,
-    ) : this(header, proof, accountExpirySeconds.secondsToInstantOrNull())
+        hasAccountGracePeriod: Boolean,
+        accountGracePeriodSeconds: Long,
+        hasAccountAutoRenewing: Boolean,
+        accountAutoRenewing: Boolean,
+    ) : this(
+        header = header,
+        proof = proof,
+        accountExpiry = accountExpirySeconds.secondsToInstantOrNull(),
+        accountGracePeriod = if (hasAccountGracePeriod) Duration.ofSeconds(accountGracePeriodSeconds) else null,
+        accountAutoRenewing = if (hasAccountAutoRenewing) accountAutoRenewing else null,
+    )
 }
 
 /** One payment/subscription record from get-pro-status. */
