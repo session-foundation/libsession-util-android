@@ -100,11 +100,13 @@ interface ReadableUserProfile: ReadableConfig {
     /**
      * The account's grace period, from synced config (key `G`).
      *
-     * Only meaningful as `proAccessExpiry - proGracePeriod`, which is the paid-through instant: the
-     * backend folds grace INTO the expiry it sends, so the expiry is coverage end. Zero when unset,
-     * and zero is also what the backend sends when the subscription is not auto-renewing — the two
-     * describe the same account and both give `E - 0 == E`, so there is nothing for a presence check
-     * to disambiguate.
+     * How much longer the account is served PAST [getProAccessExpiry], so coverage ends at
+     * `proAccessExpiry + proGracePeriod`. The expiry is the payment-due date and needs no adjustment
+     * to be displayed — do not subtract this from it.
+     *
+     * Zero when unset, and zero is also what the backend sends when the subscription is not
+     * auto-renewing — the two describe the same account and both give `E + 0 == E`, so there is
+     * nothing for a presence check to disambiguate.
      */
     fun getProGracePeriod(): Duration
 
