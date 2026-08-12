@@ -1,4 +1,6 @@
 #include "jni_utils.h"
+
+#include <stdexcept>
 #include "util.h"
 
 #include <session/ed25519.hpp>
@@ -79,10 +81,19 @@ JNIEXPORT jbyteArray JNICALL
 Java_network_loki_messenger_libsession_1util_ED25519_positiveEd25519PubKeyFromCurve25519(
         JNIEnv *env, jobject thiz, jbyteArray curve25519_pub_key) {
     return jni_utils::run_catching_cxx_exception_or_throws<jbyteArray>(env, [=] {
+        jni_utils::JavaByteArrayRef pub_key(env, curve25519_pub_key);
+
+        // Checked here because the callee cannot: `xed25519::pubkey` takes a fixed-extent span, so
+        // the length is a promise this side makes rather than something it validates, and it reads
+        // 32 bytes from the pointer either way. A short array from Kotlin would be an
+        // out-of-bounds read.
+        if (pub_key.size() != 32)
+            throw std::invalid_argument{"curve25519 public key must be 32 bytes"};
+
         return util::bytes_from_span(
                 env,
                 session::xed25519::pubkey(
-                        jni_utils::JavaByteArrayRef(env, curve25519_pub_key).get())
+                        std::span<const unsigned char, 32>(pub_key.bytes(), 32))
         ).release();
     });
 }

@@ -108,20 +108,62 @@ data class ProProofResponse(
     override val header: ProResponseHeader,
     val proof: ProProof?,
     /**
-     * Advisory account (subscription) expiry — grace-inclusive true entitlement end; set on a
-     * successful proof and on a `subscription_expired` failure (a past value), null otherwise.
+     * Advisory account (subscription) expiry — the payment-due date, with coverage running
+     * [accountGracePeriod] past it; set on a successful proof and on a `subscription_expired` failure
+     * (a past value), null otherwise.
      * Distinct from [proof]'s own clamped expiry; use for the "Pro until X" display and to refresh
      * the cached access expiry, never for entitlement gating.
      */
     val accountExpiry: Instant?,
+    /**
+     * How much longer the account is served past [accountExpiry], so coverage ends at
+     * `accountExpiry + accountGracePeriod`. Do NOT subtract it from the expiry.
+     *
+     * ⚠️ **Only meaningful on a SUCCESSFUL proof.** Core's parser returns on the failure path before
+     * filling this, so on every non-OK outcome it holds a struct default of zero — and nothing here
+     * can tell you that: there is no presence flag and the type is not nullable. **Read it inside a
+     * success branch or not at all.**
+     *
+     * Not nullable because core no longer models the absent case, so a nullable type would be a lie
+     * that invites `?: Duration.ZERO` — and zero is not inert, since writing it can clear the config
+     * key. The protection moved from the type to the call site's placement; it did not disappear.
+     */
+    val accountGracePeriod: Duration,
+    /**
+     * Whether the subscription behind [accountExpiry] renews itself.
+     *
+     * ⚠️ **Only meaningful on a SUCCESSFUL proof** — same as [accountGracePeriod], and worse here,
+     * because the default is `false` and writing `false` into the presence-only config key **ERASES**
+     * it. On `subscription_expired`/`not_subscribed`/`revoked` that erasure is truthful; on a protocol
+     * error or transport failure it would wipe a flag `get_pro_status` had correctly learned, from a
+     * response that said nothing about the account.
+     *
+     * Not nullable because core no longer models absence — but absence did not go away, it collapsed
+     * into an indistinguishable value. **Read it inside a success branch or not at all.**
+     */
+    val accountAutoRenewing: Boolean,
 ) : ProResponse {
-    /** Raw-epoch constructor used by the JNI layer (see the file header). */
+    /**
+     * Raw-epoch constructor used by the JNI layer (see the file header).
+     *
+     * [accountExpirySeconds] keeps the 0-means-absent sentinel because that field genuinely is absent
+     * on some outcomes; the other two are always populated on success, so they cross as plain values.
+     * That asymmetry is real rather than an oversight — see each property.
+     */
     @Keep
     constructor(
         header: ProResponseHeader,
         proof: ProProof?,
         accountExpirySeconds: Long,
-    ) : this(header, proof, accountExpirySeconds.secondsToInstantOrNull())
+        accountGracePeriodSeconds: Long,
+        accountAutoRenewing: Boolean,
+    ) : this(
+        header = header,
+        proof = proof,
+        accountExpiry = accountExpirySeconds.secondsToInstantOrNull(),
+        accountGracePeriod = Duration.ofSeconds(accountGracePeriodSeconds),
+        accountAutoRenewing = accountAutoRenewing,
+    )
 }
 
 /** One payment/subscription record from get-pro-status. */
@@ -138,7 +180,10 @@ data class ProPaymentItem(
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val expiry: Instant?,                    // access expiry for this payment; null if not activated
     @Serializable(with = DurationAsSecondsSerializer::class)
-    val gracePeriod: Duration,               // grace beyond [expiry] before access is really lost
+    // PAYMENT-level grace: what the store declared about THIS transaction. NOT the same quantity as
+    // GetProStatusResponse.gracePeriod, and notably not gated on auto-renewing — a cancelled
+    // subscriber can keep a multi-day value here. For coverage questions use the account-level field.
+    val gracePeriod: Duration,
     @Serializable(with = InstantAsEpochMillisSerializer::class)
     val platformRefundExpiry: Instant?,      // deadline for a platform ("quick") refund; null if n/a
     @Serializable(with = InstantAsEpochMillisSerializer::class)
@@ -187,9 +232,12 @@ data class GetProStatusResponse(
     val latestPayment: ProPaymentItem?,      // the single most-recent payment, or null when none
     val autoRenewing: Boolean,
     @Serializable(with = InstantAsEpochMillisSerializer::class)
-    val expiry: Instant?,                    // account access expiry (incl. grace); null if never subscribed
+    val expiry: Instant?,                    // the payment-due date; null if never subscribed
+    // ACCOUNT-level grace: how much longer we are served past [expiry], so coverage ends at
+    // `expiry + gracePeriod`. This is the field a client wants for coverage questions — see the
+    // warning on ProPaymentItem.gracePeriod, which shares the name and answers a different question.
     @Serializable(with = DurationAsSecondsSerializer::class)
-    val gracePeriod: Duration,               // grace included in [expiry]
+    val gracePeriod: Duration,
 ) : ProResponse {
     /** Raw-epoch constructor used by the JNI layer (see the file header); converts to the typed fields. */
     @Keep
