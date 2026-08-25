@@ -53,6 +53,27 @@ data class ProRequest(
     val body: String,
 )
 
+/**
+ * The Pro URL registry — the `url_pro_*` fields of libsession's `SESSION_PROTOCOL_STRINGS`.
+ *
+ * Not per-provider and not translation data: these are identical for every user, which is why
+ * libsession owns them. Exposed as one object rather than eight calls, matching [ProviderUrls].
+ *
+ * Note [privacyPolicy] and [termsOfService] are the **Pro** documents (`url_pro_*`), not Session's
+ * general ones — the registry carries both pairs and they are different pages.
+ */
+@Keep
+data class ProUrls(
+    val accessNotFound: String,
+    val faq: String,
+    val page: String,
+    val privacyPolicy: String,
+    val roadmap: String,
+    val support: String,
+    val termsOfService: String,
+    val upgrade: String,
+)
+
 /** Per-provider support/management URLs — libsession is the source of truth for these. */
 @Keep
 data class ProviderUrls(

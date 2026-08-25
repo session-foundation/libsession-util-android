@@ -41,6 +41,13 @@ object BackendRequests : LibSessionUtilCApi() {
     external fun providerUrls(providerCode: String): ProviderUrls?
 
     /**
+     * The Pro URL registry. Identical for every user and owned by libsession, so read this rather than
+     * copying the values — a client-side copy of a libsession constant is a value that can silently
+     * drift from the one the other clients use.
+     */
+    external fun proUrls(): ProUrls
+
+    /**
      * The purchasable payment-provider slugs to surface to users (single source of truth in libsession;
      * excludes non-purchasable providers like `stf`). Order is not significant — the client
      * applies its own ordering and skips slugs it has no display translation for.

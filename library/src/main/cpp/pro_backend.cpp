@@ -4,6 +4,7 @@
 
 #include <oxenc/hex.h>
 #include <session/pro_backend.hpp>
+#include <session/session_protocol.h>
 
 #include "jni_utils.h"
 #include "util.h"
@@ -58,6 +59,28 @@ JavaLocalRef<jobject> serialize_provider_urls(JNIEnv* env, const pb::ProviderURL
                                 jstring_from_optional(env, u.refund_status_url).get(),
                                 jstring_from_optional(env, u.update_subscription_url).get(),
                                 jstring_from_optional(env, u.cancel_subscription_url).get())};
+}
+
+/// The Pro URL registry as one Kotlin object. Reads `SESSION_PROTOCOL_STRINGS` directly - it is
+/// declared `extern const` in the public C header, so no C++ surface had to be added for this.
+///
+/// Field order MUST match `ProUrls`'s constructor. The two document urls are the `url_pro_*` ones:
+/// the registry also carries generic `url_privacy_policy` / `url_terms_of_service`, which are
+/// different pages and do not belong on a Pro object.
+JavaLocalRef<jobject> serialize_pro_urls(JNIEnv* env) {
+    static BasicJavaClassInfo cls(env, "network/loki/messenger/libsession_util/pro/ProUrls",
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
+            "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+    const auto& s = SESSION_PROTOCOL_STRINGS;
+    return {env, env->NewObject(cls.java_class, cls.constructor,
+                                jstring_from_optional(env, std::string_view(s.url_pro_access_not_found)).get(),
+                                jstring_from_optional(env, std::string_view(s.url_pro_faq)).get(),
+                                jstring_from_optional(env, std::string_view(s.url_pro_page)).get(),
+                                jstring_from_optional(env, std::string_view(s.url_pro_privacy_policy)).get(),
+                                jstring_from_optional(env, std::string_view(s.url_pro_roadmap)).get(),
+                                jstring_from_optional(env, std::string_view(s.url_pro_support)).get(),
+                                jstring_from_optional(env, std::string_view(s.url_pro_terms_of_service)).get(),
+                                jstring_from_optional(env, std::string_view(s.url_pro_upgrade)).get())};
 }
 
 // §1: `plan` is a parsed ProPlanPeriod (count + unit). We hand the app the structured pair —
@@ -246,6 +269,14 @@ Java_network_loki_messenger_libsession_1util_pro_BackendRequests_providerUrls(
         if (!urls)
             return nullptr;
         return serialize_provider_urls(env, *urls).release();
+    });
+}
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_network_loki_messenger_libsession_1util_pro_BackendRequests_proUrls(JNIEnv* env, jobject) {
+    return run_catching_cxx_exception_or_throws<jobject>(env, [=]() -> jobject {
+        return serialize_pro_urls(env).release();
     });
 }
 
