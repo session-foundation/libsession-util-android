@@ -19,7 +19,6 @@ static std::array<unsigned char, N> from_hex(std::span<char> input) {
 
 session::ProProof java_to_cpp_proof(JNIEnv *env, jobject proof) {
     struct ProProofMethods : public JavaClassInfo {
-        jmethodID get_version;
         jmethodID get_revocation_tag;
         jmethodID get_rotating_pub_key;
         jmethodID get_expiry_seconds;
@@ -27,7 +26,6 @@ session::ProProof java_to_cpp_proof(JNIEnv *env, jobject proof) {
 
         ProProofMethods(JNIEnv *env, jobject obj)
             : JavaClassInfo(env, obj)
-            , get_version(env->GetMethodID(java_class, "getVersion", "()I"))
             , get_revocation_tag(env->GetMethodID(java_class, "getRevocationTagHex", "()Ljava/lang/String;"))
             , get_rotating_pub_key(env->GetMethodID(java_class, "getRotatingPubKeyHex", "()Ljava/lang/String;"))
             , get_expiry_seconds(env->GetMethodID(java_class, "getExpirySeconds", "()J"))
@@ -42,7 +40,6 @@ session::ProProof java_to_cpp_proof(JNIEnv *env, jobject proof) {
     jni_utils::JavaLocalRef<jstring> signature(env, (jstring) env->CallObjectMethod(proof, methods.get_signature));
 
     return {
-            .version = static_cast<std::uint8_t>(env->CallIntMethod(proof, methods.get_version)),
             .revocation_tag = from_hex<32>(jni_utils::JavaStringRef(env, revocation_tag.get()).get()),
             .rotating_pubkey = from_hex<32>(jni_utils::JavaStringRef(env, rotating_pub_key.get()).get()),
             .expiry_at = std::chrono::sys_seconds(
@@ -52,14 +49,15 @@ session::ProProof java_to_cpp_proof(JNIEnv *env, jobject proof) {
 }
 
 JavaLocalRef<jobject> cpp_to_java_proof(JNIEnv *env, const session::ProProof &proof) {
+    // No leading `I`: ProProof carries no version. The proof's format is fixed by the signing
+    // domain prefix baked into its signature, not by a field, so there is nothing to marshal.
     static BasicJavaClassInfo class_info(env,
             "network/loki/messenger/libsession_util/pro/ProProof",
-            "(I[B[BJ[B)V");
+            "([B[BJ[B)V");
 
     return {env, env->NewObject(
             class_info.java_class,
             class_info.constructor,
-            static_cast<jint>(proof.version),
             util::bytes_from_span(env, proof.revocation_tag).get(),
             util::bytes_from_span(env, proof.rotating_pubkey).get(),
             static_cast<jlong>(proof.expiry_at.time_since_epoch().count()),
