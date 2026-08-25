@@ -10,11 +10,15 @@ typealias ProProofStatus = Int
 /**
  * Represents a proof of Pro. This class is marked as @Serializable to represent the JSON structure
  * received from the Pro Backend.
+ *
+ * There is deliberately no `version` field. A proof's format is bound into its signature by the
+ * 16-byte domain prefix that format selects (`ProProof_v0_____`), so the version was never part of
+ * the signed bytes and carrying it proved nothing. A future format arrives as its own field rather
+ * than a version bump, so to a client that does not know it the proof simply does not appear —
+ * reported as [STATUS_INVALID]. Protobuf tag 1 held the old field and must never be reused.
  */
 @Serializable
 data class ProProof(
-    val version: Int,
-
     @SerialName("revocation_tag")
     val revocationTagHex: String,
 
@@ -29,13 +33,11 @@ data class ProProof(
 ) {
     @Keep
     constructor(
-        version: Int,
         revocationTag: ByteArray,
         rotatingPubKey: ByteArray,
         expirySeconds: Long,
         signature: ByteArray
     ): this(
-        version = version,
         revocationTagHex = revocationTag.toHexString(),
         rotatingPubKeyHex = rotatingPubKey.toHexString(),
         expirySeconds = expirySeconds,
@@ -92,5 +94,12 @@ data class ProProof(
         const val STATUS_INVALID_USER_SIGNATURE: ProProofStatus = 2
         const val STATUS_VALID: ProProofStatus = 3
         const val STATUS_EXPIRED: ProProofStatus = 4
+
+        /**
+         * Nothing could be evaluated, so the decoded proof is not to be trusted: the message
+         * carried no proof this client can read — either none was attached, or it is in a format
+         * this client does not know. Such a message is delivered as non-Pro rather than dropped.
+         */
+        const val STATUS_INVALID: ProProofStatus = 5
     }
 }
